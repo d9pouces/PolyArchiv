@@ -1,0 +1,5 @@
+[global]
+engine=nagiback.remotes.GitRepository
+remote_tags=
+included_local_tags=*
+excluded_local_tags=
