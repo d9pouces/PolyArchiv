@@ -43,16 +43,16 @@ class Configuration(object):
                 engine = parser.get(self.global_section, 'engine', fallback='nagiback.locals.GitRepository')
                 engine_cls = import_string(engine)
                 sig = signature(engine_cls)
-                local = engine_cls(**self._get_args_from_parser(parser, self.global_section, sig))
                 name = os.path.basename(config_file).rpartition('.')[0]
+                local = engine_cls(name, **self._get_args_from_parser(parser, self.global_section, sig))
                 self.local_repositories[name] = local
                 for section in parser.sections():
                     if section == self.global_section or not parser.has_option(section, 'engine'):
                         continue
                     engine_cls = import_string(parser.get(section, 'engine'))
                     sig = signature(engine_cls)
-                    source = sig(local, **self._get_args_from_parser(parser, section, sig))
-                    local.add_source(section, source)
+                    source = sig(section, local, **self._get_args_from_parser(parser, section, sig))
+                    local.add_source(source)
 
     def _find_remote_repositories(self):
         for path in self.config_directories:
@@ -62,8 +62,8 @@ class Configuration(object):
                 engine = parser.get(self.global_section, 'engine', fallback='nagiback.remotes.GitRepository')
                 engine_cls = import_string(engine)
                 sig = signature(engine_cls)
-                remote = engine_cls(**self._get_args_from_parser(parser, self.global_section, sig))
                 name = os.path.basename(config_file).rpartition('.')[0]
+                remote = engine_cls(name, **self._get_args_from_parser(parser, self.global_section, sig))
                 self.remote_repositories[name] = remote
 
     @staticmethod

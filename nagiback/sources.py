@@ -22,7 +22,8 @@ __author__ = 'mgallet'
 class Source(object):
     """base source class"""
 
-    def __init__(self, local_repository):
+    def __init__(self, name, local_repository):
+        self.name = name
         assert isinstance(local_repository, LocalRepository)
         self.local_repository = local_repository
 
@@ -34,7 +35,7 @@ class Source(object):
 class RSync(Source):
     """copy all files from the destination to the backup using rsync.
     """
-    def __init__(self, local_repository, source_path='', destination_path='', rsync_executable='rsync',
+    def __init__(self, name, local_repository, source_path='', destination_path='', rsync_executable='rsync',
                  exclude='', include='', detect_hard_links=''):
         """
         :param local_repository: local repository where files are stored
@@ -47,7 +48,7 @@ class RSync(Source):
             a file (cf. the --include-from option from rsync)
         :param detect_hard_links: preserve hard links
         """
-        super(RSync, self).__init__(local_repository)
+        super(RSync, self).__init__(name, local_repository)
         self.source_path = source_path
         self.destination_path = destination_path
         self.rsync_executable = rsync_executable
@@ -74,15 +75,15 @@ class RSync(Source):
 
 
 class MySQL(Source):
-    def __init__(self, local_repository, host='localhost', port='3306', user='', password='', name='',
+    def __init__(self, name, local_repository, host='localhost', port='3306', user='', password='', database='',
                  destination_path='', dump_executable='mysqldump'):
-        super(MySQL, self).__init__(local_repository)
+        super(MySQL, self).__init__(name, local_repository)
         self.dump_executable = dump_executable
         self.host = host
         self.port = port
         self.user = user
         self.password = password
-        self.name = name
+        self.database = database
         self.destination_path = destination_path
 
     def backup(self):
@@ -102,7 +103,7 @@ class MySQL(Source):
     @property
     def db_options(self):
         return {'HOST': self.host, 'PORT': self.port, 'USER': self.user, 'PASSWORD': self.password,
-                'NAME': self.name}
+                'NAME': self.database}
 
     def dump_cmd_list(self):
         """ :return:
@@ -123,10 +124,11 @@ class MySQL(Source):
 
 class PostgresSQL(MySQL):
 
-    def __init__(self, local_repository, host='localhost', port='5432', user='', password='', name='',
+    def __init__(self, name, local_repository, host='localhost', port='5432', user='', password='', database='',
                  destination_path='', dump_executable='pg_dump'):
-        super(PostgresSQL, self).__init__(local_repository, host=host, port=port, user=user, password=password,
-                                          name=name, destination_path=destination_path, dump_executable=dump_executable)
+        super(PostgresSQL, self).__init__(name, local_repository, host=host, port=port, user=user, password=password,
+                                          database=database, destination_path=destination_path,
+                                          dump_executable=dump_executable)
 
     def dump_cmd_list(self):
         command = [self.dump_executable, '--username', '%(USER)s']

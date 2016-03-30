@@ -15,20 +15,19 @@ class LocalRepository(Repository):
     """Local repository, made of one or more sources.
      Each source is run and contribute to new
     """
-    def __init__(self, local_tags='', included_remote_tags='', excluded_remote_tags=''):
+    def __init__(self, name, local_tags='', included_remote_tags='', excluded_remote_tags=''):
+        super(LocalRepository, self).__init__(name)
         self.local_tags = self._split_tags(local_tags)
         self.included_remote_tags = self._split_tags(included_remote_tags)
         self.excluded_remote_tags = self._split_tags(excluded_remote_tags)
-        self.sources = {}
+        self.sources = []
 
-    def add_source(self, name, source):
+    def add_source(self, source):
         """
-        :param name: name of the source to add
-        :type name: :class:`str`
         :param source: source
         :type source: :class:`nagiback.sources.Source`
         """
-        self.sources[name] = source
+        self.sources.append(source)
 
     def get_cwd(self):
         """Must return a valid directory where a source can write its files.
@@ -48,8 +47,8 @@ class LocalRepository(Repository):
 
 class FileRepository(LocalRepository):
 
-    def __init__(self, local_path='.', local_tags='', included_remote_tags='', excluded_remote_tags=''):
-        super(FileRepository, self).__init__(local_tags=local_tags, included_remote_tags=included_remote_tags,
+    def __init__(self, name, local_path='.', local_tags='', included_remote_tags='', excluded_remote_tags=''):
+        super(FileRepository, self).__init__(name, local_tags=local_tags, included_remote_tags=included_remote_tags,
                                              excluded_remote_tags=excluded_remote_tags)
         self.local_path = local_path
 
@@ -58,7 +57,7 @@ class FileRepository(LocalRepository):
             raise ValueError('%s exists and is not a directory' % self.local_path)
         elif not os.path.isdir(self.local_path):
             os.makedirs(self.local_path)
-        for source in self.sources.values():
+        for source in self.sources:
             source.backup()
 
     def get_cwd(self):
@@ -66,9 +65,9 @@ class FileRepository(LocalRepository):
 
 
 class GitRepository(FileRepository):
-    def __init__(self, git_executable='git', local_path='.', local_tags='', included_remote_tags='',
+    def __init__(self, name, git_executable='git', local_path='.', local_tags='', included_remote_tags='',
                  excluded_remote_tags=''):
-        super(GitRepository, self).__init__(local_path=local_path, local_tags=local_tags,
+        super(GitRepository, self).__init__(name, local_path=local_path, local_tags=local_tags,
                                             included_remote_tags=included_remote_tags,
                                             excluded_remote_tags=excluded_remote_tags)
         self.git_executable = git_executable

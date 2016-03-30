@@ -32,6 +32,9 @@ def import_string(import_name, silent=False):
 
 class Repository(object):
 
+    def __init__(self, name):
+        self.name = name
+
     @staticmethod
     def _split_tags(value):
         if value:
