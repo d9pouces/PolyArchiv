@@ -19,10 +19,16 @@ class LocalRepository(Repository):
         self.local_tags = self._split_tags(local_tags)
         self.included_remote_tags = self._split_tags(included_remote_tags)
         self.excluded_remote_tags = self._split_tags(excluded_remote_tags)
-        self.sources = []
+        self.sources = {}
 
-    def add_source(self, source):
-        self.sources.append(source)
+    def add_source(self, name, source):
+        """
+        :param name: name of the source to add
+        :type name: :class:`str`
+        :param source: source
+        :type source: :class:`nagiback.sources.Source`
+        """
+        self.sources[name] = source
 
     def get_cwd(self):
         """Must return a valid directory where a source can write its files.
@@ -32,9 +38,9 @@ class LocalRepository(Repository):
         raise NotImplementedError
 
     def backup(self):
-        start = datetime.datetime.now()
+        """ perform the backup and log all errors
+        """
         self.do_backup()
-        end = datetime.datetime.now()
 
     def do_backup(self):
         raise NotImplementedError
@@ -52,7 +58,7 @@ class FileRepository(LocalRepository):
             raise ValueError('%s exists and is not a directory' % self.local_path)
         elif not os.path.isdir(self.local_path):
             os.makedirs(self.local_path)
-        for source in self.sources:
+        for source in self.sources.values():
             source.backup()
 
     def get_cwd(self):

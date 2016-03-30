@@ -47,11 +47,12 @@ class Configuration(object):
                 name = os.path.basename(config_file).rpartition('.')[0]
                 self.local_repositories[name] = local
                 for section in parser.sections():
-                    if section != self.global_section and parser.has_option(section, 'engine'):
-                        engine_cls = import_string(parser.get(section, 'engine'))
-                        sig = signature(engine_cls)
-                        source = sig(local, **self._get_args_from_parser(parser, section, sig))
-                        local.add_source(source)
+                    if section == self.global_section or not parser.has_option(section, 'engine'):
+                        continue
+                    engine_cls = import_string(parser.get(section, 'engine'))
+                    sig = signature(engine_cls)
+                    source = sig(local, **self._get_args_from_parser(parser, section, sig))
+                    local.add_source(section, source)
 
     def _find_remote_repositories(self):
         for path in self.config_directories:

@@ -27,12 +27,26 @@ class Source(object):
         self.local_repository = local_repository
 
     def backup(self):
+        """Backup data corresponding to this source"""
         raise NotImplementedError
 
 
 class RSync(Source):
+    """copy all files from the destination to the backup using rsync.
+    """
     def __init__(self, local_repository, source_path='', destination_path='', rsync_executable='rsync',
                  exclude='', include='', detect_hard_links=''):
+        """
+        :param local_repository: local repository where files are stored
+        :param source_path: absolute path of a directory to backup
+        :param destination_path: relative path of the backup destination (must be a directory name)
+        :param rsync_executable: path of the rsync executable
+        :param exclude: exclude files matching PATTERN. If PATTERN starts with '@', it must be the absolute path of
+            a file (cf. the --exclude-from option from rsync)
+        :param include: don't exclude files matching PATTERN. If PATTERN starts with '@', it must be the absolute path of
+            a file (cf. the --include-from option from rsync)
+        :param detect_hard_links: preserve hard links
+        """
         super(RSync, self).__init__(local_repository)
         self.source_path = source_path
         self.destination_path = destination_path
@@ -53,9 +67,10 @@ class RSync(Source):
             cmd += ['--include-from', self.include[1:]]
         elif self.include:
             cmd += ['--include', self.include]
-        filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
-        _ensure_directory(filename)
-        cmd += [self.source_path, filename]
+        dirname = os.path.join(self.local_repository.get_cwd(), self.destination_path)
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
+        cmd += [self.source_path, dirname]
 
 
 class MySQL(Source):
@@ -73,14 +88,6 @@ class MySQL(Source):
     def backup(self):
         filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
         _ensure_directory(filename)
-        self.dump(filename)
-
-    @property
-    def db_options(self):
-        return {'HOST': self.host, 'PORT': self.port, 'USER': self.user, 'PASSWORD': self.password,
-                'NAME': self.name}
-
-    def dump(self, filename):
         cmd = self.dump_cmd_list()
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()
@@ -91,6 +98,11 @@ class MySQL(Source):
         else:
             p = subprocess.Popen(cmd, env=env)
         p.communicate()
+
+    @property
+    def db_options(self):
+        return {'HOST': self.host, 'PORT': self.port, 'USER': self.user, 'PASSWORD': self.password,
+                'NAME': self.name}
 
     def dump_cmd_list(self):
         """ :return:
