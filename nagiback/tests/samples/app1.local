@@ -24,6 +24,6 @@ name=
 destination_path=./mysql.sql
 
 [source_3]
-engine=nagiback.sources.files
+engine=nagiback.sources.RSync
 source_path=/tmp/app1/files
 destination_path=./files

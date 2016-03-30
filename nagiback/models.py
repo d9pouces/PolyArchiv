@@ -24,8 +24,8 @@ class Configuration(object):
 
     def __init__(self, config_directories):
         self.config_directories = config_directories
-        self.local_repositories = []
-        self.remote_repositories = []
+        self.local_repositories = {}
+        self.remote_repositories = {}
         self._find_local_repositories()
         self._find_remote_repositories()
 
@@ -44,7 +44,8 @@ class Configuration(object):
                 engine_cls = import_string(engine)
                 sig = signature(engine_cls)
                 local = engine_cls(**self._get_args_from_parser(parser, self.global_section, sig))
-                self.local_repositories.append(local)
+                name = os.path.basename(config_file).rpartition('.')[0]
+                self.local_repositories[name] = local
                 for section in parser.sections():
                     if section != self.global_section and parser.has_option(section, 'engine'):
                         engine_cls = import_string(parser.get(section, 'engine'))
@@ -61,7 +62,8 @@ class Configuration(object):
                 engine_cls = import_string(engine)
                 sig = signature(engine_cls)
                 remote = engine_cls(**self._get_args_from_parser(parser, self.global_section, sig))
-                self.remote_repositories.append(remote)
+                name = os.path.basename(config_file).rpartition('.')[0]
+                self.remote_repositories[name] = remote
 
     @staticmethod
     def can_associate(local, remote):
@@ -85,11 +87,15 @@ class Configuration(object):
                     return True
         return False
 
-    def run(self):
-        for local in self.local_repositories:
+    def backup(self, only_locals=None, only_remotes=None):
+        for local_name, local in self.local_repositories.items():
+            if only_locals and local_name not in only_locals:
+                continue
             assert isinstance(local, LocalRepository)
-            local.run()
-            for remote in self.remote_repositories:
+            local.backup()
+            for remote_name, remote in self.remote_repositories.items():
+                if only_remotes and remote_name not in only_remotes:
+                    continue
                 assert isinstance(remote, RemoteRepository)
                 if self.can_associate(local, remote):
-                    remote.run(local)
+                    remote.backup(local)

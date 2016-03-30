@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 import os
 import subprocess
 
+import datetime
+
 from nagiback.utils import Repository
 
 __author__ = 'mgallet'
@@ -22,7 +24,19 @@ class LocalRepository(Repository):
     def add_source(self, source):
         self.sources.append(source)
 
-    def run(self):
+    def get_cwd(self):
+        """Must return a valid directory where a source can write its files.
+        If the local repository is not the filesystem, any file written in this directory by a source must be stored
+        to the local repository's storage.
+        """
+        raise NotImplementedError
+
+    def backup(self):
+        start = datetime.datetime.now()
+        self.do_backup()
+        end = datetime.datetime.now()
+
+    def do_backup(self):
         raise NotImplementedError
 
 
@@ -33,13 +47,13 @@ class FileRepository(LocalRepository):
                                              excluded_remote_tags=excluded_remote_tags)
         self.local_path = local_path
 
-    def run(self):
+    def do_backup(self):
         if not os.path.isdir(self.local_path) and os.path.exists(self.local_path):
             raise ValueError('%s exists and is not a directory' % self.local_path)
         elif not os.path.isdir(self.local_path):
             os.makedirs(self.local_path)
         for source in self.sources:
-            source.run()
+            source.backup()
 
     def get_cwd(self):
         return self.local_path
@@ -53,7 +67,9 @@ class GitRepository(FileRepository):
                                             excluded_remote_tags=excluded_remote_tags)
         self.git_executable = git_executable
 
-    def run(self):
-        super(GitRepository, self).run()
+    def do_backup(self):
+        super(GitRepository, self).backup()
+        end = datetime.datetime.now()
         subprocess.Popen([self.git_executable, 'init'], cwd=self.local_path)
-        subprocess.Popen([self.git_executable, 'commit', '-am', 'message'], cwd=self.local_path)
+        subprocess.Popen([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')],
+                         cwd=self.local_path)

@@ -12,7 +12,7 @@ class RemoteRepository(Repository):
         self.included_local_tags = self._split_tags(included_local_tags)
         self.excluded_local_tags = self._split_tags(excluded_local_tags)
 
-    def run(self, local_repository):
+    def backup(self, local_repository):
         raise NotImplementedError
 
 
