@@ -7,7 +7,6 @@ from __future__ import unicode_literals
 import argparse
 __author__ = 'mgallet'
 
-__all__ = ['main']
 
 def main():
     """Main function, intended for use as command line executable.
@@ -26,8 +25,6 @@ def main():
     # complete this function
     print('Hello, world!')
     return return_code
-
-
 
 
 if __name__ == '__main__':

@@ -4,22 +4,25 @@ from __future__ import unicode_literals
 import fnmatch
 import glob
 import os
-from inspect import signature, Signature
+from inspect import signature, Signature, Parameter
 
 from nagiback.locals import LocalRepository
 from nagiback.remotes import RemoteRepository
 from nagiback.utils import import_string
 
 try:
+    # noinspection PyUnresolvedReferences,PyCompatibility
     from configparser import ConfigParser
 except ImportError:
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences,PyCompatibility
     from ConfigParser import ConfigParser
 
 __author__ = 'mgallet'
 
 
-class Configuration(object):
+class Runner(object):
+    """Run backup and restore operations for all specified configurations
+    """
     global_section = 'global'
 
     def __init__(self, config_directories):
@@ -33,7 +36,14 @@ class Configuration(object):
     def _get_args_from_parser(parser, section, sig):
         assert isinstance(sig, Signature)
         assert isinstance(parser, ConfigParser)
-        return {arg_name: parser.get(section, arg_name) for arg_name in sig.parameters}
+        values = {}
+        if any(x.kind == Parameter.VAR_KEYWORD for x in sig.parameters):
+            pass
+        for parameter in sig.parameters:
+            pass
+
+        return {arg_name: parser.get(section, arg_name) for arg_name in sig.parameters
+                if parser.has_option(section, arg_name)}
 
     def _find_local_repositories(self):
         for path in self.config_directories:
@@ -68,6 +78,7 @@ class Configuration(object):
 
     @staticmethod
     def can_associate(local, remote):
+        """Return True if the remote can be associated to the local repository"""
         assert isinstance(local, LocalRepository)
         assert isinstance(remote, RemoteRepository)
         for local_tag in local.local_tags:
@@ -89,6 +100,14 @@ class Configuration(object):
         return False
 
     def backup(self, only_locals=None, only_remotes=None):
+        """Run a backup operation
+
+        :param only_locals: limit to the selected local repositories
+        :type only_locals: :class:`list` of `str`
+        :param only_remotes: limit to the selected remote repositories
+        :type only_remotes: :class:`list` of `str`
+        :return:
+        """
         for local_name, local in self.local_repositories.items():
             if only_locals and local_name not in only_locals:
                 continue
