@@ -3,18 +3,27 @@ from __future__ import unicode_literals
 
 import subprocess
 
-from nagiback.utils import Repository
+from nagiback.conf import Parameter, strip_split, check_executable
+from nagiback.utils import Repository, get_is_time_elapsed
 from nagiback.locals import GitRepository as LocalGitRepository
 
 __author__ = 'mgallet'
 
 
 class RemoteRepository(Repository):
+    parameters = Repository.parameters + [
+        Parameter('frequency', converter=get_is_time_elapsed),
+        Parameter('log_size', converter=int),
+        Parameter('remote_tags', converter=strip_split),
+        Parameter('included_local_tags', converter=strip_split),
+        Parameter('excluded_local_tags', converter=strip_split),
+    ]
+
     def __init__(self, name, remote_tags=None, included_local_tags=None, excluded_local_tags=None):
         super(RemoteRepository, self).__init__(name)
-        self.remote_tags = self._split_tags(remote_tags)
-        self.included_local_tags = self._split_tags(included_local_tags)
-        self.excluded_local_tags = self._split_tags(excluded_local_tags)
+        self.remote_tags = remote_tags or []
+        self.included_local_tags = included_local_tags or []
+        self.excluded_local_tags = excluded_local_tags or []
 
     def backup(self, local_repository):
         self.do_backup(local_repository)
@@ -24,11 +33,16 @@ class RemoteRepository(Repository):
 
 
 class GitRepository(RemoteRepository):
-    def __init__(self, name, remote_url='', git_executable='git',
-                 remote_tags=None, included_local_tags=None, excluded_local_tags=None):
-        super(GitRepository, self).__init__(name, remote_tags=remote_tags, included_local_tags=included_local_tags,
-                                            excluded_local_tags=excluded_local_tags)
+    parameters = RemoteRepository.parameters + [
+        Parameter('git_executable', converter=check_executable),
+        Parameter('remote_url'),
+        Parameter('remote_branch'),
+    ]
+
+    def __init__(self, name, remote_url='', remote_branch='master', git_executable='git', **kwargs):
+        super(GitRepository, self).__init__(name, **kwargs)
         self.remote_url = remote_url
+        self.remote_branch = remote_branch
         self.git_executable = git_executable
 
     def do_backup(self, local_repository):

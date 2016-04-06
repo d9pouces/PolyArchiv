@@ -14,8 +14,6 @@ Local repositories
 The configuration file of the local repository `myapp` is `/etc/nagiback/myapp.local`.
 It is a `.ini` file with a section `[global]` and a section for each data source.
 
-
-
 Remote repositories
 -------------------
 

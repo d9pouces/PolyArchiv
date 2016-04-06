@@ -14,6 +14,7 @@ import subprocess
 # noinspection PyProtectedMember
 from shutil import _ensure_directory
 
+from nagiback.conf import Parameter, bool_setting, check_directory, check_executable
 from nagiback.locals import LocalRepository
 
 __author__ = 'mgallet'
@@ -21,8 +22,10 @@ __author__ = 'mgallet'
 
 class Source(object):
     """base source class"""
+    parameters = []
 
-    def __init__(self, name, local_repository):
+    # noinspection PyUnusedLocal
+    def __init__(self, name, local_repository, **kwargs):
         self.name = name
         assert isinstance(local_repository, LocalRepository)
         self.local_repository = local_repository
@@ -35,8 +38,17 @@ class Source(object):
 class RSync(Source):
     """copy all files from the destination to the backup using rsync.
     """
+    parameters = Source.parameters + [
+        Parameter('source_path', converter=check_directory),
+        Parameter('destination_path'),
+        Parameter('rsync_executable', converter=check_executable),
+        Parameter('exclude'),
+        Parameter('include'),
+        Parameter('detect_hard_links', converter=bool_setting),
+    ]
+
     def __init__(self, name, local_repository, source_path='', destination_path='', rsync_executable='rsync',
-                 exclude='', include='', detect_hard_links=''):
+                 exclude='', include='', detect_hard_links='', **kwargs):
         """
         :param local_repository: local repository where files are stored
         :param source_path: absolute path of a directory to backup
@@ -48,7 +60,7 @@ class RSync(Source):
             a file (cf. the --include-from option from rsync)
         :param detect_hard_links: preserve hard links
         """
-        super(RSync, self).__init__(name, local_repository)
+        super(RSync, self).__init__(name, local_repository, **kwargs)
         self.source_path = source_path
         self.destination_path = destination_path
         self.rsync_executable = rsync_executable
@@ -75,6 +87,16 @@ class RSync(Source):
 
 
 class MySQL(Source):
+    parameters = Source.parameters + [
+        Parameter('host', converter=check_directory),
+        Parameter('port', converter=int),
+        Parameter('user'),
+        Parameter('password'),
+        Parameter('database'),
+        Parameter('destination_path'),
+        Parameter('dump_executable', converter=check_executable),
+    ]
+
     def __init__(self, name, local_repository, host='localhost', port='3306', user='', password='', database='',
                  destination_path='', dump_executable='mysqldump'):
         super(MySQL, self).__init__(name, local_repository)

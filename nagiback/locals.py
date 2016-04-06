@@ -6,7 +6,8 @@ import subprocess
 
 import datetime
 
-from nagiback.utils import Repository
+from nagiback.conf import Parameter, strip_split, check_directory, check_executable
+from nagiback.utils import Repository, get_is_time_elapsed
 
 __author__ = 'mgallet'
 
@@ -15,12 +16,30 @@ class LocalRepository(Repository):
     """Local repository, made of one or more sources.
      Each source is run and contribute to new
     """
-    def __init__(self, name, local_tags='', included_remote_tags='', excluded_remote_tags=''):
-        super(LocalRepository, self).__init__(name)
-        self.local_tags = self._split_tags(local_tags)
-        self.included_remote_tags = self._split_tags(included_remote_tags)
-        self.excluded_remote_tags = self._split_tags(excluded_remote_tags)
+    parameters = Repository.parameters + [
+        Parameter('frequency', converter=get_is_time_elapsed),
+        Parameter('log_size', converter=int),
+        Parameter('local_tags', converter=strip_split),
+        Parameter('included_remote_tags', converter=strip_split),
+        Parameter('excluded_remote_tags', converter=strip_split),
+    ]
+
+    def __init__(self, name, frequency=None, log_size=None, local_tags=None,
+                 included_remote_tags=None, excluded_remote_tags=None):
+        super(LocalRepository, self).__init__(name=name)
+        self.frequency = frequency
+        self.log_size = log_size
+        self.local_tags = local_tags or []
+        self.included_remote_tags = included_remote_tags or []
+        self.excluded_remote_tags = excluded_remote_tags or []
         self.sources = []
+
+    def backup(self):
+        """ perform the backup and log all errors
+        """
+        self.get_lock()
+        self.do_backup()
+        self.release_lock()
 
     def add_source(self, source):
         """
@@ -36,45 +55,64 @@ class LocalRepository(Repository):
         """
         raise NotImplementedError
 
-    def backup(self):
-        """ perform the backup and log all errors
-        """
-        self.do_backup()
-
     def do_backup(self):
+        raise NotImplementedError
+
+    def get_log(self):
+        raise NotImplementedError
+
+    def add_log(self):
+        raise NotImplementedError
+
+    def get_lock(self):
+        raise NotImplementedError
+
+    def release_lock(self):
         raise NotImplementedError
 
 
 class FileRepository(LocalRepository):
+    parameters = LocalRepository.parameters + [
+        Parameter('local_path', converter=check_directory)
+    ]
 
-    def __init__(self, name, local_path='.', local_tags='', included_remote_tags='', excluded_remote_tags=''):
-        super(FileRepository, self).__init__(name, local_tags=local_tags, included_remote_tags=included_remote_tags,
-                                             excluded_remote_tags=excluded_remote_tags)
+    def __init__(self, name, local_path='.', **kwargs):
+        super(FileRepository, self).__init__(name=name, **kwargs)
         self.local_path = local_path
 
     def do_backup(self):
-        if not os.path.isdir(self.local_path) and os.path.exists(self.local_path):
-            raise ValueError('%s exists and is not a directory' % self.local_path)
-        elif not os.path.isdir(self.local_path):
-            os.makedirs(self.local_path)
+        if not os.path.isdir(self._private_path) and os.path.exists(self._private_path):
+            raise ValueError('%s exists and is not a directory' % self._private_path)
+        elif not os.path.isdir(self._private_path):
+            os.makedirs(self._private_path)
         for source in self.sources:
             source.backup()
 
     def get_cwd(self):
         return self.local_path
 
+    @property
+    def _private_path(self):
+        return os.path.join(self.local_path, '.nagiback')
+
+    @property
+    def _lock_filepath(self):
+        return os.path.join(self._private_path, 'lock')
+
 
 class GitRepository(FileRepository):
-    def __init__(self, name, git_executable='git', local_path='.', local_tags='', included_remote_tags='',
-                 excluded_remote_tags=''):
-        super(GitRepository, self).__init__(name, local_path=local_path, local_tags=local_tags,
-                                            included_remote_tags=included_remote_tags,
-                                            excluded_remote_tags=excluded_remote_tags)
+    parameters = FileRepository.parameters + [
+        Parameter('git_executable', converter=check_executable),
+    ]
+
+    def __init__(self, name, git_executable='git', **kwargs):
+        super(GitRepository, self).__init__(name=name, **kwargs)
         self.git_executable = git_executable
 
     def do_backup(self):
         super(GitRepository, self).backup()
         end = datetime.datetime.now()
         subprocess.Popen([self.git_executable, 'init'], cwd=self.local_path)
+        subprocess.Popen([self.git_executable, 'commit', 'add', '.'], cwd=self.local_path)
         subprocess.Popen([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')],
                          cwd=self.local_path)

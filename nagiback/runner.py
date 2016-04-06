@@ -36,12 +36,8 @@ class Runner(object):
     def _get_args_from_parser(parser, section, sig):
         assert isinstance(sig, Signature)
         assert isinstance(parser, ConfigParser)
-        values = {}
         if any(x.kind == Parameter.VAR_KEYWORD for x in sig.parameters):
-            pass
-        for parameter in sig.parameters:
-            pass
-
+            return {arg_name: parser.get(section, arg_name) for arg_name in parser.options(section)}
         return {arg_name: parser.get(section, arg_name) for arg_name in sig.parameters
                 if parser.has_option(section, arg_name)}
 
