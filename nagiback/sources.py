@@ -11,8 +11,6 @@ from __future__ import unicode_literals
 
 import os
 import subprocess
-# noinspection PyProtectedMember
-from shutil import _ensure_directory
 
 from nagiback.conf import Parameter, bool_setting, check_directory, check_executable
 from nagiback.locals import LocalRepository
@@ -111,7 +109,8 @@ class MySQL(Source):
 
     def backup(self):
         filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
-        _ensure_directory(filename)
+        if not os.path.isdir(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
         cmd = self.dump_cmd_list()
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()

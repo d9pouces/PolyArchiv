@@ -140,6 +140,8 @@ def get_is_time_elapsed(fmt):
 
     :return:
     """
+    if not fmt:
+        fmt = ''
     if re.match('^\d+$', fmt):
         # number => number of seconds
         return lambda current_time, previous_time: previous_time is None or \
@@ -165,4 +167,4 @@ def get_is_time_elapsed(fmt):
     elif fmt == 'daily':
         return lambda current_time, previous_time: previous_time is None or \
                                                    (current_time - previous_time).total_seconds() > 86400
-    raise ValueError
+    return lambda current_time, previous_time: True

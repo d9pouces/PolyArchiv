@@ -55,10 +55,10 @@ class LocalRepository(Repository):
     def do_backup(self):
         raise NotImplementedError
 
-    def get_log(self):
+    def get_info(self, name, kind='local'):
         raise NotImplementedError
 
-    def add_log(self):
+    def set_info(self, name, kind='local'):
         raise NotImplementedError
 
     def get_lock(self):
@@ -69,6 +69,16 @@ class LocalRepository(Repository):
 
 
 class FileRepository(LocalRepository):
+    """
+    example structure:
+        dir/some/files
+        database-dump.sql
+        .nagiback/lock
+        .nagiback/local/global.json
+        .nagiback/sources/database.json
+        .nagiback/sources/files.json
+        .nagiback/remote/remote.json
+    """
     parameters = LocalRepository.parameters + [
         Parameter('local_path', converter=check_directory)
     ]
@@ -95,6 +105,18 @@ class FileRepository(LocalRepository):
     @property
     def _lock_filepath(self):
         return os.path.join(self._private_path, 'lock')
+
+    def get_info(self, name, kind='local'):
+        raise NotImplementedError
+
+    def set_info(self, name, kind='local'):
+        raise NotImplementedError
+
+    def get_lock(self):
+        raise NotImplementedError
+
+    def release_lock(self):
+        raise NotImplementedError
 
 
 class GitRepository(FileRepository):
