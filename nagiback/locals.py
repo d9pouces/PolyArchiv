@@ -6,7 +6,7 @@ import os
 import subprocess
 
 from nagiback.conf import Parameter, strip_split, check_directory, check_executable
-from nagiback.utils import Repository
+from nagiback.repository import Repository
 
 __author__ = 'mgallet'
 

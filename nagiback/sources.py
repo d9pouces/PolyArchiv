@@ -16,7 +16,7 @@ from shutil import _ensure_directory
 
 from nagiback.conf import Parameter, bool_setting, check_directory, check_executable
 from nagiback.locals import LocalRepository
-from nagiback.utils import ParameterizedObject
+from nagiback.repository import ParameterizedObject
 
 __author__ = 'mgallet'
 

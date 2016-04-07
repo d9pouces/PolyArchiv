@@ -60,9 +60,9 @@ class Parameter(object):
 
     def __init__(self, arg_name, option_name=None, converter=str, to_str=str_or_blank, help_str=None):
         """:param arg_name: the name of parameter passed to the engine
-        :type arg_name: `str`
+        :type arg_name: `str` or `unicode`
         :param option_name: option name in a .ini file
-        :type option_name: `str`
+        :type option_name: `str` or `unicode`
         :param converter: any callable that takes a text value and returns an object. Default to `str_or_none`
         :type converter: `callable`
         :param to_str: any callable that takes the Python value and that converts it to str
@@ -70,7 +70,7 @@ class Parameter(object):
         :type to_str: `callable`
         :param help_str: any text that can serve has help in documentation.
             If None, then `settings.%s_HELP % setting_name` will be used as help text.
-        :type help_str: `str`
+        :type help_str: `str` or `unicode`
         """
         self.arg_name = arg_name
         self.option_name = option_name or arg_name

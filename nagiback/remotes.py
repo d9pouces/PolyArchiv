@@ -4,8 +4,8 @@ from __future__ import unicode_literals
 import subprocess
 
 from nagiback.conf import Parameter, strip_split, check_executable
-from nagiback.utils import Repository, get_is_time_elapsed
 from nagiback.locals import GitRepository as LocalGitRepository
+from nagiback.repository import Repository
 
 __author__ = 'mgallet'
 

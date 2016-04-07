@@ -8,7 +8,8 @@ import os
 from nagiback.conf import Parameter
 from nagiback.locals import LocalRepository
 from nagiback.remotes import RemoteRepository
-from nagiback.utils import import_string, ParameterizedObject
+from nagiback.repository import ParameterizedObject
+from nagiback.utils import import_string
 
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility

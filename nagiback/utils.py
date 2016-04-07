@@ -166,20 +166,3 @@ def get_is_time_elapsed(fmt):
         return lambda current_time, previous_time: previous_time is None or \
                                                    (current_time - previous_time).total_seconds() > 86400
     raise ValueError
-
-
-class ParameterizedObject(object):
-    parameters = []
-
-    def __init__(self, name):
-        self.name = name
-
-
-class Repository(ParameterizedObject):
-    parameters = ParameterizedObject.parameters + [
-        Parameter('frequency', converter=get_is_time_elapsed),
-    ]
-
-    def __init__(self, name, frequency=None, ):
-        super(Repository, self).__init__(name)
-        self.frequency = frequency or get_is_time_elapsed('daily')
