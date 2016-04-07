@@ -79,4 +79,4 @@ class Parameter(object):
         self.help_str = help_str
 
     def __str__(self):
-        return self.option
+        return self.option_name

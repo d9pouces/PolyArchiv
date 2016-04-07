@@ -1,13 +1,10 @@
 # -*- coding=utf-8 -*-
 from __future__ import unicode_literals
 
-import re
-
-import sys
-
 import datetime
-
-from nagiback.conf import Parameter
+import os
+import re
+import sys
 
 __author__ = 'mgallet'
 
@@ -16,6 +13,22 @@ if sys.version_info[0] == 3:
 else:
     # noinspection PyUnresolvedReferences
     text_type = unicode
+
+
+def ensure_dir(dirname, parent=False):
+    """ensure that `dirname` exists and is a directory.
+
+    :param dirname:
+    :param parent: only check for the parent directory of `dirname`
+    :return:
+    """
+    if parent:
+        dirname = os.path.dirname(dirname)
+    if os.path.exists(dirname) and not os.path.isdir(dirname):
+        raise IOError('%s exists but is not a directory' % dirname)
+    elif os.path.isdir(dirname):
+        return
+    os.makedirs(dirname)
 
 
 def import_string(import_name, silent=False):

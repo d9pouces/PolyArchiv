@@ -33,6 +33,12 @@ class Source(ParameterizedObject):
         """Backup data corresponding to this source"""
         raise NotImplementedError
 
+    def get_info(self, name, kind='sources'):
+        return self.local_repository.get_info(name, kind=kind)
+
+    def set_info(self, info, name, kind='sources'):
+        return self.local_repository.set_info(info, name, kind=kind)
+
 
 class RSync(Source):
     """copy all files from the destination to the backup using rsync.

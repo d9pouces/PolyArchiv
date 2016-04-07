@@ -18,12 +18,12 @@ class RepositoryInfo(object):
     def __init__(self, last_state_valid=None, last_success=None, last_fail=None, success_count=0, fail_count=0,
                  total_size=0, last_message=''):
         self.last_state_valid = last_state_valid  # None, True, False
-        self.last_success = last_success
-        self.last_fail = last_fail
-        self.success_count = success_count
-        self.fail_count = fail_count
-        self.total_size = total_size
-        self.last_message = last_message
+        self.last_success = last_success  # expected to be filled by datetime.datetime.now()
+        self.last_fail = last_fail  # expected to be filled by datetime.datetime.now()
+        self.success_count = success_count  # number of successful backups
+        self.fail_count = fail_count  # number of failed backups
+        self.total_size = total_size  # total size (in bytes) of the backup
+        self.last_message = last_message  # should be "ok" for a success, or an informative message on error
 
     def to_dict(self):
         result = {x: getattr(self, x) for x in 'last_state_valid', 'success_count', 'fail_count', 'total_size',

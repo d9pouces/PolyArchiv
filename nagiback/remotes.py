@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 import subprocess
 
 from nagiback.conf import Parameter, strip_split, check_executable
-from nagiback.locals import GitRepository as LocalGitRepository
+from nagiback.locals import GitRepository as LocalGitRepository, LocalRepository
 from nagiback.repository import Repository
 
 __author__ = 'mgallet'
@@ -29,6 +29,14 @@ class RemoteRepository(Repository):
 
     def do_backup(self, local_repository):
         raise NotImplementedError
+
+    def get_info(self, local_repository, name, kind='remote'):
+        assert isinstance(local_repository, LocalRepository)
+        return local_repository.get_info(name, kind=kind)
+
+    def set_info(self, local_repository, info, name, kind='remote'):
+        assert isinstance(local_repository, LocalRepository)
+        return local_repository.set_info(info, name, kind=kind)
 
 
 class GitRepository(RemoteRepository):

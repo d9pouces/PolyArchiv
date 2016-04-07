@@ -1,12 +1,15 @@
 # -*- coding=utf-8 -*-
 from __future__ import unicode_literals
 
+import codecs
 import datetime
 import os
 import subprocess
 
 from nagiback.conf import Parameter, strip_split, check_directory, check_executable
-from nagiback.repository import Repository
+from nagiback.filelocks import lock
+from nagiback.repository import Repository, RepositoryInfo
+from nagiback.utils import ensure_dir, text_type
 
 __author__ = 'mgallet'
 
@@ -34,9 +37,25 @@ class LocalRepository(Repository):
     def backup(self):
         """ perform the backup and log all errors
         """
-        self.get_lock()
-        self.do_backup()
-        self.release_lock()
+        info = self.get_info(name=self.name)
+        assert isinstance(info, RepositoryInfo)
+        try:
+            lock_ = self.get_lock()
+            self.pre_source_backup()
+            for source in self.sources:
+                source.backup()
+            self.post_source_backup()
+            self.release_lock(lock_)
+            info.success_count += 1
+            info.last_state_valid = True
+            info.last_success = datetime.datetime.now()
+            info.last_message = 'ok'
+        except ValueError as e:
+            info.fail_count += 1
+            info.last_fail = datetime.datetime.now()
+            info.last_state_valid = False
+            info.last_message = text_type(e)
+        self.set_info(info, name=self.name)
 
     def add_source(self, source):
         """
@@ -52,19 +71,24 @@ class LocalRepository(Repository):
         """
         raise NotImplementedError
 
-    def do_backup(self):
+    def pre_source_backup(self):
+        raise NotImplementedError
+
+    def post_source_backup(self):
         raise NotImplementedError
 
     def get_info(self, name, kind='local'):
         raise NotImplementedError
 
-    def set_info(self, name, kind='local'):
+    def set_info(self, info, name, kind='local'):
         raise NotImplementedError
 
     def get_lock(self):
+        """Return a lock object, ensuring that only one instance of this repository is currently running"""
         raise NotImplementedError
 
-    def release_lock(self):
+    def release_lock(self, lock_):
+        """Release the lock object provided by the above method"""
         raise NotImplementedError
 
 
@@ -87,15 +111,14 @@ class FileRepository(LocalRepository):
         super(FileRepository, self).__init__(name=name, **kwargs)
         self.local_path = local_path
 
-    def do_backup(self):
-        if not os.path.isdir(self._private_path) and os.path.exists(self._private_path):
-            raise ValueError('%s exists and is not a directory' % self._private_path)
-        elif not os.path.isdir(self._private_path):
-            os.makedirs(self._private_path)
-        for source in self.sources:
-            source.backup()
+    def pre_source_backup(self):
+        ensure_dir(self.local_path)
+
+    def post_source_backup(self):
+        pass
 
     def get_cwd(self):
+        ensure_dir(self.local_path)
         return self.local_path
 
     @property
@@ -107,16 +130,33 @@ class FileRepository(LocalRepository):
         return os.path.join(self._private_path, 'lock')
 
     def get_info(self, name, kind='local'):
-        raise NotImplementedError
+        path = os.path.join(self._private_path, kind, '%s.json' % name)
+        ensure_dir(path, parent=True)
+        if os.path.isfile(path):
+            with codecs.open(path, 'r', encoding='utf-8') as fd:
+                content = fd.read()
+            return RepositoryInfo.from_str(content)
+        else:
+            return RepositoryInfo()
 
-    def set_info(self, name, kind='local'):
-        raise NotImplementedError
+    def set_info(self, info, name, kind='local'):
+        assert isinstance(info, RepositoryInfo)
+        path = os.path.join(self._private_path, kind, '%s.json' % name)
+        ensure_dir(path, parent=True)
+        content = info.to_str()
+        with codecs.open(path, 'w', encoding='utf-8') as fd:
+            fd.write(content)
 
     def get_lock(self):
-        raise NotImplementedError
+        lock_ = lock(self._lock_filepath)
+        if lock_.acquire(timeout=1):
+            return lock_
+        else:
+            raise ValueError('Unable to lock local repository. Check if no other backup is currently running or '
+                             'delete %s' % self._lock_filepath)
 
-    def release_lock(self):
-        raise NotImplementedError
+    def release_lock(self, lock_):
+        lock_.release()
 
 
 class GitRepository(FileRepository):
@@ -128,8 +168,7 @@ class GitRepository(FileRepository):
         super(GitRepository, self).__init__(name=name, **kwargs)
         self.git_executable = git_executable
 
-    def do_backup(self):
-        super(GitRepository, self).backup()
+    def post_source_backup(self):
         end = datetime.datetime.now()
         subprocess.Popen([self.git_executable, 'init'], cwd=self.local_path)
         subprocess.Popen([self.git_executable, 'commit', 'add', '.'], cwd=self.local_path)
