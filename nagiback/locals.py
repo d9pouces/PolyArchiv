@@ -54,7 +54,7 @@ class LocalRepository(Repository):
             info.last_state_valid = True
             info.last_success = datetime.datetime.now()
             info.last_message = 'ok'
-        except ValueError as e:
+        except Exception as e:
             info.fail_count += 1
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
