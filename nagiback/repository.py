@@ -59,9 +59,9 @@ class RepositoryInfo(object):
 
 class Repository(ParameterizedObject):
     parameters = ParameterizedObject.parameters + [
-        Parameter('frequency', converter=get_is_time_elapsed),
+        Parameter('check_out_of_date_backup', 'frequency', converter=get_is_time_elapsed),
     ]
 
-    def __init__(self, name, frequency=None, ):
+    def __init__(self, name, check_out_of_date_backup=None, ):
         super(Repository, self).__init__(name)
-        self.frequency = frequency or get_is_time_elapsed('daily')
+        self.check_out_of_date_backup = check_out_of_date_backup or get_is_time_elapsed(None)

@@ -39,6 +39,10 @@ class LocalRepository(Repository):
         """
         info = self.get_info(name=self.name)
         assert isinstance(info, RepositoryInfo)
+        if not self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success):
+            # the last previous backup is still valid
+            # => nothing to do
+            return True
         try:
             lock_ = self.get_lock()
             self.pre_source_backup()
@@ -56,6 +60,7 @@ class LocalRepository(Repository):
             info.last_state_valid = False
             info.last_message = text_type(e)
         self.set_info(info, name=self.name)
+        return info.last_state_valid
 
     def add_source(self, source):
         """
