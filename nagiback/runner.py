@@ -4,11 +4,11 @@ from __future__ import unicode_literals
 import fnmatch
 import glob
 import os
-from inspect import signature, Signature, Parameter
 
+from nagiback.conf import Parameter
 from nagiback.locals import LocalRepository
 from nagiback.remotes import RemoteRepository
-from nagiback.utils import import_string
+from nagiback.utils import import_string, ParameterizedObject
 
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
@@ -24,6 +24,7 @@ class Runner(object):
     """Run backup and restore operations for all specified configurations
     """
     global_section = 'global'
+    engine_option = 'engine'
 
     def __init__(self, config_directories):
         self.config_directories = config_directories
@@ -33,31 +34,34 @@ class Runner(object):
         self._find_remote_repositories()
 
     @staticmethod
-    def _get_args_from_parser(parser, section, sig):
-        assert isinstance(sig, Signature)
+    def _get_args_from_parser(parser, section, engine_cls):
         assert isinstance(parser, ConfigParser)
-        if any(x.kind == Parameter.VAR_KEYWORD for x in sig.parameters):
-            return {arg_name: parser.get(section, arg_name) for arg_name in parser.options(section)}
-        return {arg_name: parser.get(section, arg_name) for arg_name in sig.parameters
-                if parser.has_option(section, arg_name)}
+        assert issubclass(engine_cls, ParameterizedObject)
+        result = {}
+        for parameter in engine_cls.parameters:
+            assert isinstance(parameter, Parameter)
+            if not parser.has_option(section, parameter.option_name):
+                continue
+            result[parameter.arg_name] = parameter.converter(parser.get(section, parameter.option_name))
+        return result
 
     def _find_local_repositories(self):
         for path in self.config_directories:
             for config_file in glob.glob(os.path.join(path, '*.local')):
                 parser = ConfigParser()
                 parser.read([config_file])
-                engine = parser.get(self.global_section, 'engine', fallback='nagiback.locals.GitRepository')
+                engine = parser.get(self.global_section, self.engine_option, fallback='nagiback.locals.GitRepository')
                 engine_cls = import_string(engine)
-                sig = signature(engine_cls)
                 name = os.path.basename(config_file).rpartition('.')[0]
-                local = engine_cls(name, **self._get_args_from_parser(parser, self.global_section, sig))
+                parameters = self._get_args_from_parser(parser, self.global_section, engine_cls)
+                local = engine_cls(name, **parameters)
                 self.local_repositories[name] = local
                 for section in parser.sections():
                     if section == self.global_section or not parser.has_option(section, 'engine'):
                         continue
-                    engine_cls = import_string(parser.get(section, 'engine'))
-                    sig = signature(engine_cls)
-                    source = sig(section, local, **self._get_args_from_parser(parser, section, sig))
+                    engine_cls = import_string(parser.get(section, self.engine_option))
+                    parameters = self._get_args_from_parser(parser, section, engine_cls)
+                    source = engine_cls(section, local, **parameters)
                     local.add_source(source)
 
     def _find_remote_repositories(self):
@@ -65,11 +69,11 @@ class Runner(object):
             for config_file in glob.glob(os.path.join(path, '*.remote')):
                 parser = ConfigParser()
                 parser.read([config_file])
-                engine = parser.get(self.global_section, 'engine', fallback='nagiback.remotes.GitRepository')
+                engine = parser.get(self.global_section, self.engine_option, fallback='nagiback.remotes.GitRepository')
                 engine_cls = import_string(engine)
-                sig = signature(engine_cls)
                 name = os.path.basename(config_file).rpartition('.')[0]
-                remote = engine_cls(name, **self._get_args_from_parser(parser, self.global_section, sig))
+                parameters = self._get_args_from_parser(parser, self.global_section, engine_cls)
+                remote = engine_cls(name, **parameters)
                 self.remote_repositories[name] = remote
 
     @staticmethod

@@ -16,17 +16,18 @@ from shutil import _ensure_directory
 
 from nagiback.conf import Parameter, bool_setting, check_directory, check_executable
 from nagiback.locals import LocalRepository
+from nagiback.utils import ParameterizedObject
 
 __author__ = 'mgallet'
 
 
-class Source(object):
+class Source(ParameterizedObject):
     """base source class"""
-    parameters = []
+    parameters = ParameterizedObject.parameters + []
 
     # noinspection PyUnusedLocal
     def __init__(self, name, local_repository, **kwargs):
-        self.name = name
+        super(Source, self).__init__(name)
         assert isinstance(local_repository, LocalRepository)
         self.local_repository = local_repository
 
@@ -98,8 +99,8 @@ class MySQL(Source):
     ]
 
     def __init__(self, name, local_repository, host='localhost', port='3306', user='', password='', database='',
-                 destination_path='', dump_executable='mysqldump'):
-        super(MySQL, self).__init__(name, local_repository)
+                 destination_path='', dump_executable='mysqldump', **kwargs):
+        super(MySQL, self).__init__(name, local_repository, **kwargs)
         self.dump_executable = dump_executable
         self.host = host
         self.port = port
@@ -146,11 +147,8 @@ class MySQL(Source):
 
 class PostgresSQL(MySQL):
 
-    def __init__(self, name, local_repository, host='localhost', port='5432', user='', password='', database='',
-                 destination_path='', dump_executable='pg_dump'):
-        super(PostgresSQL, self).__init__(name, local_repository, host=host, port=port, user=user, password=password,
-                                          database=database, destination_path=destination_path,
-                                          dump_executable=dump_executable)
+    def __init__(self, name, local_repository, port='5432', dump_executable='pg_dump', **kwargs):
+        super(PostgresSQL, self).__init__(name, local_repository, port=port, dump_executable=dump_executable, **kwargs)
 
     def dump_cmd_list(self):
         command = [self.dump_executable, '--username', '%(USER)s']

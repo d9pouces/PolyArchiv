@@ -7,6 +7,8 @@ import sys
 
 import datetime
 
+from nagiback.conf import Parameter
+
 __author__ = 'mgallet'
 
 if sys.version_info[0] == 3:
@@ -166,9 +168,18 @@ def get_is_time_elapsed(fmt):
     raise ValueError
 
 
-class Repository(object):
+class ParameterizedObject(object):
     parameters = []
 
     def __init__(self, name):
         self.name = name
 
+
+class Repository(ParameterizedObject):
+    parameters = ParameterizedObject.parameters + [
+        Parameter('frequency', converter=get_is_time_elapsed),
+    ]
+
+    def __init__(self, name, frequency=None, ):
+        super(Repository, self).__init__(name)
+        self.frequency = frequency or get_is_time_elapsed('daily')

@@ -1,13 +1,12 @@
 # -*- coding=utf-8 -*-
 from __future__ import unicode_literals
 
+import datetime
 import os
 import subprocess
 
-import datetime
-
 from nagiback.conf import Parameter, strip_split, check_directory, check_executable
-from nagiback.utils import Repository, get_is_time_elapsed
+from nagiback.utils import Repository
 
 __author__ = 'mgallet'
 
@@ -17,17 +16,15 @@ class LocalRepository(Repository):
      Each source is run and contribute to new
     """
     parameters = Repository.parameters + [
-        Parameter('frequency', converter=get_is_time_elapsed),
         Parameter('log_size', converter=int),
         Parameter('local_tags', converter=strip_split),
         Parameter('included_remote_tags', converter=strip_split),
         Parameter('excluded_remote_tags', converter=strip_split),
     ]
 
-    def __init__(self, name, frequency=None, log_size=None, local_tags=None,
-                 included_remote_tags=None, excluded_remote_tags=None):
-        super(LocalRepository, self).__init__(name=name)
-        self.frequency = frequency
+    def __init__(self, name, log_size=None, local_tags=None, included_remote_tags=None, excluded_remote_tags=None,
+                 **kwargs):
+        super(LocalRepository, self).__init__(name=name, **kwargs)
         self.log_size = log_size
         self.local_tags = local_tags or []
         self.included_remote_tags = included_remote_tags or []
