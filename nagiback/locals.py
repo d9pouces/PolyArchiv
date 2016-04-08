@@ -5,6 +5,7 @@ import codecs
 import datetime
 import os
 import subprocess
+import re
 
 from nagiback.conf import Parameter, strip_split, check_directory, check_executable
 from nagiback.filelocks import lock
@@ -50,6 +51,7 @@ class LocalRepository(Repository):
                 source.backup()
             self.post_source_backup()
             self.release_lock(lock_)
+            info.total_size = self.get_repository_size()
             info.success_count += 1
             info.last_state_valid = True
             info.last_success = datetime.datetime.now()
@@ -82,6 +84,13 @@ class LocalRepository(Repository):
     def post_source_backup(self):
         raise NotImplementedError
 
+    def get_repository_size(self):
+        """ return the size of the repository (in bytes)
+        :return:
+        :rtype:
+        """
+        raise NotImplementedError
+
     def get_info(self, name, kind='local'):
         raise NotImplementedError
 
@@ -104,9 +113,7 @@ class FileRepository(LocalRepository):
         database-dump.sql
         .nagiback/lock
         .nagiback/local/global.json
-        .nagiback/sources/database.json
-        .nagiback/sources/files.json
-        .nagiback/remote/remote.json
+        .nagiback/remote/my_remote.json
     """
     parameters = LocalRepository.parameters + [
         Parameter('local_path', converter=check_directory)
@@ -159,6 +166,13 @@ class FileRepository(LocalRepository):
         else:
             raise ValueError('Unable to lock local repository. Check if no other backup is currently running or '
                              'delete %s' % self._lock_filepath)
+
+    def get_repository_size(self):
+        content = subprocess.check_output(['du', '-s'], cwd=self.local_path).decode()
+        matcher = re.match('^(\d+) \.$', content.strip())
+        if not matcher:
+            return None
+        return int(matcher.group(1))
 
     def release_lock(self, lock_):
         lock_.release()

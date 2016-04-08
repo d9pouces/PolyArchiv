@@ -1,5 +1,6 @@
 # -*- coding=utf-8 -*-
 from __future__ import unicode_literals
+import logging
 
 import subprocess
 
@@ -11,6 +12,7 @@ from nagiback.repository import Repository, RepositoryInfo
 from nagiback.utils import text_type
 
 __author__ = 'mgallet'
+logger = logging.getLogger('nagiback.remotes')
 
 
 class RemoteRepository(Repository):
@@ -30,7 +32,6 @@ class RemoteRepository(Repository):
     def backup(self, local_repository):
         """ perform the backup and log all errors
         """
-        self.do_backup(local_repository)
         info = self.get_info(local_repository, name=self.name)
         assert isinstance(info, RepositoryInfo)
         if not self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success):
@@ -56,10 +57,12 @@ class RemoteRepository(Repository):
     def do_backup(self, local_repository):
         raise NotImplementedError
 
+    # noinspection PyMethodMayBeStatic
     def get_info(self, local_repository, name, kind='remote'):
         assert isinstance(local_repository, LocalRepository)
         return local_repository.get_info(name, kind=kind)
 
+    # noinspection PyMethodMayBeStatic
     def set_info(self, local_repository, info, name, kind='remote'):
         assert isinstance(local_repository, LocalRepository)
         return local_repository.set_info(info, name, kind=kind)
@@ -90,10 +93,3 @@ class GitRepository(RemoteRepository):
             subprocess.check_call(cmd, cwd=local_repository.local_path)
         cmd = [self.git_executable, 'push', self.remote_branch]
         subprocess.check_call(cmd, cwd=local_repository.local_path)
-
-#
-#
-# class RsyncRepository(RemoteRepository):
-#     def __init__(self, name, remote_tags=None, included_local_tags=None, excluded_local_tags=None):
-#         super(GitRepository, self).__init__(name, remote_tags=remote_tags, included_local_tags=included_local_tags,
-#                                             excluded_local_tags=excluded_local_tags)

@@ -3,7 +3,9 @@ from __future__ import unicode_literals
 
 import fnmatch
 import glob
+import logging
 import os
+import errno
 
 from nagiback.conf import Parameter
 from nagiback.locals import LocalRepository
@@ -19,6 +21,7 @@ except ImportError:
     from ConfigParser import ConfigParser
 
 __author__ = 'mgallet'
+logger = logging.getLogger('nagiback.runner')
 
 
 class Runner(object):
@@ -33,6 +36,8 @@ class Runner(object):
         self.remote_repositories = {}
         self._find_local_repositories()
         self._find_remote_repositories()
+        self.local_config_files = []
+        self.remote_config_files = []
 
     @staticmethod
     def _get_args_from_parser(parser, section, engine_cls):
@@ -50,7 +55,13 @@ class Runner(object):
         for path in self.config_directories:
             for config_file in glob.glob(os.path.join(path, '*.local')):
                 parser = ConfigParser()
-                parser.read([config_file])
+                try:
+                    parser.read([config_file])
+                except IOError as e:
+                    if e.errno == errno.EACCES:
+                        continue
+                    raise
+                self.local_config_files.append(config_file)
                 engine = parser.get(self.global_section, self.engine_option, fallback='nagiback.locals.GitRepository')
                 engine_cls = import_string(engine)
                 name = os.path.basename(config_file).rpartition('.')[0]
@@ -69,7 +80,13 @@ class Runner(object):
         for path in self.config_directories:
             for config_file in glob.glob(os.path.join(path, '*.remote')):
                 parser = ConfigParser()
-                parser.read([config_file])
+                try:
+                    parser.read([config_file])
+                except IOError as e:
+                    if e.errno == errno.EACCES:
+                        continue
+                    raise
+                self.remote_config_files.append(config_file)
                 engine = parser.get(self.global_section, self.engine_option, fallback='nagiback.remotes.GitRepository')
                 engine_cls = import_string(engine)
                 name = os.path.basename(config_file).rpartition('.')[0]

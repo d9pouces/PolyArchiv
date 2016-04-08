@@ -8,6 +8,7 @@
 
 """
 from __future__ import unicode_literals
+import logging
 
 import os
 import subprocess
@@ -17,6 +18,7 @@ from nagiback.locals import LocalRepository
 from nagiback.repository import ParameterizedObject
 
 __author__ = 'mgallet'
+logger = logging.getLogger('nagiback.sources')
 
 
 class Source(ParameterizedObject):

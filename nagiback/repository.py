@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import json
 import datetime
+import logging
 from nagiback.conf import Parameter
 from nagiback.utils import get_is_time_elapsed, text_type
 
 __author__ = 'Matthieu Gallet'
+logger = logging.getLogger('nagiback')
 
 
 class ParameterizedObject(object):
