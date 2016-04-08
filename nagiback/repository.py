@@ -28,8 +28,8 @@ class RepositoryInfo(object):
         self.last_message = last_message  # should be "ok" for a success, or an informative message on error
 
     def to_dict(self):
-        result = {x: getattr(self, x) for x in 'last_state_valid', 'success_count', 'fail_count', 'total_size',
-                                               'last_message'}
+        result = {x: getattr(self, x) for x in ('last_state_valid', 'success_count', 'fail_count', 'total_size',
+                                                'last_message')}
         result['last_success'] = None
         result['last_fail'] = None
         if isinstance(self.last_success, datetime.datetime):

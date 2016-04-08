@@ -95,7 +95,7 @@ class RSync(Source):
 
 class MySQL(Source):
     parameters = Source.parameters + [
-        Parameter('host', converter=check_directory),
+        Parameter('host'),
         Parameter('port', converter=int),
         Parameter('user'),
         Parameter('password'),

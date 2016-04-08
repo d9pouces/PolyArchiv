@@ -5,59 +5,12 @@ Parse arguments and logger, use translated strings.
 from __future__ import unicode_literals
 
 import argparse
+import logging
+import logging.config
 import os
 import sys
-from nagiback.runner import Runner
 
 __author__ = 'mgallet'
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        },
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue'
-        },
-    },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'djangofloor.log.FloorAdminEmailHandler',
-            'min_interval': 600,
-        },
-        'stream': {
-            'level': 'WARNING',
-            'filters': ['require_debug_false'],
-            'class': 'logging.StreamHandler',
-        },
-        'debug': {
-            'level': 'DEBUG',
-            'filters': ['require_debug_true'],
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'django.request': {
-            'handlers': [
-                'stream',
-                'mail_admins',
-            ],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'djangofloor.signals': {
-            'handlers': [
-                'debug',
-                ],
-            'level': 'DEBUG',
-            'propagate': False,
-        }
-    }
-}
 
 
 def main():
@@ -74,27 +27,53 @@ def main():
         path_components = ['', 'etc']
     elif 'bin' in path_components:
         # noinspection PyTypeChecker
-        path_components = path_components[:path_components.index('bin')] + ['etc']
+        path_components = path_components[:path_components.index('bin')] + ['etc', 'nagiback']
     else:
         path_components = ['config']
-    config_dir = os.path.join(*path_components)
+
+    log_config = {
+                     'version': 1,
+                     'disable_existing_loggers': True,
+                     'formatters': {
+                         'colored': {'()': 'colorlog.ColoredFormatter',
+                                     'format': "%(log_color)s%(message)s%(reset)s"}
+                     },
+                     'handlers': {
+                         'stream': {'level': 'ERROR', 'class': 'logging.StreamHandler', 'formatter': 'colored', },
+                     },
+                     'loggers': {
+                         'nagiback': {'handlers': ['stream', ], 'level': 'DEBUG', 'propagate': False, },
+                     },
+                 }
+
+    config_dir = os.path.sep.join(path_components)
     parser = argparse.ArgumentParser(description='Backup data from multiple sources')
     parser.add_argument('-v', '--verbose', action='store_true', help='print more messages', default=False)
     parser.add_argument('-n', '--nagios', action='store_true', help='Nagios-compatible output', default=False)
-    parser.add_argument('--only-locals', nargs='+', help='limit to these local tags')
-    parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags')
-    parser.add_argument('--config', default=config_dir, help='config dir')
+    parser.add_argument('--only-locals', nargs='+', help='limit to these local tags', default=[])
+    parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
+    parser.add_argument('--config', '-C', default=config_dir, help='config dir')
     parser.add_argument('command', help='backup|show|restore')
     args = parser.parse_args()
-    print(args)
-    runner = Runner(args.config)
     command = args.command
+    print(args)
+    if args.verbose:
+        log_config['handlers']['stream']['level'] = 'DEBUG'
+    logging.config.dictConfig(log_config)
+    logger = logging.getLogger('nagiback.runner')
+    from nagiback.runner import Runner
     if command == 'backup':
-        pass
+        runner = Runner([args.config])
     elif command == 'restore':
-        pass
+        runner = Runner([args.config])
     elif command == 'show':
-        pass
+        logger.info('Configuration directory: %s' % args.config)
+        logger.debug('debug')
+        logger.info('info')
+        logger.warning('warning')
+        logger.error('error')
+        logger.critical('critical')
+        runner = Runner([args.config])
     return_code = 0  # 0 = success, != 0 = error
     # complete this function
     return return_code
@@ -102,4 +81,5 @@ def main():
 
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod()

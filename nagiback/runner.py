@@ -6,6 +6,7 @@ import glob
 import logging
 import os
 import errno
+import pwd
 
 from nagiback.conf import Parameter
 from nagiback.locals import LocalRepository
@@ -34,65 +35,71 @@ class Runner(object):
         self.config_directories = config_directories
         self.local_repositories = {}
         self.remote_repositories = {}
-        self._find_local_repositories()
-        self._find_remote_repositories()
         self.local_config_files = []
         self.remote_config_files = []
+        self._find_local_repositories()
+        self._find_remote_repositories()
 
     @staticmethod
-    def _get_args_from_parser(parser, section, engine_cls):
+    def _get_args_from_parser(config_file, parser, section, engine_cls):
         assert isinstance(parser, ConfigParser)
         assert issubclass(engine_cls, ParameterizedObject)
         result = {}
         for parameter in engine_cls.parameters:
             assert isinstance(parameter, Parameter)
-            if not parser.has_option(section, parameter.option_name):
+            option = parameter.option_name
+            if not parser.has_option(section, option):
                 continue
-            result[parameter.arg_name] = parameter.converter(parser.get(section, parameter.option_name))
+            value = parser.get(section, option)
+            try:
+                result[parameter.arg_name] = parameter.converter(value)
+            except ValueError as e:
+                logger.critical('Error in %s, section [%s], value %s: %s' % (config_file, section, option, value))
+                raise e
         return result
 
-    def _find_local_repositories(self):
+    def _iter_config_parsers(self, pattern):
         for path in self.config_directories:
-            for config_file in glob.glob(os.path.join(path, '*.local')):
+            for config_file in glob.glob(os.path.join(path, pattern)):
                 parser = ConfigParser()
                 try:
+                    open(config_file, 'rb').read(1)
                     parser.read([config_file])
                 except IOError as e:
                     if e.errno == errno.EACCES:
+                        username = pwd.getpwuid(os.getuid())[0]
+                        logger.debug('%s is ignored because user %s cannot read it' % (config_file, username))
                         continue
                     raise
-                self.local_config_files.append(config_file)
-                engine = parser.get(self.global_section, self.engine_option, fallback='nagiback.locals.GitRepository')
-                engine_cls = import_string(engine)
-                name = os.path.basename(config_file).rpartition('.')[0]
-                parameters = self._get_args_from_parser(parser, self.global_section, engine_cls)
-                local = engine_cls(name, **parameters)
-                self.local_repositories[name] = local
-                for section in parser.sections():
-                    if section == self.global_section or not parser.has_option(section, 'engine'):
-                        continue
-                    engine_cls = import_string(parser.get(section, self.engine_option))
-                    parameters = self._get_args_from_parser(parser, section, engine_cls)
-                    source = engine_cls(section, local, **parameters)
-                    local.add_source(source)
+                logger.debug('File %s added to the configuration' % config_file)
+                yield config_file, parser
+
+    def _find_local_repositories(self):
+        for config_file, parser in self._iter_config_parsers('*.local'):
+            self.local_config_files.append(config_file)
+            engine = parser.get(self.global_section, self.engine_option)
+            engine_cls = import_string(engine)
+            name = os.path.basename(config_file).rpartition('.')[0]
+            parameters = self._get_args_from_parser(config_file, parser, self.global_section, engine_cls)
+            local = engine_cls(name, **parameters)
+            self.local_repositories[name] = local
+            for section in parser.sections():
+                if section == self.global_section or not parser.has_option(section, 'engine'):
+                    continue
+                engine_cls = import_string(parser.get(section, self.engine_option))
+                parameters = self._get_args_from_parser(config_file, parser, section, engine_cls)
+                source = engine_cls(section, local, **parameters)
+                local.add_source(source)
 
     def _find_remote_repositories(self):
-        for path in self.config_directories:
-            for config_file in glob.glob(os.path.join(path, '*.remote')):
-                parser = ConfigParser()
-                try:
-                    parser.read([config_file])
-                except IOError as e:
-                    if e.errno == errno.EACCES:
-                        continue
-                    raise
-                self.remote_config_files.append(config_file)
-                engine = parser.get(self.global_section, self.engine_option, fallback='nagiback.remotes.GitRepository')
-                engine_cls = import_string(engine)
-                name = os.path.basename(config_file).rpartition('.')[0]
-                parameters = self._get_args_from_parser(parser, self.global_section, engine_cls)
-                remote = engine_cls(name, **parameters)
-                self.remote_repositories[name] = remote
+        for config_file, parser in self._iter_config_parsers('*.remote'):
+            self.remote_config_files.append(config_file)
+            engine = parser.get(self.global_section, self.engine_option)
+            engine_cls = import_string(engine)
+            name = os.path.basename(config_file).rpartition('.')[0]
+            parameters = self._get_args_from_parser(config_file, parser, self.global_section, engine_cls)
+            remote = engine_cls(name, **parameters)
+            self.remote_repositories[name] = remote
 
     @staticmethod
     def can_associate(local, remote):

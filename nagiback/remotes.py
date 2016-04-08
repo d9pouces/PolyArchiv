@@ -25,7 +25,7 @@ class RemoteRepository(Repository):
 
     def __init__(self, name, remote_tags=None, included_local_tags=None, excluded_local_tags=None, **kwargs):
         super(RemoteRepository, self).__init__(name, **kwargs)
-        self.remote_tags = remote_tags or []
+        self.remote_tags = ['remote'] if remote_tags is None else remote_tags
         self.included_local_tags = included_local_tags or []
         self.excluded_local_tags = excluded_local_tags or []
 
