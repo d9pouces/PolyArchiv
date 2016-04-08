@@ -11,6 +11,54 @@ from nagiback.runner import Runner
 
 __author__ = 'mgallet'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse'
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue'
+        },
+    },
+    'handlers': {
+        'mail_admins': {
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+            'class': 'djangofloor.log.FloorAdminEmailHandler',
+            'min_interval': 600,
+        },
+        'stream': {
+            'level': 'WARNING',
+            'filters': ['require_debug_false'],
+            'class': 'logging.StreamHandler',
+        },
+        'debug': {
+            'level': 'DEBUG',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': [
+                'stream',
+                'mail_admins',
+            ],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'djangofloor.signals': {
+            'handlers': [
+                'debug',
+                ],
+            'level': 'DEBUG',
+            'propagate': False,
+        }
+    }
+}
+
 
 def main():
     """Main function, intended for use as command line executable.
