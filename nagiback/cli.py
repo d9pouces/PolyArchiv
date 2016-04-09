@@ -31,20 +31,10 @@ def main():
     else:
         path_components = ['config']
 
-    log_config = {
-                     'version': 1,
-                     'disable_existing_loggers': True,
-                     'formatters': {
-                         'colored': {'()': 'colorlog.ColoredFormatter',
-                                     'format': "%(log_color)s%(message)s%(reset)s"}
-                     },
-                     'handlers': {
-                         'stream': {'level': 'ERROR', 'class': 'logging.StreamHandler', 'formatter': 'colored', },
-                     },
-                     'loggers': {
-                         'nagiback': {'handlers': ['stream', ], 'level': 'DEBUG', 'propagate': False, },
-                     },
-                 }
+    log = {'version': 1, 'disable_existing_loggers': True,
+           'formatters': {'color': {'()': 'colorlog.ColoredFormatter', 'format': "%(log_color)s%(message)s%(reset)s"}},
+           'handlers': {'stream': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'color'}},
+           'loggers': {'nagiback': {'handlers': ['stream', ], 'level': 'ERROR', 'propagate': False}}}
 
     config_dir = os.path.sep.join(path_components)
     parser = argparse.ArgumentParser(description='Backup data from multiple sources')
@@ -58,9 +48,9 @@ def main():
     command = args.command
     print(args)
     if args.verbose:
-        log_config['handlers']['stream']['level'] = 'DEBUG'
-    logging.config.dictConfig(log_config)
-    logger = logging.getLogger('nagiback.runner')
+        log['loggers']['nagiback']['level'] = 'DEBUG'
+    logging.config.dictConfig(log)
+    logger = logging.getLogger('nagiback.cli')
     from nagiback.runner import Runner
     if command == 'backup':
         runner = Runner([args.config])
@@ -68,12 +58,12 @@ def main():
         runner = Runner([args.config])
     elif command == 'show':
         logger.info('Configuration directory: %s' % args.config)
-        logger.debug('debug')
-        logger.info('info')
-        logger.warning('warning')
-        logger.error('error')
-        logger.critical('critical')
         runner = Runner([args.config])
+        if not args.verbose:
+            logger.error('Display more info with --verbose')
+        runner.apply_commands(lambda x: logger.info('local repository %s selected' % x.name),
+                              lambda x, y: logger.info('remote repository %s on local %s selected' % (y.name, x.name)),
+                              only_locals=args.only_locals, only_remotes=args.only_remotes)
     return_code = 0  # 0 = success, != 0 = error
     # complete this function
     return return_code

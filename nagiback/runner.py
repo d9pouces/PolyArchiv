@@ -103,7 +103,10 @@ class Runner(object):
 
     @staticmethod
     def can_associate(local, remote):
-        """Return True if the remote can be associated to the local repository"""
+        """Return True if the remote can be associated to the local repository
+        :param local:
+        :param remote:
+        """
         assert isinstance(local, LocalRepository)
         assert isinstance(remote, RemoteRepository)
         for local_tag in local.local_tags:
@@ -124,6 +127,35 @@ class Runner(object):
                     return True
         return False
 
+    def apply_commands(self, local_command, remote_command, only_locals=None, only_remotes=None):
+        """ Apply the given commands to the available local and remote repositories.
+
+        :param local_command: callable(local_repository) -> None
+        :type local_command: `callable`
+        :param remote_command: callable(local_repository, remote_repository) -> None
+        :type remote_command: `callable`
+        :param only_locals:
+        :type only_locals:
+        :param only_remotes:
+        :type only_remotes:
+        :return:
+        :rtype:
+        """
+        for local_name, local in self.local_repositories.items():
+            if only_locals and local_name not in only_locals:
+                continue
+            assert isinstance(local, LocalRepository)
+            if local_command is not None:
+                local_command(local)
+            if remote_command is None:
+                continue
+            for remote_name, remote in self.remote_repositories.items():
+                if only_remotes and remote_name not in only_remotes:
+                    continue
+                assert isinstance(remote, RemoteRepository)
+                if self.can_associate(local, remote):
+                    remote_command(local, remote)
+
     def backup(self, only_locals=None, only_remotes=None):
         """Run a backup operation
 
@@ -133,14 +165,5 @@ class Runner(object):
         :type only_remotes: :class:`list` of `str`
         :return:
         """
-        for local_name, local in self.local_repositories.items():
-            if only_locals and local_name not in only_locals:
-                continue
-            assert isinstance(local, LocalRepository)
-            local.backup()
-            for remote_name, remote in self.remote_repositories.items():
-                if only_remotes and remote_name not in only_remotes:
-                    continue
-                assert isinstance(remote, RemoteRepository)
-                if self.can_associate(local, remote):
-                    remote.backup(local)
+        self.apply_commands(lambda local: local.backup(), lambda local, remote: remote.backup(local),
+                            only_locals=only_locals, only_remotes=only_remotes)

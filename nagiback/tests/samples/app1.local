@@ -1,7 +1,7 @@
 [global]
 engine=nagiback.locals.GitRepository
 local_path=/tmp/backups/app1
-local_tags=
+local_tags=local
 included_remote_tags=*
 excluded_remote_tags=
 
