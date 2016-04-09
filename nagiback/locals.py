@@ -38,7 +38,7 @@ class LocalRepository(Repository):
     def backup(self):
         """ perform the backup and log all errors
         """
-        info = self.get_info(name=self.name)
+        info = self.get_info()
         assert isinstance(info, RepositoryInfo)
         if not self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success):
             # the last previous backup is still valid
@@ -61,8 +61,11 @@ class LocalRepository(Repository):
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
             info.last_message = text_type(e)
-        self.set_info(info, name=self.name)
+        self.set_info(info)
         return info.last_state_valid
+
+    def restore(self):
+        raise NotImplementedError
 
     def add_source(self, source):
         """
@@ -91,10 +94,10 @@ class LocalRepository(Repository):
         """
         raise NotImplementedError
 
-    def get_info(self, name, kind='local'):
+    def get_info(self, name=None, kind='local'):
         raise NotImplementedError
 
-    def set_info(self, info, name, kind='local'):
+    def set_info(self, info, name=None, kind='local'):
         raise NotImplementedError
 
     def get_lock(self):
@@ -141,7 +144,9 @@ class FileRepository(LocalRepository):
     def _lock_filepath(self):
         return os.path.join(self._private_path, 'lock')
 
-    def get_info(self, name, kind='local'):
+    def get_info(self, name=None, kind='local'):
+        if name is None:
+            name = self.name
         path = os.path.join(self._private_path, kind, '%s.json' % name)
         ensure_dir(path, parent=True)
         if os.path.isfile(path):
@@ -151,7 +156,9 @@ class FileRepository(LocalRepository):
         else:
             return RepositoryInfo()
 
-    def set_info(self, info, name, kind='local'):
+    def set_info(self, info, name=None, kind='local'):
+        if name is None:
+            name = self.name
         assert isinstance(info, RepositoryInfo)
         path = os.path.join(self._private_path, kind, '%s.json' % name)
         ensure_dir(path, parent=True)

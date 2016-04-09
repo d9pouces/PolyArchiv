@@ -11,7 +11,7 @@ import pwd
 from nagiback.conf import Parameter
 from nagiback.locals import LocalRepository
 from nagiback.remotes import RemoteRepository
-from nagiback.repository import ParameterizedObject
+from nagiback.repository import ParameterizedObject, RepositoryInfo
 from nagiback.utils import import_string
 
 try:
@@ -187,6 +187,25 @@ class Runner(object):
         :type only_remotes: :class:`list` of `str`
         :return:
         """
-        self.apply_commands(local_command=lambda local: local.restore(),
-                            local_remote_command=lambda local, remote: remote.restore(local),
-                            only_locals=only_locals, only_remotes=only_remotes)
+        for local_name, local in self.local_repositories.items():
+            assert isinstance(local, LocalRepository)
+            if only_locals and local_name not in only_locals:
+                continue
+            best_remote_date = None
+            best_remote = None
+            for remote_name, remote in self.remote_repositories.items():
+                assert isinstance(remote, RemoteRepository)
+                if only_remotes and remote_name not in only_remotes:
+                    continue
+                elif not self.can_associate(local, remote):
+                    continue
+                remote_info = remote.get_info(local)
+                assert isinstance(remote_info, RepositoryInfo)
+                if remote_info.last_success is None:
+                    continue
+                if best_remote_date is None or best_remote_date < remote_info.last_success:
+                    best_remote = remote
+                    best_remote_date = remote_info.last_success
+            if best_remote is not None:
+                best_remote.restore(local)
+            local.restore()

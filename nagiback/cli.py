@@ -46,7 +46,6 @@ def main():
     parser.add_argument('command', help='backup|show|restore')
     args = parser.parse_args()
     command = args.command
-    print(args)
     if args.verbose:
         log['loggers']['nagiback']['level'] = 'DEBUG'
     logging.config.dictConfig(log)
@@ -57,6 +56,7 @@ def main():
         runner.backup(args.only_locals, args.only_remotes)
     elif command == 'restore':
         runner = Runner([args.config])
+        runner.restore(args.only_locals, args.only_remotes)
     elif command == 'show':
         from nagiback.show import show_local_repository, show_remote_local_repository, show_remote_repository
         logger.info('configuration directory: %s' % args.config)

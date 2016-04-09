@@ -32,7 +32,7 @@ class RemoteRepository(Repository):
     def backup(self, local_repository):
         """ perform the backup and log all errors
         """
-        info = self.get_info(local_repository, name=self.name)
+        info = self.get_info(local_repository)
         assert isinstance(info, RepositoryInfo)
         if not self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success):
             # the last previous backup is still valid
@@ -51,21 +51,28 @@ class RemoteRepository(Repository):
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
             info.last_message = text_type(e)
-        self.set_info(local_repository, info, name=self.name)
+        self.set_info(local_repository, info)
         return info.last_state_valid
 
     def do_backup(self, local_repository):
         raise NotImplementedError
 
+    def restore(self, local_repository):
+        raise NotImplementedError
+
     # noinspection PyMethodMayBeStatic
-    def get_info(self, local_repository, name, kind='remote'):
+    def get_info(self, local_repository, name=None, kind='remote'):
         assert isinstance(local_repository, LocalRepository)
+        if name is None:
+            name = self.name
         return local_repository.get_info(name, kind=kind)
 
     # noinspection PyMethodMayBeStatic
-    def set_info(self, local_repository, info, name, kind='remote'):
+    def set_info(self, local_repository, info, name=None, kind='remote'):
         assert isinstance(local_repository, LocalRepository)
-        return local_repository.set_info(info, name, kind=kind)
+        if name is None:
+            name = self.name
+        return local_repository.set_info(info, name=name, kind=kind)
 
 
 class GitRepository(RemoteRepository):

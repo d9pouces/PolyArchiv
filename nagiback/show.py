@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
+import datetime
 from nagiback.conf import Parameter
 from nagiback.locals import LocalRepository
 from nagiback.remotes import RemoteRepository
+from nagiback.repository import RepositoryInfo
 from nagiback.sources import Source
 
 __author__ = 'Matthieu Gallet'
@@ -22,6 +24,19 @@ def show_local_repository(local_repository):
         logger.error('source %s added to %s' % (source.name, local_repository.name))
         engine = '%s.%s' % (source.__class__.__module__, source.__class__.__name__)
         logger.debug('engine: %s' % engine)
+    info = local_repository.get_info()
+    assert isinstance(info, RepositoryInfo)
+    if info.last_success is None:
+        logger.critical('No successful local backup')
+    else:
+        now = datetime.datetime.now()
+        out_of_date = local_repository.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
+        if out_of_date:
+            logger.critical('Last local backup is out of date: %s' % info.last_success)
+        else:
+            logger.info('Last local backup is recent enough: %s' % info.last_success)
+    if info.last_state_valid is False:
+        logger.critical('The last backup has failed. %s' % info.last_message)
 
 
 def show_remote_repository(remote_repository):
@@ -38,3 +53,16 @@ def show_remote_local_repository(local_repository, remote_repository):
     logger.debug('====================================================')
     logger.error('remote repository %s selected on local repository %s' % (remote_repository.name,
                                                                            local_repository.name))
+    info = remote_repository.get_info(local_repository)
+    assert isinstance(info, RepositoryInfo)
+    if info.last_success is None:
+        logger.critical('No successful remote backup for %s' % remote_repository.name)
+    else:
+        now = datetime.datetime.now()
+        out_of_date = local_repository.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
+        if out_of_date:
+            logger.critical('Last local backup is out of date on %s: %s' % (remote_repository.name, info.last_success))
+        else:
+            logger.info('Last local backup is recent enough on %s: %s' % (remote_repository.name, info.last_success))
+    if info.last_state_valid is False:
+        logger.critical('The last backup has failed on %s. %s' % (remote_repository.name, info.last_message))
