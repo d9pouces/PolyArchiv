@@ -127,34 +127,43 @@ class Runner(object):
                     return True
         return False
 
-    def apply_commands(self, local_command, remote_command, only_locals=None, only_remotes=None):
+    def apply_commands(self, local_command=None, remote_command=None, local_remote_command=None,
+                       only_locals=None, only_remotes=None):
         """ Apply the given commands to the available local and remote repositories.
 
         :param local_command: callable(local_repository) -> None
         :type local_command: `callable`
-        :param remote_command: callable(local_repository, remote_repository) -> None
+        :param local_remote_command: callable(local_repository, remote_repository) -> None
+        :type local_remote_command: `callable`
+        :param remote_command: callable(remote_repository) -> None
         :type remote_command: `callable`
-        :param only_locals:
-        :type only_locals:
-        :param only_remotes:
-        :type only_remotes:
+        :param only_locals: list of selected local repositories (all if not specified)
+        :type only_locals: :class:`list`
+        :param only_remotes: list of selected remote repositories (all if not specified)
+        :type only_remotes: :class:`list`
         :return:
         :rtype:
         """
+        if remote_command:
+            for remote_name, remote in self.remote_repositories.items():
+                if only_remotes and remote_name not in only_remotes:
+                    continue
+                assert isinstance(remote, RemoteRepository)
+                remote_command(remote)
         for local_name, local in self.local_repositories.items():
             if only_locals and local_name not in only_locals:
                 continue
             assert isinstance(local, LocalRepository)
             if local_command is not None:
                 local_command(local)
-            if remote_command is None:
+            if local_remote_command is None:
                 continue
             for remote_name, remote in self.remote_repositories.items():
                 if only_remotes and remote_name not in only_remotes:
                     continue
                 assert isinstance(remote, RemoteRepository)
                 if self.can_associate(local, remote):
-                    remote_command(local, remote)
+                    local_remote_command(local, remote)
 
     def backup(self, only_locals=None, only_remotes=None):
         """Run a backup operation
@@ -165,5 +174,19 @@ class Runner(object):
         :type only_remotes: :class:`list` of `str`
         :return:
         """
-        self.apply_commands(lambda local: local.backup(), lambda local, remote: remote.backup(local),
+        self.apply_commands(local_command=lambda local: local.backup(),
+                            local_remote_command=lambda local, remote: remote.backup(local),
+                            only_locals=only_locals, only_remotes=only_remotes)
+
+    def restore(self, only_locals=None, only_remotes=None):
+        """Run a backup operation
+
+        :param only_locals: limit to the selected local repositories
+        :type only_locals: :class:`list` of `str`
+        :param only_remotes: limit to the selected remote repositories
+        :type only_remotes: :class:`list` of `str`
+        :return:
+        """
+        self.apply_commands(local_command=lambda local: local.restore(),
+                            local_remote_command=lambda local, remote: remote.restore(local),
                             only_locals=only_locals, only_remotes=only_remotes)

@@ -54,15 +54,17 @@ def main():
     from nagiback.runner import Runner
     if command == 'backup':
         runner = Runner([args.config])
+        runner.backup(args.only_locals, args.only_remotes)
     elif command == 'restore':
         runner = Runner([args.config])
     elif command == 'show':
-        logger.info('Configuration directory: %s' % args.config)
+        from nagiback.show import show_local_repository, show_remote_local_repository, show_remote_repository
+        logger.info('configuration directory: %s' % args.config)
         runner = Runner([args.config])
         if not args.verbose:
-            logger.error('Display more info with --verbose')
-        runner.apply_commands(lambda x: logger.info('local repository %s selected' % x.name),
-                              lambda x, y: logger.info('remote repository %s on local %s selected' % (y.name, x.name)),
+            logger.error('display more info with --verbose')
+        runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
+                              local_remote_command=show_remote_local_repository,
                               only_locals=args.only_locals, only_remotes=args.only_remotes)
     return_code = 0  # 0 = success, != 0 = error
     # complete this function
