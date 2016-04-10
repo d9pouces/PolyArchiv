@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import codecs
 import datetime
+import logging
 import os
 import subprocess
 import re
@@ -13,6 +14,7 @@ from nagiback.repository import Repository, RepositoryInfo
 from nagiback.utils import ensure_dir, text_type
 
 __author__ = 'mgallet'
+logger = logging.getLogger('nagiback.sources')
 
 
 class LocalRepository(Repository):
@@ -43,6 +45,7 @@ class LocalRepository(Repository):
         if not self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success):
             # the last previous backup is still valid
             # => nothing to do
+            logger.debug('last backup (%s) is still valid. No backup to do.' % info.last_success)
             return True
         try:
             lock_ = self.get_lock()
@@ -171,14 +174,15 @@ class FileRepository(LocalRepository):
         if lock_.acquire(timeout=1):
             return lock_
         else:
-            raise ValueError('Unable to lock local repository. Check if no other backup is currently running or '
-                             'delete %s' % self._lock_filepath)
+            logger.error('Unable to lock local repository. Check if no other backup is currently running or '
+                         'delete %s' % self._lock_filepath)
+            raise ValueError
 
     def get_repository_size(self):
         content = subprocess.check_output(['du', '-s'], cwd=self.local_path).decode()
         matcher = re.match('^(\d+) \.$', content.strip())
         if not matcher:
-            return None
+            return 0
         return int(matcher.group(1))
 
     def release_lock(self, lock_):
@@ -196,7 +200,12 @@ class GitRepository(FileRepository):
 
     def post_source_backup(self):
         end = datetime.datetime.now()
-        subprocess.Popen([self.git_executable, 'init'], cwd=self.local_path)
-        subprocess.Popen([self.git_executable, 'commit', 'add', '.'], cwd=self.local_path)
-        subprocess.Popen([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')],
-                         cwd=self.local_path)
+        cmd = [self.git_executable, 'init']
+        logger.debug(' '.join(cmd))
+        subprocess.Popen(cmd, cwd=self.local_path)
+        cmd = [self.git_executable, 'commit', 'add', '.']
+        logger.debug(' '.join(cmd))
+        subprocess.Popen(cmd, cwd=self.local_path)
+        cmd = [self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')]
+        logger.debug(' '.join(cmd))
+        subprocess.Popen(cmd, cwd=self.local_path)

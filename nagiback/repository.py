@@ -46,7 +46,7 @@ class RepositoryInfo(object):
             assert isinstance(kwargs[k], int)
         kwargs['last_message'] = data.get('last_message', '')
         assert isinstance(kwargs['last_message'], text_type)
-        for k in 'last_state_valid':
+        for k in ('last_state_valid', ):
             kwargs[k] = data.get(k)
             assert kwargs[k] is None or isinstance(kwargs[k], bool)
         return RepositoryInfo(**kwargs)
@@ -56,7 +56,8 @@ class RepositoryInfo(object):
 
     @classmethod
     def from_str(cls, text):
-        return cls.from_dict(json.loads(text))
+        data = json.loads(text)
+        return cls.from_dict(data)
 
 
 class Repository(ParameterizedObject):

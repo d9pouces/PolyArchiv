@@ -60,7 +60,9 @@ class Runner(object):
 
     def _iter_config_parsers(self, pattern):
         for path in self.config_directories:
+            count = 0
             for config_file in glob.glob(os.path.join(path, pattern)):
+                count += 1
                 parser = ConfigParser()
                 try:
                     open(config_file, 'rb').read(1)
@@ -71,8 +73,10 @@ class Runner(object):
                         logger.debug('%s is ignored because user %s cannot read it' % (config_file, username))
                         continue
                     raise
-                logger.debug('File %s added to the configuration' % config_file)
+                logger.debug('file %s added to the configuration' % config_file)
                 yield config_file, parser
+            if count == 0:
+                logger.debug('no %s file found in %s' % (pattern, path))
 
     def _find_local_repositories(self):
         for config_file, parser in self._iter_config_parsers('*.local'):
