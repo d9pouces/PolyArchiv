@@ -7,7 +7,7 @@ import errno
 __author__ = 'mgallet'
 
 
-class lock(object):
+class Lock(object):
     """Lock interprocess basé sur des fichiers
 
     :param filename: name of the lock file

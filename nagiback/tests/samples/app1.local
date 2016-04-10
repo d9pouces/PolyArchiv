@@ -1,29 +1,29 @@
 [global]
 engine=nagiback.locals.GitRepository
-local_path=/tmp/backups/app1
+local_path=/tmp/local
 local_tags=local
 included_remote_tags=*
 excluded_remote_tags=
 
 [source_1]
 engine=nagiback.sources.PostgresSQL
-host=
+host=localhost
 port=5432
-user=
-password=
-name=
+user=test
+password=testtest
+database=testdb
 destination_path=./postgres.sql
 
 [source_2]
 engine=nagiback.sources.MySQL
-host=
-port=5432
-user=
-password=
-name=
+host=localhost
+port=3306
+user=test
+password=testtest
+database=testdb
 destination_path=./mysql.sql
 
 [source_3]
 engine=nagiback.sources.RSync
-source_path=/tmp/app1/files
+source_path=/tmp/source/files
 destination_path=./files

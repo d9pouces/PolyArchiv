@@ -39,7 +39,7 @@ def main():
     config_dir = os.path.sep.join(path_components)
     parser = argparse.ArgumentParser(description='Backup data from multiple sources')
     parser.add_argument('-v', '--verbose', action='store_true', help='print more messages', default=False)
-    parser.add_argument('-n', '--nagios', action='store_true', help='Nagios-compatible output', default=False)
+    parser.add_argument('-n', '--nrpe', action='store_true', help='Nagios-compatible output', default=False)
     parser.add_argument('--only-locals', nargs='+', help='limit to these local tags', default=[])
     parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')

@@ -8,7 +8,7 @@ import subprocess
 import re
 
 from nagiback.conf import Parameter, strip_split, check_directory, check_executable
-from nagiback.filelocks import lock
+from nagiback.filelocks import Lock
 from nagiback.repository import Repository, RepositoryInfo
 from nagiback.utils import ensure_dir, text_type
 
@@ -167,7 +167,7 @@ class FileRepository(LocalRepository):
             fd.write(content)
 
     def get_lock(self):
-        lock_ = lock(self._lock_filepath)
+        lock_ = Lock(self._lock_filepath)
         if lock_.acquire(timeout=1):
             return lock_
         else:

@@ -90,7 +90,14 @@ class RSync(Source):
         dirname = os.path.join(self.local_repository.get_cwd(), self.destination_path)
         if not os.path.isdir(dirname):
             os.makedirs(dirname)
-        cmd += [self.source_path, dirname]
+        source = self.source_path
+        if not source.endswith(os.path.sep):
+            source += os.path.sep
+        if not dirname.endswith(os.path.sep):
+            dirname += os.path.sep
+        cmd += [source, dirname]
+        logger.info(' '.join(cmd))
+        subprocess.check_call(cmd)
 
 
 class MySQL(Source):
@@ -123,11 +130,12 @@ class MySQL(Source):
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()
         env.update(self.get_env())
+        logger.info(' '.join(cmd))
         if filename is not None:
             with open(filename, 'wb') as fd:
-                p = subprocess.Popen(cmd, env=env, stdout=fd)
+                p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=subprocess.PIPE)
         else:
-            p = subprocess.Popen(cmd, env=env)
+            p = subprocess.Popen(cmd, env=env, stderr=subprocess.PIPE)
         p.communicate()
 
     @property
@@ -139,7 +147,7 @@ class MySQL(Source):
         """ :return:
         :rtype: :class:`list` of :class:`str`
         """
-        command = [self.dump_executable, '--user', '%(USER)s', '--password', '%(PASSWORD)s']
+        command = [self.dump_executable, '--user', '%(USER)s', '--password=%(PASSWORD)s']
         if self.db_options.get('HOST'):
             command += ['--host', '%(HOST)s']
         if self.db_options.get('PORT'):
