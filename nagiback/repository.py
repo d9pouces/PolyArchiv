@@ -66,7 +66,12 @@ class RepositoryInfo(object):
 
 class Repository(ParameterizedObject):
     parameters = ParameterizedObject.parameters + [
-        Parameter('check_out_of_date_backup', 'frequency', converter=get_is_time_elapsed),
+        Parameter('check_out_of_date_backup', 'frequency', converter=get_is_time_elapsed,
+                  help_str='Frequency of backup operations. Can be an integer (number of seconds), '
+                           'monthly:d (at least the d-th day of each month, d = 0..28),\n'
+                           'weekly:d (the d-th day of each week, d = 0..6),\n'
+                           'weekly or daily (once a week or once a day),\n'
+                           'daily:h (the h-th hour of each day, h = 0..23)'),
     ]
 
     def __init__(self, name, check_out_of_date_backup=None, ):

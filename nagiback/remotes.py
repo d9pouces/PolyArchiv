@@ -24,7 +24,6 @@ logger = logging.getLogger('nagiback.remotes')
 
 class RemoteRepository(Repository):
     parameters = Repository.parameters + [
-        Parameter('log_size', converter=int),
         Parameter('remote_tags', converter=strip_split),
         Parameter('included_local_tags', converter=strip_split),
         Parameter('excluded_local_tags', converter=strip_split),
@@ -136,9 +135,9 @@ class GitRepository(RemoteRepository):
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
         cmd += [self.git_executable, 'push', self.remote_url, '+master:%s' % self.remote_branch]
-        logger.info(' '.join(cmd))
         if self.private_key and not self.remote_url.startswith('http'):
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (self.private_key, ' '.join(cmd))]
+        logger.info(' '.join(cmd))
         p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         stdout, stderr = p.communicate()
         if p.returncode != 0:
@@ -148,7 +147,45 @@ class GitRepository(RemoteRepository):
 
 
 class Rsync(RemoteRepository):
-    pass
+    parameters = RemoteRepository.parameters + [
+        Parameter('rsync_executable', converter=check_executable,
+                  help_str='path of the rsync executable (default: "rsync")'),
+        Parameter('remote_url', help_str='remote server and path (e.g. login:password@server:/foo/bar/'),
+        Parameter('keytab', converter=check_file),
+        Parameter('private_key', converter=check_file),
+    ]
+
+    def __init__(self, name, rsync_executable='tar', remote_url='', keytab=None, private_key=None, **kwargs):
+        super(Rsync, self).__init__(name, **kwargs)
+        self.rsync_executable = rsync_executable
+        self.remote_url = remote_url
+        self.keytab = keytab
+        self.private_key = private_key
+
+    def do_backup(self, local_repository):
+        assert isinstance(local_repository, FileRepository)
+        cmd = []
+        if self.keytab:
+            cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
+        cmd += [self.rsync_executable, '-az', '--delete', '-S']
+        local_path = local_repository.local_path
+        if not local_path.endswith(os.path.sep):
+            local_path += os.path.sep
+        remote_url = self.remote_url
+        if not remote_url.endswith(os.path.sep):
+            remote_url += os.path.sep
+        if self.private_key:
+            cmd += ['ssh -i %s' % self.private_key]
+        else:
+            cmd += ['ssh']
+        cmd += [local_path, remote_url]
+        logger.info(' '.join(cmd))
+        p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode != 0:
+            logger.error(stdout.decode())
+            logger.error(stderr.decode())
+            raise ValueError('unable to synchronize %s against %s' % (local_path, remote_url))
 
 
 def check_curl_url(remote_url):
