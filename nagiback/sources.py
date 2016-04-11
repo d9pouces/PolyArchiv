@@ -108,7 +108,8 @@ class MySQL(Source):
         Parameter('password'),
         Parameter('database'),
         Parameter('destination_path'),
-        Parameter('dump_executable', converter=check_executable),
+        Parameter('dump_executable', converter=check_executable,
+                  help_str='path of the mysqldump executable (default: "mysqldump")'),
     ]
 
     def __init__(self, name, local_repository, host='localhost', port='3306', user='', password='', database='',
@@ -161,6 +162,10 @@ class MySQL(Source):
 
 
 class PostgresSQL(MySQL):
+    parameters = MySQL.parameters[:-1] + [
+        Parameter('dump_executable', converter=check_executable,
+                  help_str='path of the pg_dump executable (default: "pg_dump")'),
+    ]
 
     def __init__(self, name, local_repository, port='5432', dump_executable='pg_dump', **kwargs):
         super(PostgresSQL, self).__init__(name, local_repository, port=port, dump_executable=dump_executable, **kwargs)
@@ -179,29 +184,30 @@ class PostgresSQL(MySQL):
         return {'PGPASSWORD': '%(PASSWORD)s' % self.db_options}
 
 
-class Ldap(MySQL):
+class Ldap(Source):
     parameters = Source.parameters + [
-        Parameter('uri'),
-        Parameter('user'),
-        Parameter('password'),
-        Parameter('database'),
-        Parameter('destination_path'),
-        Parameter('dump_executable', converter=check_executable),
+        Parameter('database', help_str='number of the database (usually 0 and 1)'),
+        Parameter('destination_path', help_str='filename of the dump (not an absolute path)'),
+        Parameter('dump_executable', converter=check_executable,
+                  help_str='path of the slapcat executable (default: "slapcat")'),
     ]
 
-    def __init__(self, name, local_repository, uri='ldapi:///', dump_executable='slapcat', **kwargs):
-        super(Ldap, self).__init__(name, local_repository, port='', host='', dump_executable=dump_executable, **kwargs)
-        self.uri = uri
+    def __init__(self, name, local_repository, destination_path='ldap.ldif', database='1', dump_executable='slapcat',
+                 **kwargs):
+        super(Ldap, self).__init__(name, local_repository, **kwargs)
+        self.destination_path = destination_path
+        self.database = database
+        self.dump_executable = dump_executable
 
-    def get_dump_cmd_list(self):
-        command = [self.dump_executable, '--username', '%(USER)s']
-        if self.db_options.get('HOST'):
-            command += ['--host', '%(HOST)s']
-        if self.db_options.get('PORT'):
-            command += ['--port', '%(PORT)s']
-        command += ['%(NAME)s']
-        return command
-
-    def get_env(self):
-        """Extra environment variables to be passed to shell execution"""
-        return {'PGPASSWORD': '%(PASSWORD)s' % self.db_options}
+    def backup(self):
+        filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
+        if not os.path.isdir(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
+        cmd = [self.dump_executable, '-n', self.database, ]
+        logger.info(' '.join(cmd))
+        if filename is not None:
+            with open(filename, 'wb') as fd:
+                p = subprocess.Popen(cmd, stdout=fd, stderr=subprocess.PIPE)
+        else:
+            p = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        p.communicate()
