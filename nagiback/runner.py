@@ -172,6 +172,7 @@ class Runner(object):
     def backup(self, force=False, only_locals=None, only_remotes=None):
         """Run a backup operation
 
+        :param force: force backup even if not out-of-date
         :param only_locals: limit to the selected local repositories
         :type only_locals: :class:`list` of `str`
         :param only_remotes: limit to the selected remote repositories

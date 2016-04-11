@@ -34,14 +34,23 @@ class RemoteRepository(Repository):
         """
         info = self.get_info(local_repository)
         assert isinstance(info, RepositoryInfo)
-        if not self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success):
+        out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(),
+                                                    previous_time=info.last_success)
+        if not (force or out_of_date):
             # the last previous backup is still valid
             # => nothing to do
+            logger.debug('last backup (%s) is still valid. No backup to do.' % info.last_success)
             return True
+        elif info.last_success is None:
+            logger.info('no previous backup: a new backup is required.')
+        elif out_of_date:
+            logger.info('last backup (%s) is out-of-date.' % str(info.last_success))
+        elif force:
+            logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
+        lock_ = None
         try:
             lock_ = local_repository.get_lock()
             self.do_backup(local_repository)
-            local_repository.release_lock(lock_)
             info.success_count += 1
             info.last_state_valid = True
             info.last_success = datetime.datetime.now()
@@ -51,6 +60,11 @@ class RemoteRepository(Repository):
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
             info.last_message = text_type(e)
+        if lock_ is not None:
+            try:
+                local_repository.release_lock(lock_)
+            except Exception as e:
+                logger.critical('unable to release lock. %s' % str(e))
         self.set_info(local_repository, info)
         return info.last_state_valid
 

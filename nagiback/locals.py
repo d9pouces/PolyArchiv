@@ -41,7 +41,6 @@ class LocalRepository(Repository):
         """ perform the backup and log all errors
         """
         info = self.get_info()
-        print(info.to_str())
         assert isinstance(info, RepositoryInfo)
         out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success)
         if not (force or out_of_date):
@@ -50,12 +49,11 @@ class LocalRepository(Repository):
             logger.debug('last backup (%s) is still valid. No backup to do.' % info.last_success)
             return True
         elif info.last_success is None:
-            logger.info('no previous backup. Backup is required.')
+            logger.info('no previous backup: a new backup is required.')
         elif out_of_date:
             logger.info('last backup (%s) is out-of-date.' % str(info.last_success))
         elif force:
-            logger.info('last backup (%s) is still valid, backup forced.' % str(info.last_success))
-        print(info.to_str())
+            logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
         lock_ = None
         try:
             lock_ = self.get_lock()
@@ -73,7 +71,6 @@ class LocalRepository(Repository):
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
             info.last_message = text_type(e)
-        print(info.to_str())
 
         if lock_ is not None:
             try:
@@ -218,10 +215,19 @@ class GitRepository(FileRepository):
         end = datetime.datetime.now()
         cmd = [self.git_executable, 'init']
         logger.info(' '.join(cmd))
-        subprocess.Popen(cmd, cwd=self.local_path)
+        p = subprocess.Popen(cmd, cwd=self.local_path, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode != 0:
+            raise ValueError(stderr)
         cmd = [self.git_executable, 'commit', 'add', '.']
         logger.info(' '.join(cmd))
-        subprocess.Popen(cmd, cwd=self.local_path)
+        p = subprocess.Popen(cmd, cwd=self.local_path, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode != 0:
+            raise ValueError(stderr)
         cmd = [self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')]
         logger.info(' '.join(cmd))
-        subprocess.Popen(cmd, cwd=self.local_path)
+        p = subprocess.Popen(cmd, cwd=self.local_path, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode != 0:
+            raise ValueError(stderr)

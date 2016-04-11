@@ -126,7 +126,7 @@ class MySQL(Source):
         filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
         if not os.path.isdir(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
-        cmd = self.dump_cmd_list()
+        cmd = self.get_dump_cmd_list()
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()
         env.update(self.get_env())
@@ -143,7 +143,7 @@ class MySQL(Source):
         return {'HOST': self.host, 'PORT': self.port, 'USER': self.user, 'PASSWORD': self.password,
                 'NAME': self.database}
 
-    def dump_cmd_list(self):
+    def get_dump_cmd_list(self):
         """ :return:
         :rtype: :class:`list` of :class:`str`
         """
@@ -165,7 +165,35 @@ class PostgresSQL(MySQL):
     def __init__(self, name, local_repository, port='5432', dump_executable='pg_dump', **kwargs):
         super(PostgresSQL, self).__init__(name, local_repository, port=port, dump_executable=dump_executable, **kwargs)
 
-    def dump_cmd_list(self):
+    def get_dump_cmd_list(self):
+        command = [self.dump_executable, '--username', '%(USER)s']
+        if self.db_options.get('HOST'):
+            command += ['--host', '%(HOST)s']
+        if self.db_options.get('PORT'):
+            command += ['--port', '%(PORT)s']
+        command += ['%(NAME)s']
+        return command
+
+    def get_env(self):
+        """Extra environment variables to be passed to shell execution"""
+        return {'PGPASSWORD': '%(PASSWORD)s' % self.db_options}
+
+
+class Ldap(MySQL):
+    parameters = Source.parameters + [
+        Parameter('uri'),
+        Parameter('user'),
+        Parameter('password'),
+        Parameter('database'),
+        Parameter('destination_path'),
+        Parameter('dump_executable', converter=check_executable),
+    ]
+
+    def __init__(self, name, local_repository, uri='ldapi:///', dump_executable='slapcat', **kwargs):
+        super(Ldap, self).__init__(name, local_repository, port='', host='', dump_executable=dump_executable, **kwargs)
+        self.uri = uri
+
+    def get_dump_cmd_list(self):
         command = [self.dump_executable, '--username', '%(USER)s']
         if self.db_options.get('HOST'):
             command += ['--host', '%(HOST)s']
