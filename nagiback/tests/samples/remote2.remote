@@ -1,0 +1,6 @@
+[global]
+engine=nagiback.remotes.TarArchive
+remote_tags=
+remote_url=file:///tmp/remote/archives/
+included_local_tags=*
+excluded_local_tags=

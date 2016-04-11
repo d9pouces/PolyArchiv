@@ -1,4 +1,6 @@
 # -*- coding=utf-8 -*-
+"""load a complete configuration (based on .ini files) and perform backup/restore operations
+"""
 from __future__ import unicode_literals
 
 import fnmatch

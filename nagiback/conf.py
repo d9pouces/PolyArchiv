@@ -50,9 +50,29 @@ def check_directory(value):
     raise ValueError('%s is not a valid directory' % value)
 
 
+def check_file(value):
+    """Check if value is a valid directory path. If not, raise a ValueError, else return the value
+    """
+    if os.path.isfile(value):
+        return value
+    raise ValueError('%s is not a valid directory' % value)
+
+
 def check_executable(value):
     """TODO check if value is a valid executable"""
     return True
+
+
+class CheckOption(object):
+    def __init__(self, valid_options):
+        """Check if the provided value is among the allowed ones"""
+        self.valid_options = valid_options  # list of valid options
+
+    def __call__(self, value):
+        if value in self.valid_options:
+            return value
+        raise ValueError('%s is not valid. Please select one of %s' % (value, ', '.join(self.valid_options)))
+
 
 
 class Parameter(object):

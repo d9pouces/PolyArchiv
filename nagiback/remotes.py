@@ -5,11 +5,18 @@ import logging
 import subprocess
 
 import datetime
+try:
+    # noinspection PyCompatibility
+    from urllib.parse import urlparse
+except ImportError:
+    # noinspection PyUnresolvedReferences,PyCompatibility
+    from urlparse import urlparse
+import os
 
-from nagiback.conf import Parameter, strip_split, check_executable
-from nagiback.locals import GitRepository as LocalGitRepository, LocalRepository
+from nagiback.conf import Parameter, strip_split, check_executable, check_file, CheckOption
+from nagiback.locals import GitRepository as LocalGitRepository, LocalRepository, FileRepository
 from nagiback.repository import Repository, RepositoryInfo
-from nagiback.utils import text_type
+from nagiback.utils import text_type, ensure_dir
 
 __author__ = 'mgallet'
 logger = logging.getLogger('nagiback.remotes')
@@ -57,6 +64,7 @@ class RemoteRepository(Repository):
             info.last_success = datetime.datetime.now()
             info.last_message = 'ok'
         except Exception as e:
+            logger.exception('unable to perform backup', exc_info=e)
             info.fail_count += 1
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
@@ -114,4 +122,109 @@ class GitRepository(RemoteRepository):
             cmd = [self.git_executable, 'remote', 'add', '-t', 'master', 'master', self.remote_branch, self.remote_url]
             subprocess.check_call(cmd, cwd=local_repository.local_path)
         cmd = [self.git_executable, 'push', self.remote_branch]
-        subprocess.check_call(cmd, cwd=local_repository.local_path)
+        subprocess.check_call(cmd, cwd=local_repository.local_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+class Rsync(RemoteRepository):
+    pass
+
+
+def check_url(remote_url):
+    """Check if the given URL starts by a valid scheme
+
+    >>> check_url("scp://localhost/tmp")
+
+    """
+    parsed_url = urlparse(remote_url)
+    if parsed_url.scheme not in ('http', 'https', 'scp', 'ftp', 'ftps', 'sftp', 'smb', 'file'):
+        raise ValueError('Invalid scheme for remote URL: %s' % parsed_url.scheme)
+    return remote_url
+
+
+class TarArchive(RemoteRepository):
+
+    excluded_files = {'.git', '.nagiback', '.gitignore'}
+    parameters = RemoteRepository.parameters + [
+        Parameter('tar_executable', converter=check_executable),
+        Parameter('curl_executable', converter=check_executable),
+        Parameter('remote_url', converter=check_url),
+        Parameter('user'),
+        Parameter('password'),
+        Parameter('proxy'),
+        Parameter('date_format'),
+        Parameter('keytab', converter=check_file),
+        Parameter('private_key', converter=check_file),
+        Parameter('tar_format', converter=CheckOption(['tar.gz', 'tar.bz2', 'tar.xz']))
+    ]
+
+    def __init__(self, name, tar_executable='tar', curl_executable='curl', remote_url='', user='', password='',
+                 keytab=None, tar_format='tar.xz', date_format='%Y-%m-%d_%H-%M', private_key=None, proxy=None, **kwargs):
+        super(TarArchive, self).__init__(name, **kwargs)
+        self.date_format = date_format
+        self.tar_format = tar_format
+        self.curl_executable = curl_executable
+        self.tar_executable = tar_executable
+        self.remote_url = remote_url
+        self.user = user
+        self.password = password
+        self.keytab = keytab
+        self.private_key = private_key
+        self.proxy = proxy
+
+    def do_backup(self, local_repository):
+        assert isinstance(local_repository, FileRepository)
+        error = None
+        filenames = {x for x in os.listdir(local_repository.local_path)} - self.excluded_files
+        filenames = [x for x in filenames]
+        filenames.sort()
+        now_str = datetime.datetime.now().strftime(self.date_format)
+        archive_filename = os.path.join(local_repository.local_path, 'archive-%s.%s' % (now_str, self.tar_format))
+        if self.tar_format == 'tar.gz':
+            cmd = [self.tar_executable, 'czf']
+        elif self.tar_format == 'tar.bz2':
+            cmd = [self.tar_executable, 'cjf']
+        elif self.tar_format == 'tar.xz':
+            cmd = [self.tar_executable, 'cJf']
+        else:
+            raise ValueError('invalid tar format: %s' % self.tar_format)
+        cmd.append(archive_filename)
+        cmd += filenames
+        logger.info(' '.join(cmd))
+        p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode != 0:
+            logger.error(stdout.decode())
+            logger.error(stderr.decode())
+            error = ValueError('unable to create archive %s' % archive_filename)
+        else:
+            cmd = []
+            if self.keytab:
+                cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
+            if self.remote_url.startswith('file://'):
+                ensure_dir(self.remote_url[7:], parent=False)
+                cmd += ['cp', archive_filename, self.remote_url[7:]]
+            else:
+                cmd += [self.curl_executable, ]
+                cmd += ['-u', '%s:%s' % (self.user, self.password)]
+                if self.private_key:
+                    cmd += ['--key', self.private_key]
+                if self.proxy:
+                    cmd += ['-x', self.proxy]
+                cmd += ['-T', archive_filename]
+                if self.remote_url.startswith('ftps'):
+                    cmd += ['--ftp-ssl', 'ftp' + self.remote_url[4:]]
+                else:
+                    cmd += [self.remote_url]
+            logger.info(' '.join(cmd))
+            p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            stdout, stderr = p.communicate()
+            if p.returncode != 0:
+                logger.error(stdout.decode())
+                logger.error(stderr.decode())
+                error = ValueError('unable to create archive %s' % archive_filename)
+
+        if os.path.isfile(archive_filename):
+            logger.info('remove %s' % archive_filename)
+            os.remove(archive_filename)
+        if error is not None:
+            raise error
