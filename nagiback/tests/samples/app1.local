@@ -4,6 +4,7 @@ local_path=/tmp/local
 local_tags=local
 included_remote_tags=*
 excluded_remote_tags=
+frequency=daily
 
 [source_1]
 engine=nagiback.sources.PostgresSQL

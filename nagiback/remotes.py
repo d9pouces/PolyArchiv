@@ -29,7 +29,7 @@ class RemoteRepository(Repository):
         self.included_local_tags = included_local_tags or []
         self.excluded_local_tags = excluded_local_tags or []
 
-    def backup(self, local_repository):
+    def backup(self, local_repository, force=False):
         """ perform the backup and log all errors
         """
         info = self.get_info(local_repository)

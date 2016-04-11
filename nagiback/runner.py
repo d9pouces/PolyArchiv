@@ -169,7 +169,7 @@ class Runner(object):
                 if self.can_associate(local, remote):
                     local_remote_command(local, remote)
 
-    def backup(self, only_locals=None, only_remotes=None):
+    def backup(self, force=False, only_locals=None, only_remotes=None):
         """Run a backup operation
 
         :param only_locals: limit to the selected local repositories
@@ -186,7 +186,7 @@ class Runner(object):
             if only_locals and local_name not in only_locals:
                 continue
             assert isinstance(local, LocalRepository)
-            result = local.backup()
+            result = local.backup(force=force)
             if result:
                 logger.info('[OK] local repository %s' % local.name)
                 local_success += 1
@@ -200,8 +200,7 @@ class Runner(object):
                 assert isinstance(remote, RemoteRepository)
                 if not self.can_associate(local, remote):
                     continue
-                continue
-                result = remote.backup(local)
+                result = remote.backup(local, force=force)
                 if result:
                     logger.error('[OK] remote repository %s on local repository %s' % (remote.name, local.name))
                     remote_success += 1
