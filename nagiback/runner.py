@@ -178,9 +178,37 @@ class Runner(object):
         :type only_remotes: :class:`list` of `str`
         :return:
         """
-        self.apply_commands(local_command=lambda local: local.backup(),
-                            local_remote_command=lambda local, remote: remote.backup(local),
-                            only_locals=only_locals, only_remotes=only_remotes)
+        local_failed = 0
+        remote_failed = 0
+        local_success = 0
+        remote_success = 0
+        for local_name, local in self.local_repositories.items():
+            if only_locals and local_name not in only_locals:
+                continue
+            assert isinstance(local, LocalRepository)
+            result = local.backup()
+            if result:
+                logger.info('[OK] local repository %s' % local.name)
+                local_success += 1
+            else:
+                logger.error('[KO] local repository %s' % local.name)
+                local_failed += 1
+                continue
+            for remote_name, remote in self.remote_repositories.items():
+                if only_remotes and remote_name not in only_remotes:
+                    continue
+                assert isinstance(remote, RemoteRepository)
+                if not self.can_associate(local, remote):
+                    continue
+                continue
+                result = remote.backup(local)
+                if result:
+                    logger.error('[OK] remote repository %s on local repository %s' % (remote.name, local.name))
+                    remote_success += 1
+                else:
+                    logger.error('[KO] remote repository %s on local repository %s' % (remote.name, local.name))
+                    remote_failed += 1
+        return local_success, local_failed, remote_success, remote_failed
 
     def restore(self, only_locals=None, only_remotes=None):
         """Run a backup operation

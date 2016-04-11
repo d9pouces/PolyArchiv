@@ -33,9 +33,9 @@ class RepositoryInfo(object):
         result['last_success'] = None
         result['last_fail'] = None
         if isinstance(self.last_success, datetime.datetime):
-            result['last_success'] = self.last_success.strftime('%Y-%m-%mT%H:%M:%S')
+            result['last_success'] = self.last_success.strftime('%Y-%m-%dT%H:%M:%S')
         if isinstance(self.last_fail, datetime.datetime):
-            result['last_fail'] = self.last_fail.strftime('%Y-%m-%mT%H:%M:%S')
+            result['last_fail'] = self.last_fail.strftime('%Y-%m-%dT%H:%M:%S')
         return result
 
     @classmethod
@@ -49,6 +49,10 @@ class RepositoryInfo(object):
         for k in ('last_state_valid', ):
             kwargs[k] = data.get(k)
             assert kwargs[k] is None or isinstance(kwargs[k], bool)
+        if data['last_fail']:
+            kwargs['last_fail'] = datetime.datetime.strptime(data['last_fail'], '%Y-%m-%dT%H:%M:%S')
+        if data['last_success']:
+            kwargs['last_success'] = datetime.datetime.strptime(data['last_success'], '%Y-%m-%dT%H:%M:%S')
         return RepositoryInfo(**kwargs)
 
     def to_str(self):

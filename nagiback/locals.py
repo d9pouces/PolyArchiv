@@ -37,23 +37,32 @@ class LocalRepository(Repository):
         self.excluded_remote_tags = excluded_remote_tags or []
         self.sources = []
 
-    def backup(self):
+    def backup(self, force=False):
         """ perform the backup and log all errors
         """
         info = self.get_info()
+        print(info.to_str())
         assert isinstance(info, RepositoryInfo)
-        if not self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success):
+        out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success)
+        if not (force or out_of_date):
             # the last previous backup is still valid
             # => nothing to do
             logger.debug('last backup (%s) is still valid. No backup to do.' % info.last_success)
             return True
+        elif info.last_success is None:
+            logger.info('no previous backup. Backup is required.')
+        elif out_of_date:
+            logger.info('last backup (%s) is out-of-date.' % str(info.last_success))
+        elif force:
+            logger.info('last backup (%s) is still valid, backup forced.' % str(info.last_success))
+        print(info.to_str())
+        lock_ = None
         try:
             lock_ = self.get_lock()
             self.pre_source_backup()
             for source in self.sources:
                 source.backup()
             self.post_source_backup()
-            self.release_lock(lock_)
             info.total_size = self.get_repository_size()
             info.success_count += 1
             info.last_state_valid = True
@@ -64,6 +73,13 @@ class LocalRepository(Repository):
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
             info.last_message = text_type(e)
+        print(info.to_str())
+
+        if lock_ is not None:
+            try:
+                self.release_lock(lock_)
+            except Exception as e:
+                logger.critical('unable to release lock. %s' % str(e))
         self.set_info(info)
         return info.last_state_valid
 
@@ -201,11 +217,11 @@ class GitRepository(FileRepository):
     def post_source_backup(self):
         end = datetime.datetime.now()
         cmd = [self.git_executable, 'init']
-        logger.debug(' '.join(cmd))
+        logger.info(' '.join(cmd))
         subprocess.Popen(cmd, cwd=self.local_path)
         cmd = [self.git_executable, 'commit', 'add', '.']
-        logger.debug(' '.join(cmd))
+        logger.info(' '.join(cmd))
         subprocess.Popen(cmd, cwd=self.local_path)
         cmd = [self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')]
-        logger.debug(' '.join(cmd))
+        logger.info(' '.join(cmd))
         subprocess.Popen(cmd, cwd=self.local_path)

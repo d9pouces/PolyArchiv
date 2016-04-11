@@ -50,10 +50,14 @@ def main():
         log['loggers']['nagiback']['level'] = 'DEBUG'
     logging.config.dictConfig(log)
     logger = logging.getLogger('nagiback.cli')
+    return_code = 0  # 0 = success, != 0 = error
+
     from nagiback.runner import Runner
     if command == 'backup':
         runner = Runner([args.config])
-        runner.backup(args.only_locals, args.only_remotes)
+        local_success, local_failed, remote_success, remote_failed = runner.backup(args.only_locals, args.only_remotes)
+        if local_failed + remote_failed > 0:
+            return_code = 1
     elif command == 'restore':
         runner = Runner([args.config])
         runner.restore(args.only_locals, args.only_remotes)
@@ -66,7 +70,7 @@ def main():
         runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
                               local_remote_command=show_remote_local_repository,
                               only_locals=args.only_locals, only_remotes=args.only_remotes)
-    return_code = 0  # 0 = success, != 0 = error
+
     # complete this function
     return return_code
 
