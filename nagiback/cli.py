@@ -39,6 +39,7 @@ def main():
     config_dir = os.path.sep.join(path_components)
     parser = argparse.ArgumentParser(description='Backup data from multiple sources')
     parser.add_argument('-v', '--verbose', action='store_true', help='print more messages', default=False)
+    parser.add_argument('-f', '--force', action='store_true', help='force backup if not out-of-date', default=False)
     parser.add_argument('-n', '--nrpe', action='store_true', help='Nagios-compatible output', default=False)
     parser.add_argument('--only-locals', nargs='+', help='limit to these local tags', default=[])
     parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
@@ -50,12 +51,14 @@ def main():
         log['loggers']['nagiback']['level'] = 'DEBUG'
     logging.config.dictConfig(log)
     logger = logging.getLogger('nagiback.cli')
-    return_code = 0  # 0 = success, != 0 = error
+    return_code = 0
 
-    from nagiback.runner import Runner
+    from nagiback.runner import Runner  # import after log configuration
     if command == 'backup':
         runner = Runner([args.config])
-        local_success, local_failed, remote_success, remote_failed = runner.backup(args.only_locals, args.only_remotes)
+        local_success, local_failed, remote_success, remote_failed = runner.backup(only_locals=args.only_locals,
+                                                                                   only_remotes=args.only_remotes,
+                                                                                   force=args.force)
         if local_failed + remote_failed > 0:
             return_code = 1
     elif command == 'restore':
@@ -70,8 +73,6 @@ def main():
         runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
                               local_remote_command=show_remote_local_repository,
                               only_locals=args.only_locals, only_remotes=args.only_remotes)
-
-    # complete this function
     return return_code
 
 

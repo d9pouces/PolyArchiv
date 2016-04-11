@@ -32,6 +32,7 @@ class RemoteRepository(Repository):
     def backup(self, local_repository, force=False):
         """ perform the backup and log all errors
         """
+        logger.info('remote backup %s of local repository %s' % (self.name, local_repository.name))
         info = self.get_info(local_repository)
         assert isinstance(info, RepositoryInfo)
         out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(),
@@ -42,7 +43,7 @@ class RemoteRepository(Repository):
             logger.debug('last backup (%s) is still valid. No backup to do.' % info.last_success)
             return True
         elif info.last_success is None:
-            logger.info('no previous backup: a new backup is required.')
+            logger.info('no previous remote backup: a new backup is required.')
         elif out_of_date:
             logger.info('last backup (%s) is out-of-date.' % str(info.last_success))
         elif force:

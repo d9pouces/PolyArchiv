@@ -40,9 +40,11 @@ class LocalRepository(Repository):
     def backup(self, force=False):
         """ perform the backup and log all errors
         """
+        logger.info('backup of local repository %s' % self.name)
         info = self.get_info()
         assert isinstance(info, RepositoryInfo)
-        out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(), previous_time=info.last_success)
+        out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(),
+                                                    previous_time=info.last_success)
         if not (force or out_of_date):
             # the last previous backup is still valid
             # => nothing to do
@@ -67,6 +69,7 @@ class LocalRepository(Repository):
             info.last_success = datetime.datetime.now()
             info.last_message = 'ok'
         except Exception as e:
+            logger.exception('unable to perform backup', exc_info=e)
             info.fail_count += 1
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
@@ -153,17 +156,17 @@ class FileRepository(LocalRepository):
         return self.local_path
 
     @property
-    def _private_path(self):
+    def private_path(self):
         return os.path.join(self.local_path, '.nagiback')
 
     @property
-    def _lock_filepath(self):
-        return os.path.join(self._private_path, 'lock')
+    def lock_filepath(self):
+        return os.path.join(self.private_path, 'lock')
 
     def get_info(self, name=None, kind='local'):
         if name is None:
             name = self.name
-        path = os.path.join(self._private_path, kind, '%s.json' % name)
+        path = os.path.join(self.private_path, kind, '%s.json' % name)
         ensure_dir(path, parent=True)
         if os.path.isfile(path):
             with codecs.open(path, 'r', encoding='utf-8') as fd:
@@ -176,19 +179,19 @@ class FileRepository(LocalRepository):
         if name is None:
             name = self.name
         assert isinstance(info, RepositoryInfo)
-        path = os.path.join(self._private_path, kind, '%s.json' % name)
+        path = os.path.join(self.private_path, kind, '%s.json' % name)
         ensure_dir(path, parent=True)
         content = info.to_str()
         with codecs.open(path, 'w', encoding='utf-8') as fd:
             fd.write(content)
 
     def get_lock(self):
-        lock_ = Lock(self._lock_filepath)
+        lock_ = Lock(self.lock_filepath)
         if lock_.acquire(timeout=1):
             return lock_
         else:
             logger.error('Unable to lock local repository. Check if no other backup is currently running or '
-                         'delete %s' % self._lock_filepath)
+                         'delete %s' % self.lock_filepath)
             raise ValueError
 
     def get_repository_size(self):
@@ -212,22 +215,32 @@ class GitRepository(FileRepository):
         self.git_executable = git_executable
 
     def post_source_backup(self):
+        gitignore = os.path.join(self.local_path, '.gitignore')
+        if not os.path.isfile(gitignore):
+            with codecs.open(gitignore, 'w', encoding='utf-8') as fd:
+                fd.write(".nagiback/\n")
+
         end = datetime.datetime.now()
+
         cmd = [self.git_executable, 'init']
         logger.info(' '.join(cmd))
-        p = subprocess.Popen(cmd, cwd=self.local_path, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, cwd=self.local_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         if p.returncode != 0:
-            raise ValueError(stderr)
-        cmd = [self.git_executable, 'commit', 'add', '.']
+            logger.error(stdout.decode())
+            logger.error(stderr.decode())
+            raise ValueError()
+
+        cmd = [self.git_executable, 'add', '.']
         logger.info(' '.join(cmd))
-        p = subprocess.Popen(cmd, cwd=self.local_path, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, cwd=self.local_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
         if p.returncode != 0:
-            raise ValueError(stderr)
+            logger.error(stdout.decode())
+            logger.error(stderr.decode())
+            raise ValueError()
+
         cmd = [self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')]
         logger.info(' '.join(cmd))
-        p = subprocess.Popen(cmd, cwd=self.local_path, stderr=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise ValueError(stderr)
+        p = subprocess.Popen(cmd, cwd=self.local_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p.communicate()
