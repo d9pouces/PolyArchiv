@@ -98,15 +98,33 @@ class RemoteRepository(Repository):
         return local_repository.set_info(info, name=name, kind=kind)
 
 
+def check_git_url(remote_url):
+    """Check if the given URL starts by a valid scheme
+
+    >>> check_git_url("http://localhost/tmp.git") == 'http://localhost/tmp.git'
+    True
+
+    """
+    parsed_url = urlparse(remote_url)
+    if parsed_url.scheme not in ('http', 'https', 'git'):
+        raise ValueError('Invalid scheme for remote URL: %s' % parsed_url.scheme)
+    return remote_url
+
+
 class GitRepository(RemoteRepository):
     parameters = RemoteRepository.parameters + [
         Parameter('git_executable', converter=check_executable),
         Parameter('remote_url'),
         Parameter('remote_branch'),
+        Parameter('keytab', converter=check_file),
+        Parameter('private_key', converter=check_file),
     ]
 
-    def __init__(self, name, remote_url='', remote_branch='master', git_executable='git', **kwargs):
+    def __init__(self, name, remote_url='', remote_branch='master', git_executable='git',
+                 keytab=None, private_key=None, **kwargs):
         super(GitRepository, self).__init__(name, **kwargs)
+        self.keytab = keytab
+        self.private_key = private_key
         self.remote_url = remote_url
         self.remote_branch = remote_branch
         self.git_executable = git_executable
@@ -114,25 +132,30 @@ class GitRepository(RemoteRepository):
     def do_backup(self, local_repository):
         assert local_repository.__class__ == LocalGitRepository
         assert isinstance(local_repository, LocalGitRepository)
-        cmd = [self.git_executable, 'remote']
-        # noinspection PyUnresolvedReferences
-        output = subprocess.check_output(cmd, cwd=local_repository.local_path).decode('utf-8')
-        existing_remotes = {x.strip() for x in output.splitlines()}
-        if self.name not in existing_remotes:
-            cmd = [self.git_executable, 'remote', 'add', '-t', 'master', 'master', self.remote_branch, self.remote_url]
-            subprocess.check_call(cmd, cwd=local_repository.local_path)
-        cmd = [self.git_executable, 'push', self.remote_branch]
-        subprocess.check_call(cmd, cwd=local_repository.local_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cmd = []
+        if self.keytab:
+            cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
+        cmd += [self.git_executable, 'push', self.remote_url, '+master:%s' % self.remote_branch]
+        logger.info(' '.join(cmd))
+        if self.private_key and not self.remote_url.startswith('http'):
+            cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (self.private_key, ' '.join(cmd))]
+        p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if p.returncode != 0:
+            logger.error(stdout.decode())
+            logger.error(stderr.decode())
+            raise ValueError('unable to push to remote %s from %s' % (self.name, local_repository.local_path))
 
 
 class Rsync(RemoteRepository):
     pass
 
 
-def check_url(remote_url):
+def check_curl_url(remote_url):
     """Check if the given URL starts by a valid scheme
 
-    >>> check_url("scp://localhost/tmp")
+    >>> check_curl_url("scp://localhost/tmp") == 'scp://localhost/tmp'
+    True
 
     """
     parsed_url = urlparse(remote_url)
@@ -147,7 +170,7 @@ class TarArchive(RemoteRepository):
     parameters = RemoteRepository.parameters + [
         Parameter('tar_executable', converter=check_executable),
         Parameter('curl_executable', converter=check_executable),
-        Parameter('remote_url', converter=check_url),
+        Parameter('remote_url', converter=check_curl_url),
         Parameter('user'),
         Parameter('password'),
         Parameter('proxy'),
@@ -158,7 +181,7 @@ class TarArchive(RemoteRepository):
     ]
 
     def __init__(self, name, tar_executable='tar', curl_executable='curl', remote_url='', user='', password='',
-                 keytab=None, tar_format='tar.xz', date_format='%Y-%m-%d_%H-%M', private_key=None, proxy=None, **kwargs):
+                 keytab=None, private_key=None, tar_format='tar.xz', date_format='%Y-%m-%d_%H-%M', proxy=None, **kwargs):
         super(TarArchive, self).__init__(name, **kwargs)
         self.date_format = date_format
         self.tar_format = tar_format
