@@ -5,6 +5,7 @@ import logging
 import subprocess
 
 import datetime
+
 try:
     # noinspection PyCompatibility
     from urllib.parse import urlparse
@@ -13,7 +14,7 @@ except ImportError:
     from urlparse import urlparse
 import os
 
-from nagiback.conf import Parameter, strip_split, check_executable, check_file, CheckOption
+from nagiback.conf import Parameter, strip_split, check_executable, check_file, CheckOption, bool_setting
 from nagiback.locals import GitRepository as LocalGitRepository, LocalRepository, FileRepository
 from nagiback.repository import Repository, RepositoryInfo
 from nagiback.utils import text_type, ensure_dir
@@ -24,9 +25,15 @@ logger = logging.getLogger('nagiback.remotes')
 
 class RemoteRepository(Repository):
     parameters = Repository.parameters + [
-        Parameter('remote_tags', converter=strip_split),
-        Parameter('included_local_tags', converter=strip_split),
-        Parameter('excluded_local_tags', converter=strip_split),
+        Parameter('remote_tags', converter=strip_split,
+                  help_str='List of tags (comma-separated) associated to this remote repository'),
+        Parameter('included_local_tags', converter=strip_split,
+                  help_str='Any local repository with one of these tags (comma-separated) will be associated '
+                           'to this remote repo. You can use ? or * as jokers in these tags.'),
+        Parameter('excluded_local_tags', converter=strip_split,
+                  help_str='Any local repository with one of these tags (comma-separated) will not be associated'
+                           ' to this remote repo. You can use ? or * as jokers in these tags. Have precedence over '
+                           'included_local_tags and included_remote_tags.'),
     ]
 
     def __init__(self, name, remote_tags=None, included_local_tags=None, excluded_local_tags=None, **kwargs):
@@ -112,11 +119,15 @@ def check_git_url(remote_url):
 
 class GitRepository(RemoteRepository):
     parameters = RemoteRepository.parameters + [
-        Parameter('git_executable', converter=check_executable),
-        Parameter('remote_url'),
-        Parameter('remote_branch'),
-        Parameter('keytab', converter=check_file),
-        Parameter('private_key', converter=check_file),
+        Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
+        Parameter('remote_url', help_str='URL of the remote server, include username and password (e.g.: '
+                                         'git@mygitlab.example.org:username/project.git,'
+                                         'https://username:password@mygitlab.example.org/username/project.git)'),
+        Parameter('remote_branch', help_str='name of the remote branch'),
+        Parameter('keytab', converter=check_file,
+                  help_str='absolute path of the keytab file (for Kerberos authentication)'),
+        Parameter('private_key', converter=check_file,
+                  help_str='absolute path of the private key file (for SSH key authentication)'),
     ]
 
     def __init__(self, name, remote_url='', remote_branch='master', git_executable='git',
@@ -151,8 +162,10 @@ class Rsync(RemoteRepository):
         Parameter('rsync_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "rsync")'),
         Parameter('remote_url', help_str='remote server and path (e.g. login:password@server:/foo/bar/'),
-        Parameter('keytab', converter=check_file),
-        Parameter('private_key', converter=check_file),
+        Parameter('keytab', converter=check_file,
+                  help_str='absolute path of the keytab file (for Kerberos authentication)'),
+        Parameter('private_key', converter=check_file,
+                  help_str='absolute path of the private key file (for SSH key authentication)'),
     ]
 
     def __init__(self, name, rsync_executable='tar', remote_url='', keytab=None, private_key=None, **kwargs):
@@ -202,25 +215,37 @@ def check_curl_url(remote_url):
 
 
 class TarArchive(RemoteRepository):
-
     excluded_files = {'.git', '.nagiback', '.gitignore'}
     parameters = RemoteRepository.parameters + [
-        Parameter('tar_executable', converter=check_executable),
-        Parameter('curl_executable', converter=check_executable),
-        Parameter('remote_url', converter=check_curl_url),
-        Parameter('user'),
-        Parameter('password'),
-        Parameter('proxy'),
-        Parameter('date_format'),
-        Parameter('keytab', converter=check_file),
-        Parameter('private_key', converter=check_file),
-        Parameter('tar_format', converter=CheckOption(['tar.gz', 'tar.bz2', 'tar.xz']))
+        Parameter('tar_executable', converter=check_executable,
+                  help_str='path of the rsync executable (default: "tar")'),
+        Parameter('curl_executable', converter=check_executable,
+                  help_str='path of the rsync executable (default: "curl")'),
+        Parameter('remote_url', converter=check_curl_url,
+                  help_str='destination URL (e.g.: ftp://example.org/path/,'
+                           'https://example.org/path)'),
+        Parameter('user', help_str='username'),
+        Parameter('password', help_str='password'),
+        Parameter('archive_prefix', help_str='prefix of the archive names (default: "archive")'),
+        Parameter('proxy', help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080)'),
+        Parameter('insecure', converter=bool_setting, help_str='do not check certificate for SSL connections'),
+        Parameter('cacert', converter=check_file, help_str='certificate to use to verify the server'),
+        Parameter('date_format', help_str='date format for the generated archives (default: "%Y-%m-%d_%H-%M")'),
+        Parameter('keytab', converter=check_file,
+                  help_str='absolute path of the keytab file (for Kerberos authentication)'),
+        Parameter('private_key', converter=check_file,
+                  help_str='absolute path of the private key file (for SSH key authentication)'),
+        Parameter('tar_format', converter=CheckOption(['tar.gz', 'tar.bz2', 'tar.xz']),
+                  help_str='one of "tar.gz", "tar.bz2" (default), "tar.xz"')
     ]
 
     def __init__(self, name, tar_executable='tar', curl_executable='curl', remote_url='', user='', password='',
-                 keytab=None, private_key=None, tar_format='tar.xz', date_format='%Y-%m-%d_%H-%M', proxy=None, **kwargs):
+                 insecure=False, cacert=None, archive_prefix='archive',
+                 keytab=None, private_key=None, tar_format='tar.bz2', date_format='%Y-%m-%d_%H-%M', proxy=None,
+                 **kwargs):
         super(TarArchive, self).__init__(name, **kwargs)
         self.date_format = date_format
+        self.archive_prefix = archive_prefix
         self.tar_format = tar_format
         self.curl_executable = curl_executable
         self.tar_executable = tar_executable
@@ -230,6 +255,8 @@ class TarArchive(RemoteRepository):
         self.keytab = keytab
         self.private_key = private_key
         self.proxy = proxy
+        self.insecure = insecure
+        self.cacert = cacert
 
     def do_backup(self, local_repository):
         assert isinstance(local_repository, FileRepository)
@@ -238,7 +265,8 @@ class TarArchive(RemoteRepository):
         filenames = [x for x in filenames]
         filenames.sort()
         now_str = datetime.datetime.now().strftime(self.date_format)
-        archive_filename = os.path.join(local_repository.local_path, 'archive-%s.%s' % (now_str, self.tar_format))
+        archive_filename = os.path.join(local_repository.local_path,
+                                        '%s-%s.%s' % (self.archive_prefix, now_str, self.tar_format))
         if self.tar_format == 'tar.gz':
             cmd = [self.tar_executable, 'czf']
         elif self.tar_format == 'tar.bz2':
@@ -264,12 +292,16 @@ class TarArchive(RemoteRepository):
                 ensure_dir(self.remote_url[7:], parent=False)
                 cmd += ['cp', archive_filename, self.remote_url[7:]]
             else:
-                cmd += [self.curl_executable, ]
+                cmd += [self.curl_executable, '--anyauth']
+                if self.insecure:
+                    cmd += ['-k']
+                if self.cacert:
+                    cmd += ['--cacert', self.cacert]
                 cmd += ['-u', '%s:%s' % (self.user, self.password)]
                 if self.private_key:
                     cmd += ['--key', self.private_key]
                 if self.proxy:
-                    cmd += ['-x', self.proxy]
+                    cmd += ['-x', self.proxy, '--proxy-anyauth']
                 cmd += ['-T', archive_filename]
                 if self.remote_url.startswith('ftps'):
                     cmd += ['--ftp-ssl', 'ftp' + self.remote_url[4:]]

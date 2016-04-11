@@ -78,7 +78,7 @@ class CheckOption(object):
 class Parameter(object):
     """class that maps an option in a .ini file to a argument name."""
 
-    def __init__(self, arg_name, option_name=None, converter=str, to_str=str_or_blank, help_str=None):
+    def __init__(self, arg_name: object, option_name: object = None, converter: object = str, to_str: object = str_or_blank, help_str: object = None) -> object:
         """:param arg_name: the name of parameter passed to the engine
         :type arg_name: `str` or `unicode`
         :param option_name: option name in a .ini file

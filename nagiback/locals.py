@@ -22,16 +22,20 @@ class LocalRepository(Repository):
      Each source is run and contribute to new
     """
     parameters = Repository.parameters + [
-        Parameter('log_size', converter=int),
-        Parameter('local_tags', converter=strip_split),
-        Parameter('included_remote_tags', converter=strip_split),
-        Parameter('excluded_remote_tags', converter=strip_split),
+        Parameter('local_tags', converter=strip_split,
+                  help_str='List of tags (comma-separated) associated to this local repository'),
+        Parameter('included_remote_tags', converter=strip_split,
+                  help_str='Any remote repository with one of these tags (comma-separated) will be associated '
+                           'to this local repo. You can use ? or * as jokers in these tags.'),
+        Parameter('excluded_remote_tags', converter=strip_split,
+                  help_str='Any remote repository with one of these tags (comma-separated) will not be associated'
+                           ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
+                           'included_local_tags and included_remote_tags.'),
     ]
 
-    def __init__(self, name, log_size=None, local_tags=None, included_remote_tags=None, excluded_remote_tags=None,
+    def __init__(self, name, local_tags=None, included_remote_tags=None, excluded_remote_tags=None,
                  **kwargs):
         super(LocalRepository, self).__init__(name=name, **kwargs)
-        self.log_size = log_size
         self.local_tags = ['local'] if local_tags is None else local_tags
         self.included_remote_tags = included_remote_tags or []
         self.excluded_remote_tags = excluded_remote_tags or []
@@ -138,7 +142,7 @@ class FileRepository(LocalRepository):
         .nagiback/remote/my_remote.json
     """
     parameters = LocalRepository.parameters + [
-        Parameter('local_path', converter=check_directory)
+        Parameter('local_path', converter=check_directory, help_str='absolute path to locally gather all data')
     ]
 
     def __init__(self, name, local_path='.', **kwargs):
@@ -207,7 +211,7 @@ class FileRepository(LocalRepository):
 
 class GitRepository(FileRepository):
     parameters = FileRepository.parameters + [
-        Parameter('git_executable', converter=check_executable),
+        Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
     ]
 
     def __init__(self, name, git_executable='git', **kwargs):
