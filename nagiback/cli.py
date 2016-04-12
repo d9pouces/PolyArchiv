@@ -34,7 +34,7 @@ def main():
         path_components = ['config']
 
     log = {'version': 1, 'disable_existing_loggers': True,
-           'formatters': {'color': {'()': 'colorlog.ColoredFormatter', 'format': "%(log_color)s%(message)s%(reset)s"}},
+           'formatters': {'color': {'()': 'logging.Formatter', 'format': "%(message)s"}},
            'handlers': {'stream': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'color'}},
            'loggers': {'nagiback': {'handlers': ['stream', ], 'level': 'ERROR', 'propagate': False}}}
 
@@ -95,6 +95,7 @@ def main():
 
 
 def display_classes(logger, module, cls):
+
     for k, v in module.__dict__.items():
         if not isinstance(v, type) or not issubclass(v, cls):
             continue
@@ -107,6 +108,8 @@ def display_classes(logger, module, cls):
                 logger.info('      - %s: %s' % (parameter.option_name, parameter.help_str))
             else:
                 logger.info('      - %s' % parameter.option_name)
+        logger.info('    -----------------------------------------------------------------------------')
+    logger.error('====================================================================================================')
 
 
 if __name__ == '__main__':
