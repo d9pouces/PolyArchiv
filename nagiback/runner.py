@@ -172,7 +172,9 @@ class Runner(object):
                     local_remote_command(local, remote)
 
     def backup(self, force=False, only_locals=None, only_remotes=None):
-        """Run a backup operation
+        """Run a backup operation. return two dicts
+        first result is {local_repository.name: bool}  (dict["my-local_repo"] = True if successful)
+        second result is {(local_repository.name, remote_repository.name): bool}
 
         :param force: force backup even if not out-of-date
         :param only_locals: limit to the selected local repositories
@@ -181,10 +183,8 @@ class Runner(object):
         :type only_remotes: :class:`list` of `str`
         :return:
         """
-        local_failed = 0
-        remote_failed = 0
-        local_success = 0
-        remote_success = 0
+        local_results = {}
+        remote_results = {}
         for local_name, local in self.local_repositories.items():
             if only_locals and local_name not in only_locals:
                 continue
@@ -192,10 +192,10 @@ class Runner(object):
             result = local.backup(force=force)
             if result:
                 logger.info('[OK] local repository %s' % local.name)
-                local_success += 1
+                local_results[local.name] = True
             else:
                 logger.error('[KO] local repository %s' % local.name)
-                local_failed += 1
+                local_results[local.name] = False
                 continue
             for remote_name, remote in self.remote_repositories.items():
                 if only_remotes and remote_name not in only_remotes:
@@ -206,11 +206,11 @@ class Runner(object):
                 result = remote.backup(local, force=force)
                 if result:
                     logger.error('[OK] remote repository %s on local repository %s' % (remote.name, local.name))
-                    remote_success += 1
+                    remote_results[(remote.name, local.name)] = True
                 else:
                     logger.error('[KO] remote repository %s on local repository %s' % (remote.name, local.name))
-                    remote_failed += 1
-        return local_success, local_failed, remote_success, remote_failed
+                    remote_results[(remote.name, local.name)] = False
+        return local_results, remote_results
 
     def restore(self, only_locals=None, only_remotes=None):
         """Run a backup operation

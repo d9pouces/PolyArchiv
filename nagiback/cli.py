@@ -51,6 +51,8 @@ def main():
     command = args.command
     if args.verbose:
         log['loggers']['nagiback']['level'] = 'DEBUG'
+    elif args.nrpe:
+        log['loggers']['nagiback']['level'] = 'CRITICAL'
     logging.config.dictConfig(log)
     logger = logging.getLogger('nagiback.cli')
     return_code = 0
@@ -58,11 +60,17 @@ def main():
     from nagiback.runner import Runner  # import after log configuration
     if command == 'backup':
         runner = Runner([args.config])
-        local_success, local_failed, remote_success, remote_failed = runner.backup(only_locals=args.only_locals,
-                                                                                   only_remotes=args.only_remotes,
-                                                                                   force=args.force)
-        if local_failed + remote_failed > 0:
-            return_code = 1
+        local_results, remote_results = runner.backup(only_locals=args.only_locals, only_remotes=args.only_remotes,
+                                                      force=args.force)
+        local_failures = ['local:%s' % x for (x, y) in local_results.items() if not y]
+        remote_failures = ['local:%s/remote:%s' % x for (x, y) in remote_results.items() if not y]
+        if local_failures or remote_failures:
+            if args.nrpe:
+                print('CRITICAL - failed backups ' % ' '.join(local_failures + remote_failures))
+            return_code = 2
+        elif args.nrpe:
+            print('OK - all backups are valid')
+            return_code = 0
     elif command == 'restore':
         runner = Runner([args.config])
         runner.restore(args.only_locals, args.only_remotes)
@@ -95,7 +103,6 @@ def main():
 
 
 def display_classes(logger, module, cls):
-
     for k, v in module.__dict__.items():
         if not isinstance(v, type) or not issubclass(v, cls):
             continue
