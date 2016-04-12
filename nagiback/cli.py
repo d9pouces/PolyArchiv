@@ -46,7 +46,7 @@ def main():
     parser.add_argument('--only-locals', nargs='+', help='limit to these local tags', default=[])
     parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
-    parser.add_argument('command', help='backup|show|restore|help')
+    parser.add_argument('command', help='backup|show|help')
     args = parser.parse_args()
     command = args.command
     if args.verbose:
@@ -77,16 +77,18 @@ def main():
                               only_locals=args.only_locals, only_remotes=args.only_remotes)
     elif command == 'help':
         logger.info('configuration directory: %s' % args.config)
-        runner = Runner([args.config])
         if not args.verbose:
             logger.error('display available options for each engine with --verbose')
         from nagiback import sources, locals, remotes
 
         logger.error('available built-in local repository:')
+        # noinspection PyTypeChecker
         display_classes(logger, locals, locals.LocalRepository)
         logger.error('available built-in sources:')
+        # noinspection PyTypeChecker
         display_classes(logger, sources, sources.Source)
         logger.error('available built-in remote repository:')
+        # noinspection PyTypeChecker
         display_classes(logger, remotes, remotes.RemoteRepository)
 
     return return_code

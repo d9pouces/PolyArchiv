@@ -33,13 +33,26 @@ Installation
 The simplest way is to use `pip`:
 
     $ pip install nagiback
-    
+
+Some commands are available:
+display the current configuration, local and remote repositories, sources and backup status
+
+    $ nagiback show [-C /my/config/dir] [--verbose]
+
+backup data. If you set a frequency, repositories that are not out-of-date are not run (unless you specified `--force`)
+
+    $ nagiback backup [-C /my/config/dir] [--force]
+ 
+display all available engines (and their options if you specified `--verbose`)
+
+    $ nagiback help [--verbose]
+
 
 Configuration
 -------------
 
 The default configuration directory is /etc/nagiback. However, if you installed it in a virtualenv, 
-then its default config dir is $VIRTUALENV/etc/nagiback. 
+then its default config dir is `$VIRTUALENV/etc/nagiback`. 
 Otherwise, you can specify another config dir with `nagiback -C /my/config/dir`.
 
 This directory contains configuration files for local repositories 
