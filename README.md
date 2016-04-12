@@ -47,7 +47,10 @@ display all available engines (and their options if you specified `--verbose`)
 
     $ nagiback help [--verbose]
 
-You can also generate a debian package
+You can also generate a Debian/Ubuntu package with: 
+
+    sudo apt-get install python-stdeb
+    python setup.py --command-packages=stdeb.command  bdist_deb
 
 Configuration
 -------------
