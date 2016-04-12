@@ -125,8 +125,8 @@ Associating local and remote repositories
 -----------------------------------------
 
 With no restriction, all remote repositories apply to all local repositories but you can change this behaviour by applying tags to repositories.
-By default, a local repository has the tag `local` and include all remote repositories `included_remote_tags=\*`.
-A remote repository has the tag `remote` and include all local repositories `included_local_tags=\*`.
+By default, a local repository has the tag `local` and include all remote repositories `included_remote_tags=*`.
+A remote repository has the tag `remote` and include all local repositories `included_local_tags=*`.
 
 If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags in the remote configuration:
  
