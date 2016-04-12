@@ -55,7 +55,7 @@ You can also generate a Debian/Ubuntu package with:
 Configuration
 -------------
 
-The default configuration directory is /etc/nagiback. However, if you installed it in a virtualenv, 
+The default configuration directory is `/etc/nagiback`. However, if you installed it in a virtualenv, 
 then its default config dir is `$VIRTUALENV/etc/nagiback`. 
 Otherwise, you can specify another config dir with `nagiback -C /my/config/dir`.
 
