@@ -47,6 +47,7 @@ display all available engines (and their options if you specified `--verbose`)
 
     $ nagiback help [--verbose]
 
+You can also generate a debian package
 
 Configuration
 -------------

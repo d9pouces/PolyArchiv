@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from unittest import TestCase
 import datetime
 from nagiback.repository import RepositoryInfo
@@ -10,6 +11,7 @@ class TestRepository(TestCase):
 
     def test_info(self):
         now = datetime.datetime.now()
+        now = now.replace(microsecond=0)
         r1 = RepositoryInfo(last_fail=now, last_message="message", last_state_valid=True, last_success=now,
                             success_count=10, fail_count=10, total_size=42)
         as_dict = r1.to_dict()
