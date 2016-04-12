@@ -32,7 +32,7 @@ Installation
 
 The simplest way is to use `pip`:
 
-    pip install nagiback
+    $ pip install nagiback
     
 
 Configuration
@@ -53,7 +53,7 @@ Here is an example of local repository, gathering data from three sources:
 
 The `[global]` section defines options for the local repository, and other sections define the three sources:
 
-    cat /etc/nagiback/my-local.local
+    $ cat /etc/nagiback/my-local.local
     [global]
     engine=nagiback.locals.GitRepository
     local_path=/tmp/local
@@ -89,7 +89,7 @@ The kind of repository (either local or remote) and of each source is defined by
 You can define as many local repositories (each of them with one or more sources) as you want.
 Remote repositories are simpler and only have a `[global]` section. Here is a gitlab acting as remote storage for git local repo: 
 
-    cat /etc/nagiback/my-remote1.remote
+    $ cat /etc/nagiback/my-remote1.remote
     [global]
     engine=nagiback.remotes.GitRepository
     frequency=daily
@@ -101,7 +101,7 @@ Remote repositories are simpler and only have a `[global]` section. Here is a gi
 
 Maybe you also want a full backup (as an archive) uploaded monthly (the tenth day of each month) to a FTP server:
 
-    cat /etc/nagiback/my-remote2.remote
+    $ cat /etc/nagiback/my-remote2.remote
     [global]
     engine=nagiback.remotes.TarArchive
     frequency=monthly:10
@@ -130,14 +130,14 @@ A remote repository has the tag `remote` and include all local repositories `inc
 
 If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags in the remote configuration:
  
-    cat /etc/nagiback/my-remote.remote
+    $ cat /etc/nagiback/my-remote.remote
     [global]
     engine=nagiback.remotes.GitRepository
     excluded_local_tags=large
 
 and add the "large" tag in the local configuration:
 
-    cat /etc/nagiback/my-local.local
+    $ cat /etc/nagiback/my-local.local
     [global]
     engine=nagiback.locals.GitRepository
     local_path=/tmp/local
