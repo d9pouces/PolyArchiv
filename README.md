@@ -4,8 +4,8 @@ NagiBack
 Backup data from multiple local sources (organized in local repositories) and send them to one or more remote repositories.
 Configuration is based on simple files: 
     
-  * my-local-repo.local define a local repository named "my-local-repo",
-  * my-remote-repo.remote define a remote repository named "my-remote-repo".
+  * `my-local-repo.local` defines a local repository named "my-local-repo",
+  * `my-remote-repo.remote` defines a remote repository named "my-remote-repo".
   
 Each local repository defines one or more data sources (all of them are defined in the my-local-repo.local file:
 
@@ -16,7 +16,7 @@ Each local repository defines one or more data sources (all of them are defined 
 There are several kinds of local repositories:
 
   * raw files,
-  * local git repository: after each backup, files that have been gathered from the different sources are added and commited.
+  * local git repository: after each backup, files that have been gathered from the different sources are added and locally commited.
   
 There are also several kinds of remote repositories:
 
@@ -51,7 +51,7 @@ Here is an example of local repository, gathering data from three sources:
   * MySQL database
   * a directory
 
-The [global] section defines options for the local repository, and other sections define the three sources:
+The `[global]` section defines options for the local repository, and other sections define the three sources:
 
     cat /etc/nagiback/my-local.local
     [global]
@@ -87,7 +87,7 @@ The [global] section defines options for the local repository, and other section
 
 The kind of repository (either local or remote) and of each source is defined by the "engine" option.
 You can define as many local repositories (each of them with one or more sources) as you want.
-Remote repositories are simpler and only have a [global] section. Here is a gitlab acting as remote storage for git local repo: 
+Remote repositories are simpler and only have a `[global]` section. Here is a gitlab acting as remote storage for git local repo: 
 
     cat /etc/nagiback/my-remote1.remote
     [global]
@@ -125,8 +125,8 @@ Associating local and remote repositories
 -----------------------------------------
 
 With no restriction, all remote repositories apply to all local repositories but you can change this behaviour by applying tags to repositories.
-By default, a local repository has the tag "local" and include all remote repositories "included_remote_tags=\*".
-A remote repository has the tag "remote" and include all local repositories "included_local_tags=\*".
+By default, a local repository has the tag `local` and include all remote repositories `included_remote_tags=\*`.
+A remote repository has the tag `remote` and include all local repositories `included_local_tags=\*`.
 
 If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags in the remote configuration:
  
