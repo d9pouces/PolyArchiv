@@ -86,9 +86,6 @@ class RemoteRepository(Repository):
     def do_backup(self, local_repository):
         raise NotImplementedError
 
-    def restore(self, local_repository):
-        raise NotImplementedError
-
     # noinspection PyMethodMayBeStatic
     def get_info(self, local_repository, name=None, kind='remote'):
         assert isinstance(local_repository, LocalRepository)
@@ -102,6 +99,9 @@ class RemoteRepository(Repository):
         if name is None:
             name = self.name
         return local_repository.set_info(info, name=name, kind=kind)
+
+    def restore(self, local_repository):
+        raise NotImplementedError
 
 
 def check_git_url(remote_url):
@@ -288,10 +288,14 @@ class TarArchive(RemoteRepository):
             cmd = []
             if self.keytab:
                 cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
-            if self.remote_url.startswith('file://'):
-                ensure_dir(self.remote_url[7:], parent=False)
-                cmd += ['cp', archive_filename, self.remote_url[7:]]
+            remote_url = self.remote_url
+            if not remote_url.endswith('/'):
+                remote_url += '/'
+            if remote_url.startswith('file://'):
+                ensure_dir(remote_url[7:], parent=False)
+                cmd += ['cp', archive_filename, remote_url[7:]]
             else:
+
                 cmd += [self.curl_executable, '--anyauth']
                 if self.insecure:
                     cmd += ['-k']
@@ -303,10 +307,10 @@ class TarArchive(RemoteRepository):
                 if self.proxy:
                     cmd += ['-x', self.proxy, '--proxy-anyauth']
                 cmd += ['-T', archive_filename]
-                if self.remote_url.startswith('ftps'):
-                    cmd += ['--ftp-ssl', 'ftp' + self.remote_url[4:]]
+                if remote_url.startswith('ftps'):
+                    cmd += ['--ftp-ssl', 'ftp' + remote_url[4:]]
                 else:
-                    cmd += [self.remote_url]
+                    cmd += [remote_url]
             logger.info(' '.join(cmd))
             p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
             stdout, stderr = p.communicate()

@@ -27,6 +27,19 @@ class RepositoryInfo(object):
         self.total_size = total_size  # total size (in bytes) of the backup
         self.last_message = last_message  # should be "ok" for a success, or an informative message on error
 
+    @property
+    def last(self):
+        """Return the date of the last stored event (either success or fail), or None if no event is registered"""
+        if self.last_fail is None and self.last_success is None:
+            return None
+        elif self.last_success is None:
+            return self.last_fail
+        elif self.last_fail is None:
+            return self.last_success
+        elif self.last_fail < self.last_success:
+            return self.last_success
+        return self.last_fail
+
     def to_dict(self):
         result = {x: getattr(self, x) for x in ('last_state_valid', 'success_count', 'fail_count', 'total_size',
                                                 'last_message')}
@@ -62,6 +75,58 @@ class RepositoryInfo(object):
     def from_str(cls, text):
         data = json.loads(text)
         return cls.from_dict(data)
+
+    def __le__(self, other):
+        assert isinstance(other, RepositoryInfo)
+        self_last = self.last
+        other_last = other.last
+        if self_last is None:
+            return True
+        elif other_last is None:
+            return False
+        return self_last <= other_last
+
+    def __lt__(self, other):
+        assert isinstance(other, RepositoryInfo)
+        self_last = self.last
+        other_last = other.last
+        if self_last is None and other_last is None:
+            return False
+        elif self_last is None:
+            return True
+        elif other_last is None:
+            return False
+        return self_last < other_last
+
+    def __ge__(self, other):
+        assert isinstance(other, RepositoryInfo)
+        self_last = self.last
+        other_last = other.last
+        if self_last is None:
+            return other_last is None
+        elif other_last is None:
+            return True
+        return self_last >= other_last
+
+    def __gt__(self, other):
+        assert isinstance(other, RepositoryInfo)
+        self_last = self.last
+        other_last = other.last
+        if self_last is None and other_last is None:
+            return False
+        elif self_last is None:
+            return False
+        elif other_last is None:
+            return True
+        return self_last > other_last
+
+    def __eq__(self, other):
+        assert isinstance(other, RepositoryInfo)
+        return self.last == other.last
+
+    def __ne__(self, other):
+        assert isinstance(other, RepositoryInfo)
+        return self.last != other.last
 
 
 class Repository(ParameterizedObject):
