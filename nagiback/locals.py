@@ -37,7 +37,7 @@ class LocalRepository(Repository):
                  **kwargs):
         super(LocalRepository, self).__init__(name=name, **kwargs)
         self.local_tags = ['local'] if local_tags is None else local_tags
-        self.included_remote_tags = included_remote_tags or []
+        self.included_remote_tags = ['*'] if included_remote_tags is None else included_remote_tags
         self.excluded_remote_tags = excluded_remote_tags or []
         self.sources = []
 

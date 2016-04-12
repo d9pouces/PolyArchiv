@@ -46,26 +46,30 @@ class RSync(Source):
     """copy all files from the destination to the backup using rsync.
     """
     parameters = Source.parameters + [
-        Parameter('source_path', converter=check_directory),
-        Parameter('destination_path'),
-        Parameter('rsync_executable', converter=check_executable),
-        Parameter('exclude'),
-        Parameter('include'),
-        Parameter('detect_hard_links', converter=bool_setting),
+        Parameter('source_path', converter=check_directory, help_str='original folder to backup'),
+        Parameter('destination_path', help_str='destination folder (relative path, e.g. "./files")'),
+        Parameter('rsync_executable', converter=check_executable, help_str='rsync executable (default: rsync)'),
+        Parameter('exclude', help_str='exclude files matching PATTERN (see --exclude option from rsync). '
+                                      'If PATTERN startswith @, then it should be the absolute path of a file '
+                                      '(see --exclude-from option from rsync)'),
+        Parameter('include', help_str='only include files matching PATTERN (see --include option from rsync). '
+                                      'If PATTERN startswith @, then it should be the absolute path of a file '
+                                      '(see --include-from option from rsync)'),
+        Parameter('preserve_hard_links', converter=bool_setting, help_str='preserve hard links'),
     ]
 
     def __init__(self, name, local_repository, source_path='', destination_path='', rsync_executable='rsync',
-                 exclude='', include='', detect_hard_links='', **kwargs):
+                 exclude='', include='', preserve_hard_links='', **kwargs):
         """
         :param local_repository: local repository where files are stored
         :param source_path: absolute path of a directory to backup
-        :param destination_path: relative path of the backup destination (must be a directory name)
+        :param destination_path: relative path of the backup destination (must be a directory name, e.g. "data")
         :param rsync_executable: path of the rsync executable
         :param exclude: exclude files matching PATTERN. If PATTERN starts with '@', it must be the absolute path of
             a file (cf. the --exclude-from option from rsync)
         :param include: don't exclude files matching PATTERN. If PATTERN starts with '@', it must be the absolute path of
             a file (cf. the --include-from option from rsync)
-        :param detect_hard_links: preserve hard links
+        :param preserve_hard_links: preserve hard links
         """
         super(RSync, self).__init__(name, local_repository, **kwargs)
         self.source_path = source_path
@@ -73,11 +77,11 @@ class RSync(Source):
         self.rsync_executable = rsync_executable
         self.exclude = exclude
         self.include = include
-        self.detect_hard_links = detect_hard_links.lower().strip() in ('yes', 'true', 'on', '1')
+        self.preserve_hard_links = preserve_hard_links.lower().strip() in ('yes', 'true', 'on', '1')
 
     def backup(self):
         cmd = [self.rsync_executable, '-a', '--delete', '-S', ]
-        if self.detect_hard_links:
+        if self.preserve_hard_links:
             cmd.append('-H')
         if self.exclude and self.exclude.startswith('@'):
             cmd += ['--exclude-from', self.exclude[1:]]
@@ -102,12 +106,12 @@ class RSync(Source):
 
 class MySQL(Source):
     parameters = Source.parameters + [
-        Parameter('host'),
-        Parameter('port', converter=int),
-        Parameter('user'),
-        Parameter('password'),
-        Parameter('database'),
-        Parameter('destination_path'),
+        Parameter('host', help_str='database host'),
+        Parameter('port', converter=int, help_str='database port'),
+        Parameter('user', help_str='database user'),
+        Parameter('password', help_str='database password'),
+        Parameter('database', help_str='name of the backuped database'),
+        Parameter('destination_path', help_str='relative path of the backup destination (e.g. "database.sql")'),
         Parameter('dump_executable', converter=check_executable,
                   help_str='path of the mysqldump executable (default: "mysqldump")'),
     ]

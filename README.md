@@ -42,7 +42,103 @@ The default configuration directory is /etc/nagiback. However, if you installed 
 then its default config dir is $VIRTUALENV/etc/nagiback. 
 Otherwise, you can specify another config dir with `nagiback -C /my/config/dir`.
 
-The selected configuration directory should contain configuration files for local repositories (like `my-local.local`).
+This directory contains configuration files for local repositories 
+(like `my-local.local`) as well as remote repositories (like `my-remote.remote`).
 
-Backup data
------------
+Here is an example of local repository, gathering data from three sources:
+
+  * PostgresSQL database
+  * MySQL database
+  * a directory
+
+The [global] section defines options for the local repository, and other sections define the three sources:
+
+    cat /etc/nagiback/my-local.local
+    [global]
+    engine=nagiback.locals.GitRepository
+    local_path=/tmp/local
+    local_tags=local
+    included_remote_tags=*
+    excluded_remote_tags=
+    frequency=daily
+    
+    [source_1]
+    engine=nagiback.sources.PostgresSQL
+    host=localhost
+    port=5432
+    user=test
+    password=testtest
+    database=testdb
+    destination_path=./postgres.sql
+    
+    [source_2]
+    engine=nagiback.sources.MySQL
+    host=localhost
+    port=3306
+    user=test
+    password=testtest
+    database=testdb
+    destination_path=./mysql.sql
+    
+    [source_3]
+    engine=nagiback.sources.RSync
+    source_path=/tmp/source/files
+    destination_path=./files
+
+The kind of repository (either local or remote) and of each source is defined by the "engine" option.
+You can define as many local repositories (each of them with one or more sources) as you want.
+Remote repositories are simpler and only have a [global] section. Here is a gitlab acting as remote storage for git local repo: 
+
+    cat /etc/nagiback/my-remote1.remote
+    [global]
+    engine=nagiback.remotes.GitRepository
+    frequency=daily
+    remote_tags=
+    remote_url=http://gitlab.example.org/group/TestsNagiback.git
+    remote_branch=master
+    user=mgallet
+    included_local_tags=*
+
+Maybe you also want a full backup (as an archive) uploaded monthly (the tenth day of each month) to a FTP server:
+
+    cat /etc/nagiback/my-remote2.remote
+    [global]
+    engine=nagiback.remotes.TarArchive
+    frequency=monthly:10
+    remote_tags=
+    remote_url=ftp://myftp.example.org/backups/project/
+    remote_branch=master
+    user=mgallet
+    password=p@ssw0rd
+    tar_format=tar.xz
+    included_local_tags=*
+
+Configuration files can be owned by different users: files that are unreadable by the current user are ignored.
+
+Available engines
+-----------------
+
+Several engines for sources and remote or local repositories are available.
+Use `nagiback help` to display them (and `nagiback help -v` to display their configuration options). 
+
+Associating local and remote repositories
+-----------------------------------------
+
+With no restriction, all remote repositories apply to all local repositories but you can change this behaviour by applying tags to repositories.
+By default, a local repository has the tag "local" and include all remote repositories "included_remote_tags=\*".
+A remote repository has the tag "remote" and include all local repositories "included_local_tags=\*".
+
+If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags in the remote configuration:
+ 
+    cat /etc/nagiback/my-remote.remote
+    [global]
+    engine=nagiback.remotes.GitRepository
+    excluded_local_tags=large
+
+and add the "large" tag in the local configuration:
+
+    cat /etc/nagiback/my-local.local
+    [global]
+    engine=nagiback.locals.GitRepository
+    local_path=/tmp/local
+    local_tags=local,large
