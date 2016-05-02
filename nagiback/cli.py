@@ -46,7 +46,7 @@ def main():
     parser.add_argument('--only-locals', nargs='+', help='limit to these local tags', default=[])
     parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
-    parser.add_argument('command', help='backup|show|help')
+    parser.add_argument('command', help='backup|restore|config|plugins')
     args = parser.parse_args()
     command = args.command
     if args.verbose:
@@ -74,7 +74,7 @@ def main():
     elif command == 'restore':
         runner = Runner([args.config])
         runner.restore(args.only_locals, args.only_remotes)
-    elif command == 'show':
+    elif command == 'config':
         from nagiback.show import show_local_repository, show_remote_local_repository, show_remote_repository
         logger.info('configuration directory: %s (you can change it with -C /other/directory)' % args.config)
         runner = Runner([args.config])
@@ -83,7 +83,7 @@ def main():
         runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
                               local_remote_command=show_remote_local_repository,
                               only_locals=args.only_locals, only_remotes=args.only_remotes)
-    elif command == 'help':
+    elif command == 'plugins':
         logger.info('configuration directory: %s' % args.config)
         if not args.verbose:
             logger.error('display available options for each engine with --verbose')

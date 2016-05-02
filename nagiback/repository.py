@@ -43,12 +43,8 @@ class RepositoryInfo(object):
     def to_dict(self):
         result = {x: getattr(self, x) for x in ('last_state_valid', 'success_count', 'fail_count', 'total_size',
                                                 'last_message')}
-        result['last_success'] = None
-        result['last_fail'] = None
-        if isinstance(self.last_success, datetime.datetime):
-            result['last_success'] = self.last_success.strftime('%Y-%m-%dT%H:%M:%S')
-        if isinstance(self.last_fail, datetime.datetime):
-            result['last_fail'] = self.last_fail.strftime('%Y-%m-%dT%H:%M:%S')
+        result['last_success'] = self.datetime_to_str(self.last_success)
+        result['last_fail'] = self.datetime_to_str(self.last_fail)
         return result
 
     @classmethod
@@ -63,10 +59,23 @@ class RepositoryInfo(object):
             kwargs[k] = data.get(k)
             assert kwargs[k] is None or isinstance(kwargs[k], bool)
         if data['last_fail']:
-            kwargs['last_fail'] = datetime.datetime.strptime(data['last_fail'], '%Y-%m-%dT%H:%M:%S')
+            kwargs['last_fail'] = cls.datetime_from_str(data['last_fail'])
         if data['last_success']:
-            kwargs['last_success'] = datetime.datetime.strptime(data['last_success'], '%Y-%m-%dT%H:%M:%S')
+            kwargs['last_success'] = cls.datetime_from_str(data['last_success'])
         return RepositoryInfo(**kwargs)
+
+    @staticmethod
+    def datetime_to_str(value=None):
+        if value is None:
+            value = None
+        # noinspection PyUnresolvedReferences
+        return value.strftime('%Y-%m-%dT%H:%M:%S')
+
+    @staticmethod
+    def datetime_from_str(value=None):
+        if value is None:
+            return None
+        return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
 
     def to_str(self):
         return json.dumps(self.to_dict())

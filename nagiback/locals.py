@@ -144,6 +144,8 @@ class FileRepository(LocalRepository):
     parameters = LocalRepository.parameters + [
         Parameter('local_path', converter=check_directory, help_str='absolute path to locally gather all data')
     ]
+    LAST_BACKUP_FILE = '.last-backup'
+    PRIVATE_FOLDER = '.nagiback'
 
     def __init__(self, name, local_path='.', **kwargs):
         super(FileRepository, self).__init__(name=name, **kwargs)
@@ -153,7 +155,9 @@ class FileRepository(LocalRepository):
         ensure_dir(self.local_path)
 
     def post_source_backup(self):
-        pass
+        last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
+        with codecs.open(os.path.join(self.local_path, self.LAST_BACKUP_FILE), 'w', encoding='utf-8') as fd:
+            fd.write(last_backup_date)
 
     def get_cwd(self):
         ensure_dir(self.local_path)
@@ -161,7 +165,7 @@ class FileRepository(LocalRepository):
 
     @property
     def private_path(self):
-        return os.path.join(self.local_path, '.nagiback')
+        return os.path.join(self.local_path, self.PRIVATE_FOLDER)
 
     @property
     def lock_filepath(self):
@@ -219,12 +223,11 @@ class GitRepository(FileRepository):
         self.git_executable = git_executable
 
     def post_source_backup(self):
+        super(GitRepository, self).post_source_backup()
         gitignore = os.path.join(self.local_path, '.gitignore')
         if not os.path.isfile(gitignore):
             with codecs.open(gitignore, 'w', encoding='utf-8') as fd:
-                fd.write(".nagiback/\n")
-
-        end = datetime.datetime.now()
+                fd.write("%s/\n" % self.PRIVATE_FOLDER)
 
         cmd = [self.git_executable, 'init']
         logger.info(' '.join(cmd))
@@ -244,6 +247,7 @@ class GitRepository(FileRepository):
             logger.error(stderr.decode())
             raise ValueError()
 
+        end = datetime.datetime.now()
         cmd = [self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')]
         logger.info(' '.join(cmd))
         p = subprocess.Popen(cmd, cwd=self.local_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

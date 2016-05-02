@@ -100,6 +100,9 @@ class RemoteRepository(Repository):
             name = self.name
         return local_repository.set_info(info, name=name, kind=kind)
 
+    def get_last_backup_date(self):
+        raise NotImplementedError
+
     def restore(self, local_repository):
         raise NotImplementedError
 
@@ -146,6 +149,7 @@ class GitRepository(RemoteRepository):
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
         cmd += [self.git_executable, 'push', self.remote_url, '+master:%s' % self.remote_branch]
+        # noinspection PyTypeChecker
         if self.private_key and not self.remote_url.startswith('http'):
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (self.private_key, ' '.join(cmd))]
         logger.info(' '.join(cmd))
@@ -155,6 +159,10 @@ class GitRepository(RemoteRepository):
             logger.error(stdout.decode())
             logger.error(stderr.decode())
             raise ValueError('unable to push to remote %s from %s' % (self.name, local_repository.local_path))
+
+    def get_last_backup_date(self):
+        # git archive --remote=git://git.foo.com/project.git HEAD:path /to/directory filename | tar -x
+        pass
 
 
 class Rsync(RemoteRepository):
@@ -180,7 +188,7 @@ class Rsync(RemoteRepository):
         cmd = []
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
-        cmd += [self.rsync_executable, '-az', '--delete', '-S']
+        cmd += [self.rsync_executable, '-az', '--delete', '--exclude=%s' % local_repository.PRIVATE_FOLDER, '-S']
         local_path = local_repository.local_path
         if not local_path.endswith(os.path.sep):
             local_path += os.path.sep
@@ -264,15 +272,16 @@ class TarArchive(RemoteRepository):
         filenames = {x for x in os.listdir(local_repository.local_path)} - self.excluded_files
         filenames = [x for x in filenames]
         filenames.sort()
+        # noinspection PyTypeChecker
         now_str = datetime.datetime.now().strftime(self.date_format)
         archive_filename = os.path.join(local_repository.local_path,
                                         '%s-%s.%s' % (self.archive_prefix, now_str, self.tar_format))
         if self.tar_format == 'tar.gz':
-            cmd = [self.tar_executable, 'czf']
+            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, 'czf']
         elif self.tar_format == 'tar.bz2':
-            cmd = [self.tar_executable, 'cjf']
+            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, 'cjf']
         elif self.tar_format == 'tar.xz':
-            cmd = [self.tar_executable, 'cJf']
+            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, 'cJf']
         else:
             raise ValueError('invalid tar format: %s' % self.tar_format)
         cmd.append(archive_filename)
@@ -289,8 +298,10 @@ class TarArchive(RemoteRepository):
             if self.keytab:
                 cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
             remote_url = self.remote_url
+            # noinspection PyTypeChecker
             if not remote_url.endswith('/'):
                 remote_url += '/'
+            # noinspection PyTypeChecker
             if remote_url.startswith('file://'):
                 ensure_dir(remote_url[7:], parent=False)
                 cmd += ['cp', archive_filename, remote_url[7:]]
@@ -307,6 +318,7 @@ class TarArchive(RemoteRepository):
                 if self.proxy:
                     cmd += ['-x', self.proxy, '--proxy-anyauth']
                 cmd += ['-T', archive_filename]
+                # noinspection PyTypeChecker
                 if remote_url.startswith('ftps'):
                     cmd += ['--ftp-ssl', 'ftp' + remote_url[4:]]
                 else:
@@ -324,3 +336,27 @@ class TarArchive(RemoteRepository):
             os.remove(archive_filename)
         if error is not None:
             raise error
+
+
+class Duplicity(RemoteRepository):
+    parameters = RemoteRepository.parameters + [
+        Parameter('duplicity_executable', converter=check_executable,
+                  help_str='path of the duplicity executable (default: "duplicity")'),
+        Parameter('always_full', converter=bool_setting,
+                  help_str='Perform a full backup. A new backup chain is started even if signatures are available for '
+                           'an incremental backup.'),  # full
+        Parameter('always_verify', converter=bool_setting,
+                  help_str='Always perform a verify check after a backup: restore backup contents temporarily file by '
+                           'file and compare against the local path\'s contents. Can take a lot of time!'),  # verify
+        Parameter('encrypt_key',
+                  help_str='When backing up, encrypt to the given public key, instead of using symmetric (traditional) '
+                           'encryption.'),  # --encrypt-key key-id
+        Parameter('encrypt-secret-keyring',
+                  help_str='This option can only be used with encrypt_key, and changes the path to the secret keyring'
+                           ' for the encrypt key to filename. Default to ~/.gnupg/secring.gpg'
+                  ),  # --encrypt-secret-keyring filename
+        Parameter('sign_key',
+                  help_str='When backing up, all backup files will be signed with keyid key.'),  # --sign-key key-id
+
+    ]
+# --exclude=%s
