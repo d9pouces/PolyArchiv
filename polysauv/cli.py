@@ -10,6 +10,8 @@ import logging.config
 import os
 import sys
 
+import math
+
 from polysauv.conf import Parameter
 
 __author__ = 'mgallet'
@@ -112,7 +114,10 @@ def display_classes(logger, module, cls):
         for parameter in v.parameters:
             assert isinstance(parameter, Parameter)
             if parameter.help_str:
-                logger.info('      - %s: %s' % (parameter.option_name, parameter.help_str))
+                lines = []
+                for line in parameter.help_str.splitlines():
+                    lines += [line[70 * i:70 * (i + 1)] for i in range(math.ceil(len(line) / 70.))]
+                logger.info('      - %s: %s' % (parameter.option_name, '\n        '.join(lines)))
             else:
                 logger.info('      - %s' % parameter.option_name)
         logger.info('    -----------------------------------------------------------------------------')
