@@ -27,7 +27,6 @@ def get_input_text(prompt):
     return result
 
 
-
 def ensure_dir(dirname, parent=False):
     """ensure that `dirname` exists and is a directory.
 

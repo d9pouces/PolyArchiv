@@ -5,13 +5,14 @@ import codecs
 import datetime
 import logging
 import os
-import subprocess
 import re
+import subprocess
 
 from polysauv.conf import Parameter, strip_split, check_directory, check_executable
 from polysauv.filelocks import Lock
 from polysauv.repository import Repository, RepositoryInfo
-from polysauv.utils import ensure_dir, text_type
+from polysauv.sources import Source
+from polysauv.utils import text_type
 
 __author__ = 'mgallet'
 logger = logging.getLogger('polysauv.sources')
@@ -65,6 +66,7 @@ class LocalRepository(Repository):
             lock_ = self.get_lock()
             self.pre_source_backup()
             for source in self.sources:
+                assert isinstance(source, Source)
                 source.backup()
             self.post_source_backup()
             info.total_size = self.get_repository_size()
@@ -84,7 +86,8 @@ class LocalRepository(Repository):
                 self.release_lock(lock_)
             except Exception as e:
                 logger.critical('unable to release lock. %s' % str(e))
-        self.set_info(info)
+        if self.can_execute_command('# register this backup state?'):
+            self.set_info(info)
         return info.last_state_valid
 
     def restore(self):
@@ -141,6 +144,7 @@ class FileRepository(LocalRepository):
         .polysauv/local/global.json
         .polysauv/remote/my_remote.json
     """
+
     parameters = LocalRepository.parameters + [
         Parameter('local_path', converter=check_directory, help_str='absolute path to locally gather all data')
     ]
@@ -152,15 +156,16 @@ class FileRepository(LocalRepository):
         self.local_path = local_path
 
     def pre_source_backup(self):
-        ensure_dir(self.local_path)
+        self.ensure_dir(self.local_path)
 
     def post_source_backup(self):
         last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
-        with codecs.open(os.path.join(self.local_path, self.LAST_BACKUP_FILE), 'w', encoding='utf-8') as fd:
-            fd.write(last_backup_date)
+        if self.execute_command('# store the current time for remote repositories?'):
+            with codecs.open(os.path.join(self.local_path, self.LAST_BACKUP_FILE), 'w', encoding='utf-8') as fd:
+                fd.write(last_backup_date)
 
     def get_cwd(self):
-        ensure_dir(self.local_path)
+        self.ensure_dir(self.local_path)
         return self.local_path
 
     @property
@@ -175,7 +180,7 @@ class FileRepository(LocalRepository):
         if name is None:
             name = self.name
         path = os.path.join(self.private_path, kind, '%s.json' % name)
-        ensure_dir(path, parent=True)
+        self.ensure_dir(path, parent=True)
         if os.path.isfile(path):
             with codecs.open(path, 'r', encoding='utf-8') as fd:
                 content = fd.read()
@@ -188,7 +193,7 @@ class FileRepository(LocalRepository):
             name = self.name
         assert isinstance(info, RepositoryInfo)
         path = os.path.join(self.private_path, kind, '%s.json' % name)
-        ensure_dir(path, parent=True)
+        self.ensure_dir(path, parent=True)
         content = info.to_str()
         with codecs.open(path, 'w', encoding='utf-8') as fd:
             fd.write(content)
@@ -212,6 +217,9 @@ class FileRepository(LocalRepository):
     def release_lock(self, lock_):
         lock_.release()
 
+    def restore(self):
+        raise NotImplementedError
+
 
 class GitRepository(FileRepository):
     parameters = FileRepository.parameters + [
@@ -225,30 +233,13 @@ class GitRepository(FileRepository):
     def post_source_backup(self):
         super(GitRepository, self).post_source_backup()
         gitignore = os.path.join(self.local_path, '.gitignore')
-        if not os.path.isfile(gitignore):
+        if not os.path.isfile(gitignore) and self.can_execute_command('# create .gitignore file?'):
             with codecs.open(gitignore, 'w', encoding='utf-8') as fd:
                 fd.write("%s/\n" % self.PRIVATE_FOLDER)
-
-        cmd = [self.git_executable, 'init']
-        logger.info(' '.join(cmd))
-        p = subprocess.Popen(cmd, cwd=self.local_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            logger.error(stdout.decode())
-            logger.error(stderr.decode())
-            raise ValueError()
-
-        cmd = [self.git_executable, 'add', '.']
-        logger.info(' '.join(cmd))
-        p = subprocess.Popen(cmd, cwd=self.local_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            logger.error(stdout.decode())
-            logger.error(stderr.decode())
-            raise ValueError()
-
+        self.execute_command([self.git_executable, 'init'])
+        self.execute_command([self.git_executable, 'add', '.'])
         end = datetime.datetime.now()
-        cmd = [self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')]
-        logger.info(' '.join(cmd))
-        p = subprocess.Popen(cmd, cwd=self.local_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p.communicate()
+        self.execute_command([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')])
+
+    def restore(self):
+        raise NotImplementedError

@@ -8,7 +8,6 @@
 
 """
 from __future__ import unicode_literals
-import logging
 
 import os
 import subprocess
@@ -18,7 +17,6 @@ from polysauv.locals import LocalRepository
 from polysauv.repository import ParameterizedObject
 
 __author__ = 'mgallet'
-logger = logging.getLogger('polysauv.sources')
 
 
 class Source(ParameterizedObject):
@@ -96,8 +94,7 @@ class RSync(Source):
         elif self.include:
             cmd += ['--include', self.include]
         dirname = os.path.join(self.local_repository.get_cwd(), self.destination_path)
-        if not os.path.isdir(dirname) and self.can_execute_command(['mkdir', '-p', dirname]):
-            os.makedirs(dirname)
+        self.ensure_dir(dirname)
         source = self.source_path
         if not source.endswith(os.path.sep):
             source += os.path.sep
@@ -111,8 +108,7 @@ class RSync(Source):
         if self.preserve_hard_links:
             cmd.append('-H')
         dirname = os.path.join(self.local_repository.get_cwd(), self.destination_path)
-        if not os.path.isdir(dirname) and self.can_execute_command(['mkdir', '-p', dirname]):
-            os.makedirs(dirname)
+        self.ensure_dir(dirname)
         source = self.source_path
         if not source.endswith(os.path.sep):
             source += os.path.sep
@@ -150,9 +146,7 @@ class MySQL(Source):
 
     def backup(self):
         filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
-        dirname = os.path.dirname(filename)
-        if not os.path.isdir(dirname) and self.can_execute_command(['mkdir', '-p', dirname]):
-            os.makedirs(dirname)
+        self.ensure_dir(filename, parent=True)
         cmd = self.get_dump_cmd_list()
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()
@@ -170,10 +164,8 @@ class MySQL(Source):
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()
         env.update(self.get_env())
-        if self.can_execute_command(cmd):
-            with open(filename, 'rb') as fd:
-                p = subprocess.Popen(cmd, env=env, stdin=fd, stderr=self.stderr, stdout=self.stdout)
-            p.communicate()
+        with open(filename, 'rb') as fd:
+            self.execute_command(cmd, env=env, stdin=fd, stderr=self.stderr, stdout=self.stdout)
 
     @property
     def db_options(self):
@@ -263,9 +255,7 @@ class Ldap(Source):
 
     def backup(self):
         filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
-        dirname = os.path.dirname(filename)
-        if not os.path.isdir(dirname) and self.can_execute_command(['mkdir', '-p', dirname]):
-            os.makedirs(dirname)
+        self.ensure_dir(filename, parent=True)
         cmd = [self.dump_executable, '-l', filename]
         if self.database:
             cmd += ['-n', self.database]

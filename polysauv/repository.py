@@ -4,6 +4,7 @@ from __future__ import unicode_literals, print_function
 import datetime
 import json
 import logging
+import os
 
 import subprocess
 
@@ -26,6 +27,10 @@ class ParameterizedObject(object):
         self.command_keep_output = command_keep_output
 
     def can_execute_command(self, text):
+        """Return False if dry mode is activated or if the command is not validated by the user.
+         Return True otherwise.
+         Display the command if required.
+        """
         if isinstance(text, list):
             text = ' '.join(text)
         result = '-'
@@ -36,12 +41,16 @@ class ParameterizedObject(object):
             print(text)
         return result != 'n' and self.command_execute
 
-    def execute_command(self, cmd):
+    def execute_command(self, cmd, ignore_errors=False, cwd=None, stderr=None, stdout=None, stdin=None, env=None):
+        return_code = 0
         if self.can_execute_command(cmd):
-            p = subprocess.Popen(cmd, stderr=self.stderr, stdout=self.stdout)
+            p = subprocess.Popen(cmd, stdin=stdin, stderr=stderr or self.stderr, stdout=stdout or self.stdout,
+                                 cwd=cwd, env=env)
             p.communicate()
-            if p.returncode != 0:
-                raise subprocess.CalledProcessError(p.returncode, cmd[0])
+            return_code = p.returncode
+            if return_code != 0 and not ignore_errors:
+                raise subprocess.CalledProcessError(return_code, cmd[0])
+        return return_code
 
     @property
     def stderr(self):
@@ -50,6 +59,22 @@ class ParameterizedObject(object):
     @property
     def stdout(self):
         return subprocess.PIPE if not self.command_keep_output else None
+
+    def ensure_dir(self, dirname, parent=False):
+        """ensure that `dirname` exists and is a directory.
+
+        :param dirname:
+        :param parent: only check for the parent directory of `dirname`
+        :return:
+        """
+        if parent:
+            dirname = os.path.dirname(dirname)
+        if os.path.exists(dirname) and not os.path.isdir(dirname):
+            raise IOError('%s exists but is not a directory' % dirname)
+        elif os.path.isdir(dirname):
+            return
+        if self.can_execute_command(['mkdir', '-p', dirname]):
+            os.makedirs(dirname)
 
 
 class RepositoryInfo(object):

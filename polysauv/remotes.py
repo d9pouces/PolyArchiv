@@ -1,10 +1,8 @@
 # -*- coding=utf-8 -*-
 from __future__ import unicode_literals
-import logging
-
-import subprocess
 
 import datetime
+import logging
 
 try:
     # noinspection PyCompatibility
@@ -144,7 +142,7 @@ class GitRepository(RemoteRepository):
 
     def do_backup(self, local_repository):
         assert local_repository.__class__ == LocalGitRepository
-        assert isinstance(local_repository, LocalGitRepository)
+        assert isinstance(local_repository, LocalGitRepository)  # just to help PyCharm
         cmd = []
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
@@ -152,13 +150,7 @@ class GitRepository(RemoteRepository):
         # noinspection PyTypeChecker
         if self.private_key and not self.remote_url.startswith('http'):
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (self.private_key, ' '.join(cmd))]
-        logger.info(' '.join(cmd))
-        p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            logger.error(stdout.decode())
-            logger.error(stderr.decode())
-            raise ValueError('unable to push to remote %s from %s' % (self.name, local_repository.local_path))
+        self.execute_command(cmd, cwd=local_repository.local_path)
 
     def get_last_backup_date(self, local_repository):
         # git archive --remote=git://git.foo.com/project.git HEAD:path /to/directory filename | tar -x
@@ -200,13 +192,7 @@ class Rsync(RemoteRepository):
         else:
             cmd += ['ssh']
         cmd += [local_path, remote_url]
-        logger.info(' '.join(cmd))
-        p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            logger.error(stdout.decode())
-            logger.error(stderr.decode())
-            raise ValueError('unable to synchronize %s against %s' % (local_path, remote_url))
+        self.execute_command(cmd, cwd=local_repository.local_path)
 
 
 def check_curl_url(remote_url):
@@ -286,12 +272,8 @@ class TarArchive(RemoteRepository):
             raise ValueError('invalid tar format: %s' % self.tar_format)
         cmd.append(archive_filename)
         cmd += filenames
-        logger.info(' '.join(cmd))
-        p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            logger.error(stdout.decode())
-            logger.error(stderr.decode())
+        returncode = self.execute_command(cmd, cwd=local_repository.local_path, ignore_errors=True)
+        if returncode != 0:
             error = ValueError('unable to create archive %s' % archive_filename)
         else:
             cmd = []
@@ -323,16 +305,10 @@ class TarArchive(RemoteRepository):
                     cmd += ['--ftp-ssl', 'ftp' + remote_url[4:]]
                 else:
                     cmd += [remote_url]
-            logger.info(' '.join(cmd))
-            p = subprocess.Popen(cmd, cwd=local_repository.local_path, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-            stdout, stderr = p.communicate()
-            if p.returncode != 0:
-                logger.error(stdout.decode())
-                logger.error(stderr.decode())
+            returncode = self.execute_command(cmd, cwd=local_repository.local_path)
+            if returncode != 0:
                 error = ValueError('unable to create archive %s' % archive_filename)
-
-        if os.path.isfile(archive_filename):
-            logger.info('remove %s' % archive_filename)
+        if os.path.isfile(archive_filename) and self.can_execute_command(['rm', archive_filename]):
             os.remove(archive_filename)
         if error is not None:
             raise error
@@ -483,11 +459,4 @@ class Duplicity(RemoteRepository):
             elif i == 1:
                 cmd_args += ['verify']
             cmd_args += [local_path, remote_url]
-            logger.info(' '.join(cmd_args))
-            p = subprocess.Popen(cmd_args, cwd=local_repository.local_path, stderr=subprocess.PIPE,
-                                 stdout=subprocess.PIPE, env=env)
-            stdout, stderr = p.communicate()
-            if p.returncode != 0:
-                logger.error(stdout.decode())
-                logger.error(stderr.decode())
-                raise ValueError('unable to synchronize %s against %s' % (local_path, remote_url))
+            self.execute_command(cmd_args, cwd=local_repository.local_path, env=env)
