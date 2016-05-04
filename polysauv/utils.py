@@ -15,6 +15,19 @@ else:
     text_type = unicode
 
 
+def get_input_text(prompt):
+    encoding = 'utf-8'
+    if hasattr(sys.stdin, 'encoding') and sys.stdin.encoding:
+        encoding = sys.stdin.encoding
+    if sys.version_info[0] == 2:
+        # noinspection PyCompatibility
+        result = raw_input(prompt).decode(encoding)
+    else:
+        result = input(prompt)
+    return result
+
+
+
 def ensure_dir(dirname, parent=False):
     """ensure that `dirname` exists and is a directory.
 

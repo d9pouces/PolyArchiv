@@ -35,6 +35,10 @@ class Source(ParameterizedObject):
         """Backup data corresponding to this source"""
         raise NotImplementedError
 
+    def restore(self):
+        """Restore data from the local backup """
+        raise NotImplementedError
+
     def get_info(self, name, kind='sources'):
         return self.local_repository.get_info(name, kind=kind)
 
@@ -92,7 +96,7 @@ class RSync(Source):
         elif self.include:
             cmd += ['--include', self.include]
         dirname = os.path.join(self.local_repository.get_cwd(), self.destination_path)
-        if not os.path.isdir(dirname):
+        if not os.path.isdir(dirname) and self.can_execute_command(['mkdir', '-p', dirname]):
             os.makedirs(dirname)
         source = self.source_path
         if not source.endswith(os.path.sep):
@@ -100,8 +104,22 @@ class RSync(Source):
         if not dirname.endswith(os.path.sep):
             dirname += os.path.sep
         cmd += [source, dirname]
-        logger.info(' '.join(cmd))
-        subprocess.check_call(cmd)
+        self.execute_command(cmd)
+
+    def restore(self):
+        cmd = [self.rsync_executable, '-a', '--delete', '-S', ]
+        if self.preserve_hard_links:
+            cmd.append('-H')
+        dirname = os.path.join(self.local_repository.get_cwd(), self.destination_path)
+        if not os.path.isdir(dirname) and self.can_execute_command(['mkdir', '-p', dirname]):
+            os.makedirs(dirname)
+        source = self.source_path
+        if not source.endswith(os.path.sep):
+            source += os.path.sep
+        if not dirname.endswith(os.path.sep):
+            dirname += os.path.sep
+        cmd += [dirname, source]
+        self.execute_command(cmd)
 
 
 class MySQL(Source):
@@ -114,11 +132,14 @@ class MySQL(Source):
         Parameter('destination_path', help_str='relative path of the backup destination (e.g. "database.sql")'),
         Parameter('dump_executable', converter=check_executable,
                   help_str='path of the mysqldump executable (default: "mysqldump")'),
+        Parameter('restore_executable', converter=check_executable,
+                  help_str='path of the mysql executable (default: "mysql")'),
     ]
 
     def __init__(self, name, local_repository, host='localhost', port='3306', user='', password='', database='',
-                 destination_path='', dump_executable='mysqldump', **kwargs):
+                 destination_path='', dump_executable='mysqldump', restore_executable='mysql', **kwargs):
         super(MySQL, self).__init__(name, local_repository, **kwargs)
+        self.restore_executable = restore_executable
         self.dump_executable = dump_executable
         self.host = host
         self.port = port
@@ -129,19 +150,30 @@ class MySQL(Source):
 
     def backup(self):
         filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
-        if not os.path.isdir(os.path.dirname(filename)):
-            os.makedirs(os.path.dirname(filename))
+        dirname = os.path.dirname(filename)
+        if not os.path.isdir(dirname) and self.can_execute_command(['mkdir', '-p', dirname]):
+            os.makedirs(dirname)
         cmd = self.get_dump_cmd_list()
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()
         env.update(self.get_env())
-        logger.info(' '.join(cmd))
-        if filename is not None:
+        if self.can_execute_command(cmd):
             with open(filename, 'wb') as fd:
-                p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=subprocess.PIPE)
-        else:
-            p = subprocess.Popen(cmd, env=env, stderr=subprocess.PIPE)
-        p.communicate()
+                p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
+            p.communicate()
+
+    def restore(self):
+        filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
+        if not os.path.isfile(filename):
+            return
+        cmd = self.get_dump_cmd_list()
+        cmd = [x % self.db_options for x in cmd]
+        env = os.environ.copy()
+        env.update(self.get_env())
+        if self.can_execute_command(cmd):
+            with open(filename, 'rb') as fd:
+                p = subprocess.Popen(cmd, env=env, stdin=fd, stderr=self.stderr, stdout=self.stdout)
+            p.communicate()
 
     @property
     def db_options(self):
@@ -152,11 +184,23 @@ class MySQL(Source):
         """ :return:
         :rtype: :class:`list` of :class:`str`
         """
-        command = [self.dump_executable, '--user', '%(USER)s', '--password=%(PASSWORD)s']
+        command = [self.dump_executable, '--user=%(USER)s', '--password=%(PASSWORD)s']
         if self.db_options.get('HOST'):
-            command += ['--host', '%(HOST)s']
+            command += ['--host=%(HOST)s']
         if self.db_options.get('PORT'):
-            command += ['--port', '%(PORT)s']
+            command += ['--port=%(PORT)s']
+        command += ['%(NAME)s']
+        return command
+
+    def get_restore_cmd_list(self):
+        """ :return:
+        :rtype: :class:`list` of :class:`str`
+        """
+        command = [self.restore_executable, '--user=%(USER)s', '--password=%(PASSWORD)s']
+        if self.db_options.get('HOST'):
+            command += ['--host=%(HOST)s']
+        if self.db_options.get('PORT'):
+            command += ['--port=%(PORT)s']
         command += ['%(NAME)s']
         return command
 
@@ -166,20 +210,31 @@ class MySQL(Source):
 
 
 class PostgresSQL(MySQL):
-    parameters = MySQL.parameters[:-1] + [
+    parameters = MySQL.parameters[:-2] + [
         Parameter('dump_executable', converter=check_executable,
                   help_str='path of the pg_dump executable (default: "pg_dump")'),
+        Parameter('restore_executable', converter=check_executable,
+                  help_str='path of the psql executable (default: "psql")'),
     ]
 
     def __init__(self, name, local_repository, port='5432', dump_executable='pg_dump', **kwargs):
         super(PostgresSQL, self).__init__(name, local_repository, port=port, dump_executable=dump_executable, **kwargs)
 
     def get_dump_cmd_list(self):
-        command = [self.dump_executable, '--username', '%(USER)s']
+        command = [self.dump_executable, '--username=%(USER)s']
         if self.db_options.get('HOST'):
-            command += ['--host', '%(HOST)s']
+            command += ['--host=%(HOST)s']
         if self.db_options.get('PORT'):
-            command += ['--port', '%(PORT)s']
+            command += ['--port=%(PORT)s']
+        command += ['%(NAME)s']
+        return command
+
+    def get_restore_cmd_list(self):
+        command = [self.restore_executable, '--username=%(USER)s']
+        if self.db_options.get('HOST'):
+            command += ['--host=%(HOST)s']
+        if self.db_options.get('PORT'):
+            command += ['--port=%(PORT)s']
         command += ['%(NAME)s']
         return command
 
@@ -194,24 +249,32 @@ class Ldap(Source):
         Parameter('destination_path', help_str='filename of the dump (not an absolute path)'),
         Parameter('dump_executable', converter=check_executable,
                   help_str='path of the slapcat executable (default: "slapcat")'),
+        Parameter('restore_executable', converter=check_executable,
+                  help_str='path of the slapadd executable (default: "slapadd")'),
     ]
 
-    def __init__(self, name, local_repository, destination_path='ldap.ldif', database='1', dump_executable='slapcat',
-                 **kwargs):
+    def __init__(self, name, local_repository, destination_path='ldap.ldif', database=None, dump_executable='slapcat',
+                 restore_executable='slapadd', **kwargs):
         super(Ldap, self).__init__(name, local_repository, **kwargs)
         self.destination_path = destination_path
         self.database = database
         self.dump_executable = dump_executable
+        self.restore_executable = restore_executable
 
     def backup(self):
         filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
-        if not os.path.isdir(os.path.dirname(filename)):
-            os.makedirs(os.path.dirname(filename))
-        cmd = [self.dump_executable, '-n', self.database, ]
-        logger.info(' '.join(cmd))
-        if filename is not None:
-            with open(filename, 'wb') as fd:
-                p = subprocess.Popen(cmd, stdout=fd, stderr=subprocess.PIPE)
-        else:
-            p = subprocess.Popen(cmd, stderr=subprocess.PIPE)
-        p.communicate()
+        dirname = os.path.dirname(filename)
+        if not os.path.isdir(dirname) and self.can_execute_command(['mkdir', '-p', dirname]):
+            os.makedirs(dirname)
+        cmd = [self.dump_executable, '-l', filename]
+        if self.database:
+            cmd += ['-n', self.database]
+        self.execute_command(cmd)
+
+    def restore(self):
+        filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
+        if not os.path.isfile(filename):
+            return
+        self.execute_command(['service' 'slapd', 'stop'])
+        self.execute_command([self.restore_executable, '-l', filename, ])
+        self.execute_command(['service' 'slapd', 'start'])

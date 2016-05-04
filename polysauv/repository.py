@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
-import json
+from __future__ import unicode_literals, print_function
+
 import datetime
+import json
 import logging
+
+import subprocess
+
 from polysauv.conf import Parameter
-from polysauv.utils import get_is_time_elapsed, text_type
+from polysauv.utils import get_is_time_elapsed, text_type, get_input_text
 
 __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polysauv')
@@ -12,8 +17,39 @@ logger = logging.getLogger('polysauv')
 class ParameterizedObject(object):
     parameters = []
 
-    def __init__(self, name):
+    def __init__(self, name, command_display=True, command_confirm=False, command_execute=True,
+                 command_keep_output=False):
         self.name = name
+        self.command_display = command_display
+        self.command_confirm = command_confirm
+        self.command_execute = command_execute
+        self.command_keep_output = command_keep_output
+
+    def can_execute_command(self, text):
+        if isinstance(text, list):
+            text = ' '.join(text)
+        result = '-'
+        if self.command_confirm:
+            while result not in ('', 'y', 'n'):
+                result = get_input_text('%s [Y]/n\n' % text).lower()
+        elif self.command_display:
+            print(text)
+        return result != 'n' and self.command_execute
+
+    def execute_command(self, cmd):
+        if self.can_execute_command(cmd):
+            p = subprocess.Popen(cmd, stderr=self.stderr, stdout=self.stdout)
+            p.communicate()
+            if p.returncode != 0:
+                raise subprocess.CalledProcessError(p.returncode, cmd[0])
+
+    @property
+    def stderr(self):
+        return subprocess.PIPE if not self.command_keep_output else None
+
+    @property
+    def stdout(self):
+        return subprocess.PIPE if not self.command_keep_output else None
 
 
 class RepositoryInfo(object):
