@@ -100,7 +100,7 @@ class RemoteRepository(Repository):
             name = self.name
         return local_repository.set_info(info, name=name, kind=kind)
 
-    def get_last_backup_date(self):
+    def get_last_backup_date(self, local_repository):
         raise NotImplementedError
 
     def restore(self, local_repository):
@@ -160,7 +160,7 @@ class GitRepository(RemoteRepository):
             logger.error(stderr.decode())
             raise ValueError('unable to push to remote %s from %s' % (self.name, local_repository.local_path))
 
-    def get_last_backup_date(self):
+    def get_last_backup_date(self, local_repository):
         # git archive --remote=git://git.foo.com/project.git HEAD:path /to/directory filename | tar -x
         pass
 
@@ -423,8 +423,6 @@ class Duplicity(RemoteRepository):
         self.duplicity_executable = duplicity_executable
         self.gpg_executable = gpg_executable
 
-# '--exclude=%s' % local_repository.PRIVATE_FOLDER
-
     def do_backup(self, local_repository):
         assert isinstance(local_repository, FileRepository)
         cmd = []
@@ -476,6 +474,7 @@ class Duplicity(RemoteRepository):
             cmd += ['--gpg-binary', self.gpg_executable]
 
         for i in (0, 1):
+            # only required for the optional ‘verify’ pass
             cmd_args = [x for x in cmd]
             if i == 0 and self.always_full:
                 cmd_args += ['full']
