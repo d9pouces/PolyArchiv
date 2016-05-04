@@ -13,12 +13,12 @@ import logging
 import os
 import subprocess
 
-from nagiback.conf import Parameter, bool_setting, check_directory, check_executable
-from nagiback.locals import LocalRepository
-from nagiback.repository import ParameterizedObject
+from polysauv.conf import Parameter, bool_setting, check_directory, check_executable
+from polysauv.locals import LocalRepository
+from polysauv.repository import ParameterizedObject
 
 __author__ = 'mgallet'
-logger = logging.getLogger('nagiback.sources')
+logger = logging.getLogger('polysauv.sources')
 
 
 class Source(ParameterizedObject):

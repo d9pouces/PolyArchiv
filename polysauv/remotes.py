@@ -14,13 +14,13 @@ except ImportError:
     from urlparse import urlparse
 import os
 
-from nagiback.conf import Parameter, strip_split, check_executable, check_file, CheckOption, bool_setting
-from nagiback.locals import GitRepository as LocalGitRepository, LocalRepository, FileRepository
-from nagiback.repository import Repository, RepositoryInfo
-from nagiback.utils import text_type, ensure_dir
+from polysauv.conf import Parameter, strip_split, check_executable, check_file, CheckOption, bool_setting
+from polysauv.locals import GitRepository as LocalGitRepository, LocalRepository, FileRepository
+from polysauv.repository import Repository, RepositoryInfo
+from polysauv.utils import text_type, ensure_dir
 
 __author__ = 'mgallet'
-logger = logging.getLogger('nagiback.remotes')
+logger = logging.getLogger('polysauv.remotes')
 
 
 class RemoteRepository(Repository):
@@ -223,7 +223,7 @@ def check_curl_url(remote_url):
 
 
 class TarArchive(RemoteRepository):
-    excluded_files = {'.git', '.nagiback', '.gitignore'}
+    excluded_files = {'.git', '.polysauv', '.gitignore'}
     parameters = RemoteRepository.parameters + [
         Parameter('tar_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "tar")'),

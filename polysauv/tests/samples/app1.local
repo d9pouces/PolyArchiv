@@ -1,5 +1,5 @@
 [global]
-engine=nagiback.locals.GitRepository
+engine=polysauv.locals.GitRepository
 local_path=/tmp/local
 local_tags=local
 included_remote_tags=*
@@ -7,7 +7,7 @@ excluded_remote_tags=
 frequency=daily
 
 [source_1]
-engine=nagiback.sources.PostgresSQL
+engine=polysauv.sources.PostgresSQL
 host=localhost
 port=5432
 user=test
@@ -16,7 +16,7 @@ database=testdb
 destination_path=./postgres.sql
 
 [source_2]
-engine=nagiback.sources.MySQL
+engine=polysauv.sources.MySQL
 host=localhost
 port=3306
 user=test
@@ -25,6 +25,6 @@ database=testdb
 destination_path=./mysql.sql
 
 [source_3]
-engine=nagiback.sources.RSync
+engine=polysauv.sources.RSync
 source_path=/tmp/source/files
 destination_path=./files

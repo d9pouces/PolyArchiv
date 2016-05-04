@@ -10,11 +10,11 @@ import os
 import errno
 import pwd
 
-from nagiback.conf import Parameter
-from nagiback.locals import LocalRepository
-from nagiback.remotes import RemoteRepository
-from nagiback.repository import ParameterizedObject, RepositoryInfo
-from nagiback.utils import import_string
+from polysauv.conf import Parameter
+from polysauv.locals import LocalRepository
+from polysauv.remotes import RemoteRepository
+from polysauv.repository import ParameterizedObject, RepositoryInfo
+from polysauv.utils import import_string
 
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
@@ -24,7 +24,7 @@ except ImportError:
     from ConfigParser import ConfigParser
 
 __author__ = 'mgallet'
-logger = logging.getLogger('nagiback.runner')
+logger = logging.getLogger('polysauv.runner')
 
 
 class Runner(object):

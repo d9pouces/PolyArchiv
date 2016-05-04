@@ -8,13 +8,13 @@ import os
 import subprocess
 import re
 
-from nagiback.conf import Parameter, strip_split, check_directory, check_executable
-from nagiback.filelocks import Lock
-from nagiback.repository import Repository, RepositoryInfo
-from nagiback.utils import ensure_dir, text_type
+from polysauv.conf import Parameter, strip_split, check_directory, check_executable
+from polysauv.filelocks import Lock
+from polysauv.repository import Repository, RepositoryInfo
+from polysauv.utils import ensure_dir, text_type
 
 __author__ = 'mgallet'
-logger = logging.getLogger('nagiback.sources')
+logger = logging.getLogger('polysauv.sources')
 
 
 class LocalRepository(Repository):
@@ -93,7 +93,7 @@ class LocalRepository(Repository):
     def add_source(self, source):
         """
         :param source: source
-        :type source: :class:`nagiback.sources.Source`
+        :type source: :class:`polysauv.sources.Source`
         """
         self.sources.append(source)
 
@@ -137,15 +137,15 @@ class FileRepository(LocalRepository):
     example structure:
         dir/some/files
         database-dump.sql
-        .nagiback/lock
-        .nagiback/local/global.json
-        .nagiback/remote/my_remote.json
+        .polysauv/lock
+        .polysauv/local/global.json
+        .polysauv/remote/my_remote.json
     """
     parameters = LocalRepository.parameters + [
         Parameter('local_path', converter=check_directory, help_str='absolute path to locally gather all data')
     ]
     LAST_BACKUP_FILE = '.last-backup'
-    PRIVATE_FOLDER = '.nagiback'
+    PRIVATE_FOLDER = '.polysauv'
 
     def __init__(self, name, local_path='.', **kwargs):
         super(FileRepository, self).__init__(name=name, **kwargs)

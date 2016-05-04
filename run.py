@@ -2,6 +2,6 @@
 from __future__ import unicode_literals
 import sys
 
-from nagiback.cli import main
+from polysauv.cli import main
 __author__ = 'mgallet'
 sys.exit(main())

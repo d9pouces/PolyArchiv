@@ -9,12 +9,12 @@ __author__ = 'Matthieu Gallet'
 log = {'version': 1, 'disable_existing_loggers': True,
        'formatters': {'color': {'()': 'logging.Formatter', 'format': "%(log_color)s%(message)s%(reset)s"}},
        'handlers': {'stream': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'color'}},
-       'loggers': {'nagiback': {'handlers': ['stream', ], 'level': 'DEBUG', 'propagate': False}}}
+       'loggers': {'polysauv': {'handlers': ['stream', ], 'level': 'DEBUG', 'propagate': False}}}
 logging.config.dictConfig(log)
 
-from nagiback.runner import Runner
-from nagiback.locals import LocalRepository
-from nagiback.sources import RSync, PostgresSQL, MySQL
+from polysauv.runner import Runner
+from polysauv.locals import LocalRepository
+from polysauv.sources import RSync, PostgresSQL, MySQL
 
 
 class TestSources(TestCase):

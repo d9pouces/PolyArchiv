@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 import logging
 import datetime
-from nagiback.conf import Parameter
-from nagiback.locals import LocalRepository
-from nagiback.remotes import RemoteRepository
-from nagiback.repository import RepositoryInfo
-from nagiback.sources import Source
+from polysauv.conf import Parameter
+from polysauv.locals import LocalRepository
+from polysauv.remotes import RemoteRepository
+from polysauv.repository import RepositoryInfo
+from polysauv.sources import Source
 
 __author__ = 'Matthieu Gallet'
 
-logger = logging.getLogger('nagiback.show')
+logger = logging.getLogger('polysauv.show')
 
 
 def show_local_repository(local_repository):

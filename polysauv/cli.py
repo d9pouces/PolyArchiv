@@ -10,7 +10,7 @@ import logging.config
 import os
 import sys
 
-from nagiback.conf import Parameter
+from polysauv.conf import Parameter
 
 __author__ = 'mgallet'
 
@@ -29,14 +29,14 @@ def main():
         path_components = ['', 'etc']
     elif 'bin' in path_components:
         # noinspection PyTypeChecker
-        path_components = path_components[:path_components.index('bin')] + ['etc', 'nagiback']
+        path_components = path_components[:path_components.index('bin')] + ['etc', 'polysauv']
     else:
         path_components = ['config']
 
     log = {'version': 1, 'disable_existing_loggers': True,
            'formatters': {'color': {'()': 'logging.Formatter', 'format': "%(message)s"}},
            'handlers': {'stream': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'color'}},
-           'loggers': {'nagiback': {'handlers': ['stream', ], 'level': 'ERROR', 'propagate': False}}}
+           'loggers': {'polysauv': {'handlers': ['stream', ], 'level': 'ERROR', 'propagate': False}}}
 
     config_dir = os.path.sep.join(path_components)
     parser = argparse.ArgumentParser(description='backup data from multiple sources')
@@ -50,14 +50,14 @@ def main():
     args = parser.parse_args()
     command = args.command
     if args.verbose:
-        log['loggers']['nagiback']['level'] = 'DEBUG'
+        log['loggers']['polysauv']['level'] = 'DEBUG'
     elif args.nrpe:
-        log['loggers']['nagiback']['level'] = 'CRITICAL'
+        log['loggers']['polysauv']['level'] = 'CRITICAL'
     logging.config.dictConfig(log)
-    logger = logging.getLogger('nagiback.cli')
+    logger = logging.getLogger('polysauv.cli')
     return_code = 0
 
-    from nagiback.runner import Runner  # import after log configuration
+    from polysauv.runner import Runner  # import after log configuration
     if command == 'backup':
         runner = Runner([args.config])
         local_results, remote_results = runner.backup(only_locals=args.only_locals, only_remotes=args.only_remotes,
@@ -75,7 +75,7 @@ def main():
         runner = Runner([args.config])
         runner.restore(args.only_locals, args.only_remotes)
     elif command == 'config':
-        from nagiback.show import show_local_repository, show_remote_local_repository, show_remote_repository
+        from polysauv.show import show_local_repository, show_remote_local_repository, show_remote_repository
         logger.info('configuration directory: %s (you can change it with -C /other/directory)' % args.config)
         runner = Runner([args.config])
         if not args.verbose:
@@ -87,7 +87,7 @@ def main():
         logger.info('configuration directory: %s' % args.config)
         if not args.verbose:
             logger.error('display available options for each engine with --verbose')
-        from nagiback import sources, locals, remotes
+        from polysauv import sources, locals, remotes
 
         logger.error('available built-in local repository:')
         # noinspection PyTypeChecker

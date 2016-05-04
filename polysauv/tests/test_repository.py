@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 from unittest import TestCase
 import datetime
-from nagiback.repository import RepositoryInfo
+from polysauv.repository import RepositoryInfo
 
 __author__ = 'Matthieu Gallet'
 

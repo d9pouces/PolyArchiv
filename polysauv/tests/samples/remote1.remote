@@ -1,7 +1,7 @@
 [global]
-engine=nagiback.remotes.GitRepository
+engine=polysauv.remotes.GitRepository
 remote_tags=
-remote_url=http://gitlab.example.org/group/TestsNagiback.git
+remote_url=http://gitlab.example.org/group/TestsPolysauv.git
 remote_branch=master
 user=mgallet
 included_local_tags=*

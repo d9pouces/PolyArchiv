@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Setup file for the NagiBack project.
+"""Setup file for the Polysauv project.
 """
 
 import codecs
@@ -8,7 +8,7 @@ import re
 from setuptools import setup
 
 version = None
-for line in codecs.open(os.path.join('nagiback', '__init__.py'), 'r', encoding='utf-8'):
+for line in codecs.open(os.path.join('polysauv', '__init__.py'), 'r', encoding='utf-8'):
     matcher = re.match(r"""^__version__\s*=\s*['"](.*)['"]\s*$""", line)
     version = version or matcher and matcher.group(1)
 
@@ -16,16 +16,16 @@ with codecs.open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding=
     long_description = fd.read()
 
 setup(
-    name='nagiback',
+    name='polysauv',
     version=version,
     description='Multi-source backup tool',
     long_description=long_description,
     author='mgallet',
     author_email='mgallet@19pouces.net',
     license='CeCILL-B',
-    url='https://github.com/d9pouces/NagiBack',
-    entry_points={'console_scripts': ['nagiback = nagiback.cli:main']},
-    packages=['nagiback', ],
+    url='https://github.com/d9pouces/Polysauv',
+    entry_points={'console_scripts': ['polysauv = polysauv.cli:main']},
+    packages=['polysauv', ],
     include_package_data=True,
     zip_safe=False,
     install_requires=['setuptools>=1.0', ],
