@@ -79,7 +79,6 @@ class CheckOption(object):
         raise ValueError('%s is not valid. Please select one of %s' % (value, ', '.join(self.valid_options)))
 
 
-
 class Parameter(object):
     """class that maps an option in a .ini file to a argument name."""
 

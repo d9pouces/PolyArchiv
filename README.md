@@ -22,7 +22,8 @@ There are also several kinds of remote repositories:
 
   * GitRepository (requires a local git repository): after the backup, local commits are pushed to this remote git repository,
   * Rsync: after the backup, all files are synchronized to the remote repository,
-  * TarArchive: after the backup, all files are archived in a single .tar.gz archive and sent to the remote repo (via ftp, scp, http, smb, or a basic cp)
+  * TarArchive: after the backup, all files are archived in a single .tar.gz archive and sent to the remote repo (via ftp, scp, http, smb, or a basic cp),
+  * Duplicity: after the backup, all files are encrypted and sent to the remote repository.
 
 Each repository (either local or remote) is associated to a frequency of backup. 
 If you specify a daily backup for a given repository and you execute Nagiback twice a day, only the first backup will be executed. 
@@ -59,7 +60,7 @@ The default configuration directory is `/etc/nagiback`. However, if you installe
 then its default config dir is `$VIRTUALENV/etc/nagiback`. 
 Otherwise, you can specify another config dir with `nagiback -C /my/config/dir`.
 
-This directory contains configuration files for local repositories 
+This directory should contain configuration files for local repositories 
 (like `my-local.local`) as well as remote repositories (like `my-remote.remote`).
 
 Here is an example of local repository, gathering data from three sources:
@@ -68,6 +69,7 @@ Here is an example of local repository, gathering data from three sources:
   * MySQL database
   * a directory
 
+Its name must end by `.local`. 
 The `[global]` section defines options for the local repository, and other sections define the three sources:
 
     $ cat /etc/nagiback/my-local.local
@@ -104,7 +106,9 @@ The `[global]` section defines options for the local repository, and other secti
 
 The kind of repository (either local or remote) and of each source is defined by the "engine" option.
 You can define as many local repositories (each of them with one or more sources) as you want.
-Remote repositories are simpler and only have a `[global]` section. Here is a gitlab acting as remote storage for git local repo: 
+Remote repositories are simpler and only have a `[global]` section.
+Their names must end by `.remote`.
+Here is a gitlab acting as remote storage for git local repo: 
 
     $ cat /etc/nagiback/my-remote1.remote
     [global]
@@ -136,21 +140,21 @@ Available engines
 -----------------
 
 Several engines for sources and remote or local repositories are available.
-Use `nagiback help` to display them (and `nagiback help -v` to display their configuration options). 
+Use `nagiback plugins` to display them (and `nagiback plugins -v` to display all their configuration options). 
 
 Associating local and remote repositories
 -----------------------------------------
 
-With no restriction, all remote repositories apply to all local repositories but you can change this behaviour by applying tags to repositories.
+All remote repositories apply to all local repositories but you can change this behaviour by applying tags to repositories.
 By default, a local repository has the tag `local` and include all remote repositories `included_remote_tags=*`.
 A remote repository has the tag `remote` and include all local repositories `included_local_tags=*`.
 
-If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags in the remote configuration:
+If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
  
     $ cat /etc/nagiback/my-remote.remote
     [global]
     engine=nagiback.remotes.GitRepository
-    excluded_local_tags=large
+    excluded_local_tags=*large,huge
 
 and add the "large" tag in the local configuration:
 
@@ -159,3 +163,20 @@ and add the "large" tag in the local configuration:
     engine=nagiback.locals.GitRepository
     local_path=/tmp/local
     local_tags=local,large
+
+Traditionnal shell expansion is used for comparing included and excluded tags. Tags can be applied to remote repositories:
+
+    $ cat /etc/nagiback/my-remote.remote
+    [global]
+    engine=nagiback.remotes.GitRepository
+    remote_tags=small-only
+
+and add the "large" tag to the local configuration:
+
+    $ cat /etc/nagiback/my-local.local
+    [global]
+    engine=nagiback.locals.GitRepository
+    local_path=/tmp/local
+    included_remote_tags=huge,large
+    
+Since the remote repository does not present either the `huge` tag or the `large` tag, it will not be applied.

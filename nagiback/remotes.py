@@ -242,7 +242,7 @@ class TarArchive(RemoteRepository):
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication)'),
         Parameter('private_key', converter=check_file,
-                  help_str='absolute path of the private key file (for SSH key authentication)'),
+                  help_str='[SSH backend] absolute path of the private key file'),
         Parameter('tar_format', converter=CheckOption(['tar.gz', 'tar.bz2', 'tar.xz']),
                   help_str='one of "tar.gz", "tar.bz2" (default), "tar.xz"')
     ]
@@ -340,23 +340,155 @@ class TarArchive(RemoteRepository):
 
 class Duplicity(RemoteRepository):
     parameters = RemoteRepository.parameters + [
-        Parameter('duplicity_executable', converter=check_executable,
-                  help_str='path of the duplicity executable (default: "duplicity")'),
+        Parameter('remote_url',
+                  help_str='destination URL (e.g.: ftp://example.org/path/,'
+                           'https://example.org/path). Please check Duplicity\'s documentation.'),
+        Parameter('encrypt_key_id', help_str='[GPG] encrypt with this public key instead of symmetric encryption.'),
+        # --encrypt-key key-id
+        Parameter('sign_key_id', help_str='[GPG] All backup files will be signed with keyid key.'),  # --sign-key key-id
+        Parameter('encrypt_passphrase', help_str='[GPG] This passphrase is passed to GnuPG.'),  # PASSPHRASE
+        Parameter('sign_passphrase', help_str='[GPG] This passphrase is passed to GnuPG for the sign_key.'),
+        # SIGN_PASSPHRASE
+        Parameter('no_encryption', converter=bool_setting, help_str='Do not use GnuPG to encrypt remote files.'),
+        # --no-encryption
+        Parameter('private_key', converter=check_file, help_str='[SSH backend] The private SSH key (filename)'),
+        # --ssh-options -oIdentityFile=%s
+        Parameter('password', help_str='upload password'),  # FTP_PASSWORD
+
+        Parameter('full_if_older_than',
+                  help_str='Perform a full backup if an incremental backup is requested, but the latest full backup in '
+                           'the collection is older than the given time.'),  # --full-if-older-than
+        Parameter('max_block_size', help_str='determines the number of the blocks examined for changes during the '
+                                             'diff process.'),  # --max-blocksize
+        Parameter('no_compression', converter=bool_setting, help_str='Do not use GZip to compress remote files.'),
+        # --no-compression
+        Parameter('volsize', help_str='Change the volume size to number Mb. Default is 25Mb.'),  # --volsize
         Parameter('always_full', converter=bool_setting,
                   help_str='Perform a full backup. A new backup chain is started even if signatures are available for '
                            'an incremental backup.'),  # full
         Parameter('always_verify', converter=bool_setting,
                   help_str='Always perform a verify check after a backup: restore backup contents temporarily file by '
                            'file and compare against the local path\'s contents. Can take a lot of time!'),  # verify
-        Parameter('encrypt_key',
-                  help_str='When backing up, encrypt to the given public key, instead of using symmetric (traditional) '
-                           'encryption.'),  # --encrypt-key key-id
-        Parameter('encrypt-secret-keyring',
-                  help_str='This option can only be used with encrypt_key, and changes the path to the secret keyring'
-                           ' for the encrypt key to filename. Default to ~/.gnupg/secring.gpg'
-                  ),  # --encrypt-secret-keyring filename
-        Parameter('sign_key',
-                  help_str='When backing up, all backup files will be signed with keyid key.'),  # --sign-key key-id
 
+        Parameter('gpg_encrypt_secret_keyring',
+                  help_str='[GPG] This option can only be used with encrypt_key, and changes the path to the secret '
+                           'keyring for the encrypt key to filename. Default to ~/.gnupg/secring.gpg'
+                  ),  # --encrypt-secret-keyring filename
+        Parameter('gpg_options', converter=check_executable,
+                  help_str='[GPG] Allows you to pass options to gpg encryption.  The options list should be of the '
+                           'form "--opt1 --opt2=parm"'),  # --gpg-options
+        Parameter('rsync_options', help_str='[RSYNC backend] Options for rsync. The options list should be of the '
+                                            'form "opt1=parm1 opt2=parm2"'),  # --rsync-options options
+        Parameter('ssh_options',
+                  help_str='[SSH backend] Options for SSH. The options list should be of '
+                           'the form "-oOpt1=\'parm1\' -oOpt2=\'parm2\'".'),  # --ssh-options options
+        Parameter('cacert', converter=check_file, help_str='[WEBDAV] certificate to use to verify the server'),
+        # --ssl-cacert-file file
+        Parameter('insecure', converter=bool_setting,
+                  help_str='[WEBDAV backend] do not check certificate for SSL connections'),
+        # --ssl-no-check-certificate
+        Parameter('duplicity_executable', converter=check_executable,
+                  help_str='path of the duplicity executable (default: "duplicity")'),
+        Parameter('gpg_executable', converter=check_executable,
+                  help_str='path of the gpg executable (default: "gpg")'),  # --gpg-binary
     ]
-# --exclude=%s
+
+    def __init__(self, name, remote_url='', encrypt_key_id=None, sign_key_id=None, encrypt_passphrase=None,
+                 sign_passphrase=None, no_encryption=False, private_key=None, password=None,
+                 full_if_older_than=None, max_block_size=None, no_compression=False, volsize=None,
+                 always_full=False, always_verify=False, gpg_encrypt_secret_keyring=None, gpg_options=None,
+                 rsync_options=None, ssh_options=None, cacert=None, insecure=False,
+                 duplicity_executable='duplicity', gpg_executable=None, **kwargs):
+        super(Duplicity, self).__init__(name, **kwargs)
+        self.remote_url = remote_url
+        self.encrypt_key_id = encrypt_key_id
+        self.sign_key_id = sign_key_id
+        self.encrypt_passphrase = encrypt_passphrase
+        self.sign_passphrase = sign_passphrase
+        self.no_encryption = no_encryption
+        self.private_key = private_key
+        self.password = password
+        self.full_if_older_than = full_if_older_than
+        self.max_block_size = max_block_size
+        self.no_compression = no_compression
+        self.volsize = volsize
+        self.always_full = always_full
+        self.always_verify = always_verify
+        self.gpg_encrypt_secret_keyring = gpg_encrypt_secret_keyring
+        self.gpg_options = gpg_options
+        self.rsync_options = rsync_options
+        self.ssh_options = ssh_options
+        self.cacert = cacert
+        self.insecure = insecure
+        self.duplicity_executable = duplicity_executable
+        self.gpg_executable = gpg_executable
+
+# '--exclude=%s' % local_repository.PRIVATE_FOLDER
+
+    def do_backup(self, local_repository):
+        assert isinstance(local_repository, FileRepository)
+        cmd = []
+        env = {}
+        cmd += [self.duplicity_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, ]
+        local_path = local_repository.local_path
+        if not local_path.endswith(os.path.sep):
+            local_path += os.path.sep
+        remote_url = self.remote_url
+        if not remote_url.endswith(os.path.sep):
+            remote_url += os.path.sep
+        if self.encrypt_key_id:
+            cmd += ['--encrypt-key', self.encrypt_key_id]
+        if self.sign_key_id:
+            cmd += ['--sign-key', self.sign_key_id]
+        if self.encrypt_passphrase:
+            env['PASSPHRASE'] = self.encrypt_passphrase
+        if self.sign_passphrase:
+            env['SIGN_PASSPHRASE'] = self.sign_passphrase
+        if self.no_encryption:
+            cmd += ['--no-encryption']
+        if self.ssh_options and self.private_key:
+            cmd += ['--ssh-options', '%s -oIdentityFile=%s' % (self.ssh_options, self.private_key)]
+        elif self.private_key:
+            cmd += ['--ssh-options', '-oIdentityFile=%s' % self.private_key]
+        elif self.ssh_options:
+            cmd += ['--ssh-options', self.ssh_options]
+        if self.password:
+            env['FTP_PASSWORD'] = self.password
+        if self.full_if_older_than:
+            cmd += ['--full-if-older-than', self.full_if_older_than]
+        if self.max_block_size:
+            cmd += ['--max-blocksize', self.max_block_size]
+        if self.no_compression:
+            cmd += ['--no-compression']
+        if self.volsize:
+            cmd += ['--volsize', self.volsize]
+        if self.gpg_encrypt_secret_keyring:
+            cmd += ['--encrypt-secret-keyring filename', self.gpg_encrypt_secret_keyring]
+        if self.gpg_options:
+            cmd += ['--gpg-options', self.gpg_options]
+        if self.rsync_options:
+            cmd += ['--rsync-options', self.rsync_options]
+        if self.cacert:
+            cmd += ['--ssl-cacert-file', self.cacert]
+        if self.insecure:
+            cmd += ['--ssl-no-check-certificate']
+        if self.gpg_executable:
+            cmd += ['--gpg-binary', self.gpg_executable]
+
+        for i in (0, 1):
+            cmd_args = [x for x in cmd]
+            if i == 0 and self.always_full:
+                cmd_args += ['full']
+            elif i == 1 and not self.always_verify:
+                continue
+            elif i == 1:
+                cmd_args += ['verify']
+            cmd_args += [local_path, remote_url]
+            logger.info(' '.join(cmd_args))
+            p = subprocess.Popen(cmd_args, cwd=local_repository.local_path, stderr=subprocess.PIPE,
+                                 stdout=subprocess.PIPE, env=env)
+            stdout, stderr = p.communicate()
+            if p.returncode != 0:
+                logger.error(stdout.decode())
+                logger.error(stderr.decode())
+                raise ValueError('unable to synchronize %s against %s' % (local_path, remote_url))
