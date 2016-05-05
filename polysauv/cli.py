@@ -13,6 +13,7 @@ import sys
 import math
 
 from polysauv.conf import Parameter
+from polysauv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN
 
 __author__ = 'mgallet'
 
@@ -51,7 +52,8 @@ def main():
     parser.add_argument('command', help='backup|restore|config|plugins')
     args = parser.parse_args()
     command = args.command
-    if args.verbose:
+    verbose = args.verbose
+    if verbose:
         log['loggers']['polysauv']['level'] = 'DEBUG'
     elif args.nrpe:
         log['loggers']['polysauv']['level'] = 'CRITICAL'
@@ -78,50 +80,53 @@ def main():
         runner.restore(args.only_locals, args.only_remotes)
     elif command == 'config':
         from polysauv.show import show_local_repository, show_remote_local_repository, show_remote_repository
-        logger.info('configuration directory: %s (you can change it with -C /other/directory)' % args.config)
+        cprint('configuration directory: %s (you can change it with -C /other/directory)' % args.config, YELLOW)
         runner = Runner([args.config])
-        if not args.verbose:
-            logger.error('display more info with --verbose')
+        if not verbose:
+            cprint('display more info with --verbose', CYAN)
         runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
                               local_remote_command=show_remote_local_repository,
                               only_locals=args.only_locals, only_remotes=args.only_remotes)
     elif command == 'plugins':
-        logger.info('configuration directory: %s' % args.config)
-        if not args.verbose:
-            logger.error('display available options for each engine with --verbose')
+        cprint('configuration directory: %s' % args.config, YELLOW)
+        if not verbose:
+            cprint('display available options for each engine with --verbose', CYAN)
         from polysauv import sources, locals, remotes
 
-        logger.error('available built-in local repository:')
+        cprint('available built-in local repository:', YELLOW)
         # noinspection PyTypeChecker
-        display_classes(logger, locals, locals.LocalRepository)
-        logger.error('available built-in sources:')
+        display_classes(locals, locals.LocalRepository, verbose=verbose)
+        cprint('available built-in sources:', YELLOW)
         # noinspection PyTypeChecker
-        display_classes(logger, sources, sources.Source)
-        logger.error('available built-in remote repository:')
+        display_classes(sources, sources.Source, verbose=verbose)
+        cprint('available built-in remote repository:', YELLOW)
         # noinspection PyTypeChecker
-        display_classes(logger, remotes, remotes.RemoteRepository)
+        display_classes(remotes, remotes.RemoteRepository, verbose=verbose)
 
     return return_code
 
 
-def display_classes(logger, module, cls):
+def display_classes(module, cls, verbose=False):
     for k, v in module.__dict__.items():
         if not isinstance(v, type) or not issubclass(v, cls):
             continue
-        logger.error('  * engine=%s.%s' % (v.__module__, v.__name__))
-        logger.info('    options:')
+        cprint('  * engine=%s.%s' % (v.__module__, v.__name__), BOLD, GREEN)
+        if verbose:
+            cprint('    options:', GREEN)
         # noinspection PyUnresolvedReferences
         for parameter in v.parameters:
             assert isinstance(parameter, Parameter)
             if parameter.help_str:
                 lines = []
                 for line in parameter.help_str.splitlines():
-                    lines += [line[70 * i:70 * (i + 1)] for i in range(math.ceil(len(line) / 70.))]
-                logger.info('      - %s: %s' % (parameter.option_name, '\n        '.join(lines)))
+                    lines += [line[70 * i:70 * (i + 1)] for i in range(int(math.ceil(len(line) / 70.)))]
+                if verbose:
+                    cprint('      - %s: %s' % (parameter.option_name, '\n        '.join(lines)), GREEN)
             else:
-                logger.info('      - %s' % parameter.option_name)
-        logger.info('    -----------------------------------------------------------------------------')
-    logger.error('====================================================================================================')
+                if verbose:
+                    cprint('      - %s' % parameter.option_name, GREEN)
+        if verbose:
+            cprint('    -----------------------------------------------------------------------------', GREEN)
 
 
 if __name__ == '__main__':

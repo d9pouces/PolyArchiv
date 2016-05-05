@@ -11,11 +11,10 @@ import subprocess
 from polysauv.conf import Parameter, strip_split, check_directory, check_executable
 from polysauv.filelocks import Lock
 from polysauv.repository import Repository, RepositoryInfo
-from polysauv.sources import Source
 from polysauv.utils import text_type
 
 __author__ = 'mgallet'
-logger = logging.getLogger('polysauv.sources')
+logger = logging.getLogger('polysauv')
 
 
 class LocalRepository(Repository):
@@ -53,7 +52,7 @@ class LocalRepository(Repository):
         if not (force or out_of_date):
             # the last previous backup is still valid
             # => nothing to do
-            logger.debug('last backup (%s) is still valid. No backup to do.' % info.last_success)
+            logger.info('last backup (%s) is still valid. No backup to do.' % info.last_success)
             return True
         elif info.last_success is None:
             logger.info('no previous backup: a new backup is required.')
@@ -66,7 +65,6 @@ class LocalRepository(Repository):
             lock_ = self.get_lock()
             self.pre_source_backup()
             for source in self.sources:
-                assert isinstance(source, Source)
                 source.backup()
             self.post_source_backup()
             info.total_size = self.get_repository_size()
@@ -232,9 +230,9 @@ class GitRepository(FileRepository):
 
     def post_source_backup(self):
         super(GitRepository, self).post_source_backup()
-        gitignore = os.path.join(self.local_path, '.gitignore')
-        if not os.path.isfile(gitignore) and self.can_execute_command('# create .gitignore file?'):
-            with codecs.open(gitignore, 'w', encoding='utf-8') as fd:
+        path = os.path.join(self.local_path, '.gitignore')
+        if not os.path.isfile(path) and self.can_execute_command('echo "%s/" > %s' % (self.PRIVATE_FOLDER, path)):
+            with codecs.open(path, 'w', encoding='utf-8') as fd:
                 fd.write("%s/\n" % self.PRIVATE_FOLDER)
         self.execute_command([self.git_executable, 'init'])
         self.execute_command([self.git_executable, 'add', '.'])

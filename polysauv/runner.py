@@ -14,6 +14,7 @@ from polysauv.conf import Parameter
 from polysauv.locals import LocalRepository
 from polysauv.remotes import RemoteRepository
 from polysauv.repository import ParameterizedObject, RepositoryInfo
+from polysauv.termcolor import cprint
 from polysauv.utils import import_string
 
 try:
@@ -27,13 +28,14 @@ __author__ = 'mgallet'
 logger = logging.getLogger('polysauv.runner')
 
 
-class Runner(object):
+class Runner(ParameterizedObject):
     """Run backup and restore operations for all specified configurations
     """
     global_section = 'global'
     engine_option = 'engine'
 
-    def __init__(self, config_directories):
+    def __init__(self, config_directories, **kwargs):
+        super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
         self.local_repositories = {}
         self.remote_repositories = {}
@@ -56,7 +58,7 @@ class Runner(object):
             try:
                 result[parameter.arg_name] = parameter.converter(value)
             except ValueError as e:
-                logger.critical('Error in %s, section [%s], value %s: %s' % (config_file, section, option, value))
+                logger.error('Error in %s, section [%s], value %s: %s' % (config_file, section, option, value))
                 raise e
         return result
 
@@ -72,13 +74,13 @@ class Runner(object):
                 except IOError as e:
                     if e.errno == errno.EACCES:
                         username = pwd.getpwuid(os.getuid())[0]
-                        logger.debug('%s is ignored because user %s cannot read it' % (config_file, username))
+                        logger.info('%s is ignored because user %s cannot read it' % (config_file, username))
                         continue
                     raise
-                logger.debug('file %s added to the configuration' % config_file)
+                logger.info('file %s added to the configuration' % config_file)
                 yield config_file, parser
             if count == 0:
-                logger.debug('no %s file found in %s' % (pattern, path))
+                logger.info('no %s file found in %s' % (pattern, path))
 
     def _find_local_repositories(self):
         for config_file, parser in self._iter_config_parsers('*.local'):

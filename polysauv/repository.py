@@ -5,7 +5,6 @@ import datetime
 import json
 import logging
 import os
-
 import subprocess
 
 from polysauv.conf import Parameter
@@ -38,16 +37,19 @@ class ParameterizedObject(object):
             while result not in ('', 'y', 'n'):
                 result = get_input_text('%s [Y]/n\n' % text).lower()
         elif self.command_display:
-            print(text)
+            logger.info(text)
         return result != 'n' and self.command_execute
 
-    def execute_command(self, cmd, ignore_errors=False, cwd=None, stderr=None, stdout=None, stdin=None, env=None):
+    def execute_command(self, cmd, ignore_errors=False, cwd=None, stderr=None, stdout=None, stdin=None, env=None,
+                        error_str=None):
         return_code = 0
         if self.can_execute_command(cmd):
             p = subprocess.Popen(cmd, stdin=stdin, stderr=stderr or self.stderr, stdout=stdout or self.stdout,
                                  cwd=cwd, env=env)
             p.communicate()
             return_code = p.returncode
+            if return_code != 0 and error_str:
+                logger.error(error_str)
             if return_code != 0 and not ignore_errors:
                 raise subprocess.CalledProcessError(return_code, cmd[0])
         return return_code
@@ -209,6 +211,6 @@ class Repository(ParameterizedObject):
                            'daily:h (the h-th hour of each day, h = 0..23)'),
     ]
 
-    def __init__(self, name, check_out_of_date_backup=None, ):
-        super(Repository, self).__init__(name)
+    def __init__(self, name, check_out_of_date_backup=None, **kwargs):
+        super(Repository, self).__init__(name, **kwargs)
         self.check_out_of_date_backup = check_out_of_date_backup or get_is_time_elapsed(None)
