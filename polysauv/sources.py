@@ -57,7 +57,7 @@ class RSync(Source):
         Parameter('include', help_str='only include files matching PATTERN (see --include option from rsync). '
                                       'If PATTERN startswith @, then it should be the absolute path of a file '
                                       '(see --include-from option from rsync)'),
-        Parameter('preserve_hard_links', converter=bool_setting, help_str='preserve hard links'),
+        Parameter('preserve_hard_links', converter=bool_setting, help_str='true|false: preserve hard links'),
     ]
 
     def __init__(self, name, local_repository, source_path='', destination_path='', rsync_executable='rsync',

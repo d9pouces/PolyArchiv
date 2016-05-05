@@ -216,13 +216,13 @@ class TarArchive(RemoteRepository):
         Parameter('curl_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "curl")'),
         Parameter('remote_url', converter=check_curl_url,
-                  help_str='destination URL (e.g.: ftp://example.org/path/,'
+                  help_str='destination URL (e.g.: ftp://example.org/path/ or '
                            'https://example.org/path)'),
         Parameter('user', help_str='username'),
         Parameter('password', help_str='password'),
         Parameter('archive_prefix', help_str='prefix of the archive names (default: "archive")'),
         Parameter('proxy', help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080)'),
-        Parameter('insecure', converter=bool_setting, help_str='do not check certificate for SSL connections'),
+        Parameter('insecure', converter=bool_setting, help_str='true|false: do not check certificates'),
         Parameter('cacert', converter=check_file, help_str='certificate to use to verify the server'),
         Parameter('date_format', help_str='date format for the generated archives (default: "%Y-%m-%d_%H-%M")'),
         Parameter('keytab', converter=check_file,
@@ -320,53 +320,48 @@ class Duplicity(RemoteRepository):
                   help_str='destination URL (e.g.: ftp://example.org/path/,'
                            'https://example.org/path). Please check Duplicity\'s documentation.'),
         Parameter('encrypt_key_id', help_str='[GPG] encrypt with this public key instead of symmetric encryption.'),
-        # --encrypt-key key-id
-        Parameter('sign_key_id', help_str='[GPG] All backup files will be signed with keyid key.'),  # --sign-key key-id
-        Parameter('encrypt_passphrase', help_str='[GPG] This passphrase is passed to GnuPG.'),  # PASSPHRASE
+        Parameter('sign_key_id', help_str='[GPG] All backup files will be signed with keyid key.'),
+        Parameter('encrypt_passphrase', help_str='[GPG] This passphrase is passed to GnuPG.'),
         Parameter('sign_passphrase', help_str='[GPG] This passphrase is passed to GnuPG for the sign_key.'),
-        # SIGN_PASSPHRASE
-        Parameter('no_encryption', converter=bool_setting, help_str='Do not use GnuPG to encrypt remote files.'),
-        # --no-encryption
+        Parameter('no_encryption', converter=bool_setting, help_str='true|false: do not use GnuPG to encrypt '
+                                                                    'remote files.'),
         Parameter('private_key', converter=check_file, help_str='[SSH backend] The private SSH key (filename)'),
-        # --ssh-options -oIdentityFile=%s
-        Parameter('password', help_str='upload password'),  # FTP_PASSWORD
+        Parameter('password', help_str='upload password'),
 
         Parameter('full_if_older_than',
                   help_str='Perform a full backup if an incremental backup is requested, but the latest full backup in '
-                           'the collection is older than the given time.'),  # --full-if-older-than
+                           'the collection is older than the given time.'),
         Parameter('max_block_size', help_str='determines the number of the blocks examined for changes during the '
-                                             'diff process.'),  # --max-blocksize
-        Parameter('no_compression', converter=bool_setting, help_str='Do not use GZip to compress remote files.'),
-        # --no-compression
-        Parameter('volsize', help_str='Change the volume size to number Mb. Default is 25Mb.'),  # --volsize
+                                             'diff process.'),
+        Parameter('no_compression', converter=bool_setting, help_str='true|false: do not use GZip to compress remote '
+                                                                     'files.'),
+        Parameter('volsize', help_str='Change the volume size to number Mb. Default is 25Mb.'),
         Parameter('always_full', converter=bool_setting,
-                  help_str='Perform a full backup. A new backup chain is started even if signatures are available for '
-                           'an incremental backup.'),  # full
+                  help_str='true|false: perform a full backup. A new backup chain is started even if signatures are '
+                           'available for an incremental backup.'),
         Parameter('always_verify', converter=bool_setting,
-                  help_str='Always perform a verify check after a backup: restore backup contents temporarily file by '
-                           'file and compare against the local path\'s contents. Can take a lot of time!'),  # verify
+                  help_str='true|false: always perform a verify check after a backup: restore backup contents '
+                           'temporarily file by file and compare against the local path\'s contents. Can take a lot of '
+                           'time!'),
 
         Parameter('gpg_encrypt_secret_keyring',
                   help_str='[GPG] This option can only be used with encrypt_key, and changes the path to the secret '
-                           'keyring for the encrypt key to filename. Default to ~/.gnupg/secring.gpg'
-                  ),  # --encrypt-secret-keyring filename
+                           'keyring for the encrypt key to filename. Default to ~/.gnupg/secring.gpg'),
         Parameter('gpg_options', converter=check_executable,
                   help_str='[GPG] Allows you to pass options to gpg encryption.  The options list should be of the '
-                           'form "--opt1 --opt2=parm"'),  # --gpg-options
+                           'form "--opt1 --opt2=parm"'),
         Parameter('rsync_options', help_str='[RSYNC backend] Options for rsync. The options list should be of the '
-                                            'form "opt1=parm1 opt2=parm2"'),  # --rsync-options options
+                                            'form "opt1=parm1 opt2=parm2"'),
         Parameter('ssh_options',
                   help_str='[SSH backend] Options for SSH. The options list should be of '
-                           'the form "-oOpt1=\'parm1\' -oOpt2=\'parm2\'".'),  # --ssh-options options
-        Parameter('cacert', converter=check_file, help_str='[WEBDAV] certificate to use to verify the server'),
-        # --ssl-cacert-file file
+                           'the form "-oOpt1=\'parm1\' -oOpt2=\'parm2\'".'),
+        Parameter('cacert', converter=check_file, help_str='[WEBDAV backend] certificate to use to verify the server'),
         Parameter('insecure', converter=bool_setting,
-                  help_str='[WEBDAV backend] do not check certificate for SSL connections'),
-        # --ssl-no-check-certificate
+                  help_str='[WEBDAV backend] true|false: do not check certificate for SSL connections'),
         Parameter('duplicity_executable', converter=check_executable,
                   help_str='path of the duplicity executable (default: "duplicity")'),
         Parameter('gpg_executable', converter=check_executable,
-                  help_str='path of the gpg executable (default: "gpg")'),  # --gpg-binary
+                  help_str='path of the gpg executable (default: "gpg")'),
     ]
 
     def __init__(self, name, remote_url='', encrypt_key_id=None, sign_key_id=None, encrypt_passphrase=None,
