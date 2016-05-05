@@ -84,7 +84,7 @@ class LocalRepository(Repository):
                 self.release_lock(lock_)
             except Exception as e:
                 logger.critical('unable to release lock. %s' % str(e))
-        if self.can_execute_command('# register this backup state?'):
+        if self.can_execute_command('# register this backup state'):
             self.set_info(info)
         return info.last_state_valid
 
