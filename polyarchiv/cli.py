@@ -96,13 +96,13 @@ def main():
         if not verbose:
             cprint('display available options for each engine with --verbose', CYAN)
 
-        cprint('available built-in local repository engines:', YELLOW)
+        cprint('available local repository engines:', YELLOW)
         # noinspection PyTypeChecker
         display_classes('polyarchiv.locals', verbose=verbose)
-        cprint('available built-in source engines:', YELLOW)
+        cprint('available source engines:', YELLOW)
         # noinspection PyTypeChecker
         display_classes('polyarchiv.sources', verbose=verbose)
-        cprint('available built-in remote repository engines:', YELLOW)
+        cprint('available remote repository engines:', YELLOW)
         # noinspection PyTypeChecker
         display_classes('polyarchiv.remotes', verbose=verbose)
     return return_code
@@ -112,7 +112,7 @@ def display_classes(plugin_category, verbose=False):
     """display plugins of a given category"""
     for entry_point in iter_entry_points(plugin_category):
         v = entry_point.load()
-        cprint('  * engine=%s.%s' % (v.__module__, v.__name__), BOLD, GREEN)
+        cprint('  * engine=%s' % entry_point.name, BOLD, GREEN)
         if verbose:
             cprint('    options:', GREEN)
         # noinspection PyUnresolvedReferences

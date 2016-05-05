@@ -10,6 +10,8 @@ import logging
 import os
 import pwd
 
+from pkg_resources import iter_entry_points
+
 from polyarchiv.conf import Parameter
 from polyarchiv.locals import LocalRepository
 from polyarchiv.remotes import RemoteRepository
@@ -36,6 +38,9 @@ class Runner(ParameterizedObject):
     def __init__(self, config_directories, **kwargs):
         super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
+        self.available_local_engines = {x.name.lower(): x.load() for x in iter_entry_points('polyarchiv.locals')}
+        self.available_remote_engines = {x.name.lower(): x.load() for x in iter_entry_points('polyarchiv.remotes')}
+        self.available_source_engines = {x.name.lower(): x.load() for x in iter_entry_points('polyarchiv.sources')}
         self.local_repositories = {}
         self.remote_repositories = {}
         self.local_config_files = []
@@ -86,7 +91,10 @@ class Runner(ParameterizedObject):
         for config_file, parser in self._iter_config_parsers('*.local'):
             self.local_config_files.append(config_file)
             engine = parser.get(self.global_section, self.engine_option)
-            engine_cls = import_string(engine)
+            if engine.lower() in self.available_local_engines:
+                engine_cls = self.available_local_engines[engine.lower()]
+            else:
+                engine_cls = import_string(engine)
             name = os.path.basename(config_file).rpartition('.')[0]
             parameters = self._get_args_from_parser(config_file, parser, self.global_section, engine_cls)
             local = engine_cls(name, **parameters)
@@ -94,7 +102,10 @@ class Runner(ParameterizedObject):
             for section in parser.sections():
                 if section == self.global_section or not parser.has_option(section, 'engine'):
                     continue
-                engine_cls = import_string(parser.get(section, self.engine_option))
+                if engine.lower() in self.available_source_engines:
+                    engine_cls = self.available_source_engines[engine.lower()]
+                else:
+                    engine_cls = import_string(parser.get(section, self.engine_option))
                 parameters = self._get_args_from_parser(config_file, parser, section, engine_cls)
                 source = engine_cls(section, local, **parameters)
                 local.add_source(source)
@@ -103,7 +114,10 @@ class Runner(ParameterizedObject):
         for config_file, parser in self._iter_config_parsers('*.remote'):
             self.remote_config_files.append(config_file)
             engine = parser.get(self.global_section, self.engine_option)
-            engine_cls = import_string(engine)
+            if engine.lower() in self.available_remote_engines:
+                engine_cls = self.available_remote_engines[engine.lower()]
+            else:
+                engine_cls = import_string(engine)
             name = os.path.basename(config_file).rpartition('.')[0]
             parameters = self._get_args_from_parser(config_file, parser, self.global_section, engine_cls)
             remote = engine_cls(name, **parameters)

@@ -15,16 +15,16 @@ for line in codecs.open(os.path.join('polyarchiv', '__init__.py'), 'r', encoding
 with codecs.open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as fd:
     long_description = fd.read()
 
-sources = ['RSync = polyarchiv.sources:RSync',
-           'MySQL = polyarchiv.sources:MySQL',
-           'PostgresSQL = polyarchiv.sources:PostgresSQL',
-           'Ldap = polyarchiv.sources:Ldap', ]
-remotes = ['GitRepository = polyarchiv.remotes:GitRepository',
-           'Rsync = polyarchiv.remotes:Rsync',
-           'TarArchive = polyarchiv.remotes:TarArchive',
-           'Duplicity = polyarchiv.remotes:Duplicity', ]
-locals_ = ['FileRepository = polyarchiv.locals:FileRepository',
-           'GitRepository = polyarchiv.locals:GitRepository', ]
+sources = ['rsync = polyarchiv.sources:RSync',
+           'mysql = polyarchiv.sources:MySQL',
+           'postgressql = polyarchiv.sources:PostgresSQL',
+           'ldap = polyarchiv.sources:Ldap', ]
+remotes = ['git = polyarchiv.remotes:GitRepository',
+           'rsync = polyarchiv.remotes:Rsync',
+           'tar = polyarchiv.remotes:TarArchive',
+           'duplicity = polyarchiv.remotes:Duplicity', ]
+locals_ = ['files = polyarchiv.locals:FileRepository',
+           'git = polyarchiv.locals:GitRepository', ]
 
 setup(
     name='polyarchiv',

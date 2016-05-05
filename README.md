@@ -46,7 +46,7 @@ backup data. If you set a frequency, repositories that are not out-of-date are n
  
 display all available engines (and their options if you specified `--verbose`)
 
-    $ polyarchiv help [--verbose]
+    $ polyarchiv plugins [--verbose]
 
 You can also generate a Debian/Ubuntu package with: 
 
@@ -56,8 +56,8 @@ You can also generate a Debian/Ubuntu package with:
 Configuration
 -------------
 
-The default configuration directory is `/etc/polyarchiv`. However, if you installed it in a virtualenv, 
-then its default config dir is `$VIRTUALENV/etc/polyarchiv`. 
+The default configuration directory is `/etc/polyarchiv` unless you installed it in a virtualenv, 
+(then its default config dir is `$VIRTUALENV/etc/polyarchiv`). 
 Otherwise, you can specify another config dir with `polyarchiv -C /my/config/dir`.
 
 This directory should contain configuration files for local repositories 
@@ -74,7 +74,7 @@ The `[global]` section defines options for the local repository, and other secti
 
     $ cat /etc/polyarchiv/my-local.local
     [global]
-    engine=polyarchiv.locals.GitRepository
+    engine=git
     local_path=/tmp/local
     local_tags=local
     included_remote_tags=*
@@ -82,7 +82,7 @@ The `[global]` section defines options for the local repository, and other secti
     frequency=daily
     
     [source_1]
-    engine=polyarchiv.sources.PostgresSQL
+    engine=postgressql
     host=localhost
     port=5432
     user=test
@@ -91,7 +91,7 @@ The `[global]` section defines options for the local repository, and other secti
     destination_path=./postgres.sql
     
     [source_2]
-    engine=polyarchiv.sources.MySQL
+    engine=mysql
     host=localhost
     port=3306
     user=test
@@ -100,7 +100,7 @@ The `[global]` section defines options for the local repository, and other secti
     destination_path=./mysql.sql
     
     [source_3]
-    engine=polyarchiv.sources.RSync
+    engine=rsync
     source_path=/tmp/source/files
     destination_path=./files
 
@@ -112,7 +112,7 @@ Here is a gitlab acting as remote storage for git local repo:
 
     $ cat /etc/polyarchiv/my-remote1.remote
     [global]
-    engine=polyarchiv.remotes.GitRepository
+    engine=git
     frequency=daily
     remote_tags=
     remote_url=http://gitlab.example.org/group/TestsPolyarchiv.git
@@ -124,7 +124,7 @@ Maybe you also want a full backup (as an archive) uploaded monthly (the tenth da
 
     $ cat /etc/polyarchiv/my-remote2.remote
     [global]
-    engine=polyarchiv.remotes.TarArchive
+    engine=tar
     frequency=monthly:10
     remote_tags=
     remote_url=ftp://myftp.example.org/backups/project/
@@ -140,7 +140,19 @@ Available engines
 -----------------
 
 Several engines for sources and remote or local repositories are available.
-Use `polyarchiv plugins` to display them (and `polyarchiv plugins -v` to display all their configuration options). 
+Use `polyarchiv plugins` to display the full list, and `polyarchiv plugins -v` to display all their configuration options.
+ 
+Extra backup options
+--------------------
+
+  * `--verbose`: display more infos
+  * `--force`: force the backup, even if not required (the last backup is recent enough)
+  * `--nrpe`: the output is compatible with Nagios/NRPE (so you can use it like a standard Nagios check in your sup)
+  * `--show-commands`: display all operations as a plain Bash script
+  * `--confirm-commands`: display all operations and ask for a manual confirmation before running them
+  * `--dry`: does not actually perform operations
+  * `--only-locals`: limit used local repositories to these tags
+  * `--only-remotes`: limit used remote repositories to these tags
 
 Associating local and remote repositories
 -----------------------------------------
@@ -153,14 +165,14 @@ If large local repositories should not be sent to a given remote repository, you
  
     $ cat /etc/polyarchiv/my-remote.remote
     [global]
-    engine=polyarchiv.remotes.GitRepository
+    engine=git
     excluded_local_tags=*large,huge
 
 and add the "large" tag in the local configuration:
 
     $ cat /etc/polyarchiv/my-local.local
     [global]
-    engine=polyarchiv.locals.GitRepository
+    engine=git
     local_path=/tmp/local
     local_tags=local,large
 
@@ -168,14 +180,14 @@ Traditionnal shell expansion is used for comparing included and excluded tags. T
 
     $ cat /etc/polyarchiv/my-remote.remote
     [global]
-    engine=polyarchiv.remotes.GitRepository
+    engine=git
     remote_tags=small-only
 
 and add the "large" tag to the local configuration:
 
     $ cat /etc/polyarchiv/my-local.local
     [global]
-    engine=polyarchiv.locals.GitRepository
+    engine=git
     local_path=/tmp/local
     included_remote_tags=huge,large
     
