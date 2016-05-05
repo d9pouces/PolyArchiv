@@ -5,6 +5,7 @@ import datetime
 import json
 import logging
 import os
+import pipes
 import subprocess
 
 from polysauv.conf import Parameter
@@ -32,7 +33,7 @@ class ParameterizedObject(object):
          Display the command if required.
         """
         if isinstance(text, list):
-            text = ' '.join(text)
+            text = ' '.join([pipes.quote(x) for x in text])
         result = '-'
         if self.command_confirm:
             while result not in ('', 'y', 'n'):
