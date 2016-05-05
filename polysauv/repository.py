@@ -32,8 +32,12 @@ class ParameterizedObject(object):
          Return True otherwise.
          Display the command if required.
         """
+        def smart_quote(x):
+            if x in ('>', '<', '2>'):
+                return x
+            return pipes.quote(x)
         if isinstance(text, list):
-            text = ' '.join([pipes.quote(x) for x in text])
+            text = ' '.join([smart_quote(x) for x in text])
         result = '-'
         if self.command_confirm:
             while result not in ('', 'y', 'n'):
