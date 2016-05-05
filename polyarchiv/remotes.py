@@ -64,7 +64,8 @@ class RemoteRepository(Repository):
             logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
         lock_ = None
         try:
-            lock_ = local_repository.get_lock()
+            if self.can_execute_command(''):
+                lock_ = local_repository.get_lock()
             self.do_backup(local_repository)
             info.success_count += 1
             info.last_state_valid = True
@@ -78,10 +79,12 @@ class RemoteRepository(Repository):
             info.last_message = text_type(e)
         if lock_ is not None:
             try:
-                local_repository.release_lock(lock_)
+                if self.can_execute_command(''):
+                    local_repository.release_lock(lock_)
             except Exception as e:
                 logger.critical('unable to release lock. %s' % str(e))
-        self.set_info(local_repository, info)
+        if self.can_execute_command('# register this remote state'):
+            self.set_info(local_repository, info)
         return info.last_state_valid
 
     def do_backup(self, local_repository):

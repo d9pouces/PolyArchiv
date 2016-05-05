@@ -62,7 +62,8 @@ class LocalRepository(Repository):
             logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
         lock_ = None
         try:
-            lock_ = self.get_lock()
+            if self.can_execute_command(''):
+                lock_ = self.get_lock()
             self.pre_source_backup()
             for source in self.sources:
                 source.backup()
@@ -81,7 +82,8 @@ class LocalRepository(Repository):
 
         if lock_ is not None:
             try:
-                self.release_lock(lock_)
+                if self.can_execute_command(''):
+                    self.release_lock(lock_)
             except Exception as e:
                 logger.critical('unable to release lock. %s' % str(e))
         if self.can_execute_command('# register this backup state'):

@@ -32,18 +32,19 @@ class ParameterizedObject(object):
          Return True otherwise.
          Display the command if required.
         """
-        def smart_quote(x):
-            if x in ('>', '<', '2>'):
-                return x
-            return pipes.quote(x)
+        def smart_quote(y):
+            if y in ('>', '<', '2>'):
+                return y
+            return pipes.quote(y)
         if isinstance(text, list):
             text = ' '.join([smart_quote(x) for x in text])
         result = '-'
-        if self.command_confirm:
-            while result not in ('', 'y', 'n'):
-                result = get_input_text('%s [Y]/n\n' % text).lower()
-        elif self.command_display:
-            cprint(text, YELLOW)
+        if text:
+            if self.command_confirm:
+                while result not in ('', 'y', 'n'):
+                    result = get_input_text('%s [Y]/n\n' % text).lower()
+            elif self.command_display:
+                cprint(text, YELLOW)
         return result != 'n' and self.command_execute
 
     def execute_command(self, cmd, ignore_errors=False, cwd=None, stderr=None, stdout=None, stdin=None, env=None,

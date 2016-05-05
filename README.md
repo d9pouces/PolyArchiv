@@ -1,5 +1,5 @@
 Polyarchiv
-========
+==========
 
 Backup data from multiple local sources (organized in local repositories) and send them to one or more remote repositories.
 Configuration is based on simple `.ini` files: 
