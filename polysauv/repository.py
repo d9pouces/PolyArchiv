@@ -8,6 +8,7 @@ import os
 import subprocess
 
 from polysauv.conf import Parameter
+from polysauv.termcolor import cprint, YELLOW
 from polysauv.utils import get_is_time_elapsed, text_type, get_input_text
 
 __author__ = 'Matthieu Gallet'
@@ -37,7 +38,7 @@ class ParameterizedObject(object):
             while result not in ('', 'y', 'n'):
                 result = get_input_text('%s [Y]/n\n' % text).lower()
         elif self.command_display:
-            logger.info(text)
+            cprint(text, YELLOW)
         return result != 'n' and self.command_execute
 
     def execute_command(self, cmd, ignore_errors=False, cwd=None, stderr=None, stdout=None, stdin=None, env=None,
@@ -130,7 +131,7 @@ class RepositoryInfo(object):
     @staticmethod
     def datetime_to_str(value=None):
         if value is None:
-            value = None
+            return None
         # noinspection PyUnresolvedReferences
         return value.strftime('%Y-%m-%dT%H:%M:%S')
 

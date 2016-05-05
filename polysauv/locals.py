@@ -158,8 +158,9 @@ class FileRepository(LocalRepository):
 
     def post_source_backup(self):
         last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
-        if self.execute_command('# store the current time for remote repositories?'):
-            with codecs.open(os.path.join(self.local_path, self.LAST_BACKUP_FILE), 'w', encoding='utf-8') as fd:
+        filename = os.path.join(self.local_path, self.LAST_BACKUP_FILE)
+        if self.execute_command('echo "%s" > %s' % (last_backup_date, filename)):
+            with codecs.open(filename, 'w', encoding='utf-8') as fd:
                 fd.write(last_backup_date)
 
     def get_cwd(self):

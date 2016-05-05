@@ -23,9 +23,8 @@ class Source(ParameterizedObject):
     """base source class"""
     parameters = ParameterizedObject.parameters + []
 
-    # noinspection PyUnusedLocal
     def __init__(self, name, local_repository, **kwargs):
-        super(Source, self).__init__(name)
+        super(Source, self).__init__(name, **kwargs)
         assert isinstance(local_repository, LocalRepository)
         self.local_repository = local_repository
 
