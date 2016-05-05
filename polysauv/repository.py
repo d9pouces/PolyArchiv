@@ -57,11 +57,11 @@ class ParameterizedObject(object):
 
     @property
     def stderr(self):
-        return subprocess.PIPE if not self.command_keep_output else None
+        return open(os.devnull, 'wb') if not self.command_keep_output else None
 
     @property
     def stdout(self):
-        return subprocess.PIPE if not self.command_keep_output else None
+        return open(os.devnull, 'wb') if not self.command_keep_output else None
 
     def ensure_dir(self, dirname, parent=False):
         """ensure that `dirname` exists and is a directory.

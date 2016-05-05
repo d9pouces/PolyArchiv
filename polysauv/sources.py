@@ -153,7 +153,13 @@ class MySQL(Source):
         if self.can_execute_command(cmd):
             with open(filename, 'wb') as fd:
                 p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
-            p.communicate()
+                p.communicate()
+        else:
+            with open(os.devnull, 'wb') as fd:
+                p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
+                p.communicate()
+        if p.returncode != 0:
+            raise subprocess.CalledProcessError(p.returncode, cmd[0])
 
     def restore(self):
         filename = os.path.join(self.local_repository.get_cwd(), self.destination_path)
