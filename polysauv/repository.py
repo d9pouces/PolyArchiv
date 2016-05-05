@@ -44,7 +44,14 @@ class ParameterizedObject(object):
     def execute_command(self, cmd, ignore_errors=False, cwd=None, stderr=None, stdout=None, stdin=None, env=None,
                         error_str=None):
         return_code = 0
-        if self.can_execute_command(cmd):
+        cmd_text = [x for x in cmd]
+        if hasattr(stdin, 'name') and stdin.name:
+            cmd_text += ['<',  stdin.name]
+        if hasattr(stdout, 'name') and stdout.name:
+            cmd_text += ['>',  stdout.name]
+        if hasattr(stderr, 'name') and stderr.name:
+            cmd_text += ['2>',  stderr.name]
+        if self.can_execute_command(cmd_text):
             p = subprocess.Popen(cmd, stdin=stdin, stderr=stderr or self.stderr, stdout=stdout or self.stdout,
                                  cwd=cwd, env=env)
             p.communicate()
