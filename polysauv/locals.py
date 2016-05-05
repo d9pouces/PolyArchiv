@@ -235,11 +235,11 @@ class GitRepository(FileRepository):
         if not os.path.isfile(path) and self.can_execute_command('echo \'%s/\' > %s' % (self.PRIVATE_FOLDER, path)):
             with codecs.open(path, 'w', encoding='utf-8') as fd:
                 fd.write("%s/\n" % self.PRIVATE_FOLDER)
-        self.execute_command([self.git_executable, 'init'])
-        self.execute_command([self.git_executable, 'add', '.'])
+        self.execute_command([self.git_executable, 'init'], cwd=self.local_path)
+        self.execute_command([self.git_executable, 'add', '.'], cwd=self.local_path)
         end = datetime.datetime.now()
         self.execute_command([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')],
-                             ignore_errors=True)
+                             ignore_errors=True, cwd=self.local_path)
 
     def restore(self):
         raise NotImplementedError

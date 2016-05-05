@@ -56,6 +56,11 @@ class ParameterizedObject(object):
             cmd_text += ['>',  stdout.name]
         if hasattr(stderr, 'name') and stderr.name:
             cmd_text += ['2>',  stderr.name]
+        if env and self.command_display:
+            for k, v in env.items():
+                cprint('%s=%s' % (k, v), YELLOW)
+        if cwd:
+            self.can_execute_command(['cd', cwd])
         if self.can_execute_command(cmd_text):
             p = subprocess.Popen(cmd, stdin=stdin, stderr=stderr or self.stderr, stdout=stdout or self.stdout,
                                  cwd=cwd, env=env)
