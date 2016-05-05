@@ -38,7 +38,7 @@ The simplest way is to use `pip`:
 Some commands are available:
 display the current configuration, local and remote repositories, sources and backup status
 
-    $ polyarchiv show [-C /my/config/dir] [--verbose]
+    $ polyarchiv config [-C /my/config/dir] [--verbose]
 
 backup data. If you set a frequency, repositories that are not out-of-date are not run (unless you specified `--force`)
 
