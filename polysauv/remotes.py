@@ -206,7 +206,7 @@ def check_curl_url(remote_url):
 
     """
     parsed_url = urlparse(remote_url)
-    if parsed_url.scheme not in ('http', 'https', 'scp', 'ftp', 'ftps', 'sftp', 'smb', 'file'):
+    if parsed_url.scheme not in ('http', 'https', 'scp', 'ftp', 'ftps', 'sftp', 'smb', 'smbs', 'file'):
         raise ValueError('Invalid scheme for remote URL: %s' % parsed_url.scheme)
     return remote_url
 
@@ -214,30 +214,35 @@ def check_curl_url(remote_url):
 class TarArchive(RemoteRepository):
     excluded_files = {'.git', '.gitignore'}
     parameters = RemoteRepository.parameters + [
-        Parameter('tar_executable', converter=check_executable,
-                  help_str='path of the rsync executable (default: "tar")'),
-        Parameter('curl_executable', converter=check_executable,
-                  help_str='path of the rsync executable (default: "curl")'),
         Parameter('remote_url', converter=check_curl_url,
-                  help_str='destination URL (e.g.: ftp://example.org/path/ or '
-                           'https://example.org/path)'),
-        Parameter('user', help_str='username'),
-        Parameter('password', help_str='password'),
+                  help_str='destination URL (e.g.: ‘ftp://example.org/path/’ or '
+                           '‘https://example.org/path’). ‘file://’ URLs are handled by a ‘cp’ command, other ones'
+                           ' are handled by ‘curl’ command. Most of protocols known by cURL can be used:'
+                           ' ftp(s), http(s) with WebDAV, scp, sftp, smb, smbs. You can specify user and password'
+                           ' in URL: ‘scheme://user:password@host/path’'),
+        Parameter('user', help_str='username (if not set in the URL)'),
+        Parameter('password', help_str='password (if not set in the URL)'),
         Parameter('archive_prefix', help_str='prefix of the archive names (default: "archive")'),
         Parameter('proxy', help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080)'),
         Parameter('insecure', converter=bool_setting, help_str='true|false: do not check certificates'),
-        Parameter('cacert', converter=check_file, help_str='certificate to use to verify the server'),
+        Parameter('cert', converter=check_file, help_str='[HTTPS|FTPS backend] certificate to provide to the server'),
+        Parameter('cacert', converter=check_file, help_str='[HTTPS|FTPS backend] CA certificate authenticating'
+                                                           ' the server'),
         Parameter('date_format', help_str='date format for the generated archives (default: "%Y-%m-%d_%H-%M")'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication)'),
         Parameter('private_key', converter=check_file,
-                  help_str='[SSH backend] absolute path of the private key file'),
+                  help_str='[HTTPS|FTPS|SSH backend] absolute path of the private key file'),
         Parameter('tar_format', converter=CheckOption(['tar.gz', 'tar.bz2', 'tar.xz']),
-                  help_str='one of "tar.gz", "tar.bz2" (default), "tar.xz"')
+                  help_str='one of "tar.gz", "tar.bz2" (default), "tar.xz"'),
+        Parameter('tar_executable', converter=check_executable,
+                  help_str='path of the rsync executable (default: "tar")'),
+        Parameter('curl_executable', converter=check_executable,
+                  help_str='path of the rsync executable (default: "curl")'),
     ]
 
     def __init__(self, name, tar_executable='tar', curl_executable='curl', remote_url='', user='', password='',
-                 insecure=False, cacert=None, archive_prefix='archive',
+                 insecure=False, cacert=None, cert=None, archive_prefix='archive',
                  keytab=None, private_key=None, tar_format='tar.bz2', date_format='%Y-%m-%d_%H-%M', proxy=None,
                  **kwargs):
         super(TarArchive, self).__init__(name, **kwargs)
@@ -254,6 +259,7 @@ class TarArchive(RemoteRepository):
         self.proxy = proxy
         self.insecure = insecure
         self.cacert = cacert
+        self.cert = cert
 
     def do_backup(self, local_repository):
         assert isinstance(local_repository, FileRepository)
@@ -298,7 +304,11 @@ class TarArchive(RemoteRepository):
                     cmd += ['-k']
                 if self.cacert:
                     cmd += ['--cacert', self.cacert]
-                cmd += ['-u', '%s:%s' % (self.user, self.password)]
+                if self.cert:
+                    cmd += ['--cert', self.cert]
+                parsed_url = urlparse(remote_url)
+                if not parsed_url.username and not parsed_url.password:
+                    cmd += ['-u', '%s:%s' % (self.user, self.password)]
                 if self.private_key:
                     cmd += ['--key', self.private_key]
                 if self.proxy:
@@ -321,8 +331,9 @@ class TarArchive(RemoteRepository):
 class Duplicity(RemoteRepository):
     parameters = RemoteRepository.parameters + [
         Parameter('remote_url',
-                  help_str='destination URL (e.g.: ftp://example.org/path/,'
-                           'https://example.org/path). Please check Duplicity\'s documentation.'),
+                  help_str='destination URL with the username (e.g.: ftp://user:password@example.org/path/,'
+                           'https://user:password@example.org/path). Please check Duplicity\'s documentation.'
+                           'Password can be separately set with the ‘password’ option.'),
         Parameter('encrypt_key_id', help_str='[GPG] encrypt with this public key instead of symmetric encryption.'),
         Parameter('sign_key_id', help_str='[GPG] All backup files will be signed with keyid key.'),
         Parameter('encrypt_passphrase', help_str='[GPG] This passphrase is passed to GnuPG.'),
@@ -350,7 +361,7 @@ class Duplicity(RemoteRepository):
 
         Parameter('gpg_encrypt_secret_keyring',
                   help_str='[GPG] This option can only be used with encrypt_key, and changes the path to the secret '
-                           'keyring for the encrypt key to filename. Default to ~/.gnupg/secring.gpg'),
+                           'keyring for the encrypt key to filename. Default to ‘~/.gnupg/secring.gpg’'),
         Parameter('gpg_options', converter=check_executable,
                   help_str='[GPG] Allows you to pass options to gpg encryption.  The options list should be of the '
                            'form "--opt1 --opt2=parm"'),
@@ -359,9 +370,9 @@ class Duplicity(RemoteRepository):
         Parameter('ssh_options',
                   help_str='[SSH backend] Options for SSH. The options list should be of '
                            'the form "-oOpt1=\'parm1\' -oOpt2=\'parm2\'".'),
-        Parameter('cacert', converter=check_file, help_str='[WEBDAV backend] certificate to use to verify the server'),
+        Parameter('cacert', converter=check_file, help_str='[HTTPS backend] certificate to use to verify the server'),
         Parameter('insecure', converter=bool_setting,
-                  help_str='[WEBDAV backend] true|false: do not check certificate for SSL connections'),
+                  help_str='[HTTPS backend] true|false: do not check certificate for SSL connections'),
         Parameter('duplicity_executable', converter=check_executable,
                   help_str='path of the duplicity executable (default: "duplicity")'),
         Parameter('gpg_executable', converter=check_executable,
