@@ -72,7 +72,7 @@ def main():
         remote_failures = ['local:%s/remote:%s' % x for (x, y) in remote_results.items() if not y]
         if local_failures or remote_failures:
             if args.nrpe:
-                print('CRITICAL - failed backups ' % ' '.join(local_failures + remote_failures))
+                print('CRITICAL - failed backups: %s ' % ' '.join(local_failures + remote_failures))
             return_code = 2
         elif args.nrpe:
             print('OK - all backups are valid')

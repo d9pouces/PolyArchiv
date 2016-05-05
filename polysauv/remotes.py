@@ -212,7 +212,7 @@ def check_curl_url(remote_url):
 
 
 class TarArchive(RemoteRepository):
-    excluded_files = {'.git', '.polysauv', '.gitignore'}
+    excluded_files = {'.git', '.gitignore'}
     parameters = RemoteRepository.parameters + [
         Parameter('tar_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "tar")'),
@@ -258,7 +258,8 @@ class TarArchive(RemoteRepository):
     def do_backup(self, local_repository):
         assert isinstance(local_repository, FileRepository)
         error = None
-        filenames = {x for x in os.listdir(local_repository.local_path)} - self.excluded_files
+        excluded_files = self.excluded_files | {local_repository.PRIVATE_FOLDER}
+        filenames = {x for x in os.listdir(local_repository.local_path)} - excluded_files
         filenames = [x for x in filenames]
         filenames.sort()
         # noinspection PyTypeChecker
@@ -266,11 +267,11 @@ class TarArchive(RemoteRepository):
         archive_filename = os.path.join(local_repository.local_path,
                                         '%s-%s.%s' % (self.archive_prefix, now_str, self.tar_format))
         if self.tar_format == 'tar.gz':
-            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, '-czf']
+            cmd = [self.tar_executable, '-czf']
         elif self.tar_format == 'tar.bz2':
-            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, '-cjf']
+            cmd = [self.tar_executable, '-cjf']
         elif self.tar_format == 'tar.xz':
-            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, '-cJf']
+            cmd = [self.tar_executable, '-cJf']
         else:
             raise ValueError('invalid tar format: %s' % self.tar_format)
         cmd.append(archive_filename)
