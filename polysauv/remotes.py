@@ -263,11 +263,11 @@ class TarArchive(RemoteRepository):
         archive_filename = os.path.join(local_repository.local_path,
                                         '%s-%s.%s' % (self.archive_prefix, now_str, self.tar_format))
         if self.tar_format == 'tar.gz':
-            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, 'czf']
+            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, '-czf']
         elif self.tar_format == 'tar.bz2':
-            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, 'cjf']
+            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, '-cjf']
         elif self.tar_format == 'tar.xz':
-            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, 'cJf']
+            cmd = [self.tar_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, '-cJf']
         else:
             raise ValueError('invalid tar format: %s' % self.tar_format)
         cmd.append(archive_filename)
