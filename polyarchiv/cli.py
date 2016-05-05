@@ -14,7 +14,7 @@ import sys
 from pkg_resources import iter_entry_points
 
 from polyarchiv.conf import Parameter
-from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN
+from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN, GREY
 
 __author__ = 'mgallet'
 
@@ -111,12 +111,15 @@ def main():
 def display_classes(plugin_category, verbose=False):
     """display plugins of a given category"""
     for entry_point in iter_entry_points(plugin_category):
-        v = entry_point.load()
+        engine_cls = entry_point.load()
         cprint('  * engine=%s' % entry_point.name, BOLD, GREEN)
+        if engine_cls.__doc__:
+            cprint('    ' + engine_cls.__doc__, GREY, BOLD)
+
         if verbose:
             cprint('    options:', GREEN)
         # noinspection PyUnresolvedReferences
-        for parameter in v.parameters:
+        for parameter in engine_cls.parameters:
             assert isinstance(parameter, Parameter)
             if parameter.help_str:
                 lines = []

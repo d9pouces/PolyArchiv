@@ -46,7 +46,8 @@ class Source(ParameterizedObject):
 
 
 class RSync(Source):
-    """copy all files from the destination to the backup using rsync.
+    """copy all files from the given source_path to the local repository using rsync.
+    The destination is a folder inside the local repository.
     """
     parameters = Source.parameters + [
         Parameter('source_path', converter=check_directory, help_str='original folder to backup'),
@@ -120,6 +121,7 @@ class RSync(Source):
 
 
 class MySQL(Source):
+    """Dump the content of a MySQL database with the mysqldump utility to a filename in the local repository"""
     parameters = Source.parameters + [
         Parameter('host', help_str='database host'),
         Parameter('port', converter=int, help_str='database port'),
@@ -215,6 +217,7 @@ class MySQL(Source):
 
 
 class PostgresSQL(MySQL):
+    """Dump the content of a PostgresSQL database with the pg_dump utility to a filename in the local repository"""
     parameters = MySQL.parameters[:-2] + [
         Parameter('dump_executable', converter=check_executable,
                   help_str='path of the pg_dump executable (default: "pg_dump")'),
@@ -249,6 +252,7 @@ class PostgresSQL(MySQL):
 
 
 class Ldap(Source):
+    """Dump a OpenLDAP database using slapcat to a filename in the local repository"""
     parameters = Source.parameters + [
         Parameter('database', help_str='number of the database (usually 0 and 1)'),
         Parameter('destination_path', help_str='filename of the dump (not an absolute path)'),
