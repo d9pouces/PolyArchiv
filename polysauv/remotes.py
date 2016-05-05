@@ -4,6 +4,9 @@ from __future__ import unicode_literals
 import datetime
 import logging
 
+from polysauv.termcolor import YELLOW
+from polysauv.termcolor import cprint
+
 try:
     # noinspection PyCompatibility
     from urllib.parse import urlparse
@@ -454,4 +457,7 @@ class Duplicity(RemoteRepository):
             elif i == 1:
                 cmd_args += ['verify']
             cmd_args += [local_path, remote_url]
+            if self.command_display:
+                for k, v in env.items():
+                    cprint('%s=%s' % (k, v), YELLOW)
             self.execute_command(cmd_args, cwd=local_repository.local_path, env=env)

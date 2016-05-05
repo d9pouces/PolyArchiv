@@ -15,6 +15,8 @@ import subprocess
 from polysauv.conf import Parameter, bool_setting, check_directory, check_executable
 from polysauv.locals import LocalRepository
 from polysauv.repository import ParameterizedObject
+from polysauv.termcolor import YELLOW
+from polysauv.termcolor import cprint
 
 __author__ = 'mgallet'
 
@@ -150,6 +152,9 @@ class MySQL(Source):
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()
         env.update(self.get_env())
+        if self.command_display:
+            for k, v in self.get_env().items():
+                cprint('%s=%s' % (k, v), YELLOW)
         if self.can_execute_command(cmd):
             with open(filename, 'wb') as fd:
                 p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
@@ -169,6 +174,9 @@ class MySQL(Source):
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()
         env.update(self.get_env())
+        if self.command_display:
+            for k, v in self.get_env():
+                cprint('%s=%s' % (k, v), YELLOW)
         with open(filename, 'rb') as fd:
             self.execute_command(cmd, env=env, stdin=fd, stderr=self.stderr, stdout=self.stdout)
 
