@@ -159,7 +159,7 @@ class FileRepository(LocalRepository):
     def post_source_backup(self):
         last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
         filename = os.path.join(self.local_path, self.LAST_BACKUP_FILE)
-        if self.can_execute_command('echo "%s" > %s' % (last_backup_date, filename)):
+        if self.can_execute_command('echo \'%s\' > %s' % (last_backup_date, filename)):
             with codecs.open(filename, 'w', encoding='utf-8') as fd:
                 fd.write(last_backup_date)
 
@@ -232,7 +232,7 @@ class GitRepository(FileRepository):
     def post_source_backup(self):
         super(GitRepository, self).post_source_backup()
         path = os.path.join(self.local_path, '.gitignore')
-        if not os.path.isfile(path) and self.can_execute_command('echo "%s/" > %s' % (self.PRIVATE_FOLDER, path)):
+        if not os.path.isfile(path) and self.can_execute_command('echo \'%s/\' > %s' % (self.PRIVATE_FOLDER, path)):
             with codecs.open(path, 'w', encoding='utf-8') as fd:
                 fd.write("%s/\n" % self.PRIVATE_FOLDER)
         self.execute_command([self.git_executable, 'init'])
