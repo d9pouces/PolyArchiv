@@ -308,7 +308,7 @@ class TarArchive(RemoteRepository):
                     cmd += ['--ftp-ssl', 'ftp' + remote_url[4:]]
                 else:
                     cmd += [remote_url]
-            returncode = self.execute_command(cmd, cwd=local_repository.local_path)
+            returncode = self.execute_command(cmd)
             if returncode != 0:
                 error = ValueError('unable to create archive %s' % archive_filename)
         if os.path.isfile(archive_filename) and self.can_execute_command(['rm', archive_filename]):
