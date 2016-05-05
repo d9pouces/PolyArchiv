@@ -8,12 +8,12 @@ import os
 import pipes
 import subprocess
 
-from polysauv.conf import Parameter
-from polysauv.termcolor import cprint, YELLOW
-from polysauv.utils import get_is_time_elapsed, text_type, get_input_text
+from polyarchiv.conf import Parameter
+from polyarchiv.termcolor import cprint, YELLOW
+from polyarchiv.utils import get_is_time_elapsed, text_type, get_input_text
 
 __author__ = 'Matthieu Gallet'
-logger = logging.getLogger('polysauv')
+logger = logging.getLogger('polyarchiv')
 
 
 class ParameterizedObject(object):

@@ -1,7 +1,7 @@
 [global]
-engine=polysauv.remotes.GitRepository
+engine=polyarchiv.remotes.GitRepository
 remote_tags=
-remote_url=http://gitlab.example.org/group/TestsPolysauv.git
+remote_url=http://gitlab.example.org/group/TestsPolyarchiv.git
 remote_branch=master
 user=mgallet
 included_local_tags=*

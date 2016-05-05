@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 import logging
 import datetime
-from polysauv.conf import Parameter
-from polysauv.locals import LocalRepository
-from polysauv.remotes import RemoteRepository
-from polysauv.repository import RepositoryInfo
-from polysauv.sources import Source
+from polyarchiv.conf import Parameter
+from polyarchiv.locals import LocalRepository
+from polyarchiv.remotes import RemoteRepository
+from polyarchiv.repository import RepositoryInfo
+from polyarchiv.sources import Source
 
 __author__ = 'Matthieu Gallet'
 
-logger = logging.getLogger('polysauv.show')
+logger = logging.getLogger('polyarchiv.show')
 
 
 def show_local_repository(local_repository):

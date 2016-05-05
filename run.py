@@ -2,6 +2,6 @@
 from __future__ import unicode_literals
 import sys
 
-from polysauv.cli import main
+from polyarchiv.cli import main
 __author__ = 'mgallet'
 sys.exit(main())

@@ -12,11 +12,11 @@ from __future__ import unicode_literals
 import os
 import subprocess
 
-from polysauv.conf import Parameter, bool_setting, check_directory, check_executable
-from polysauv.locals import LocalRepository
-from polysauv.repository import ParameterizedObject
-from polysauv.termcolor import YELLOW
-from polysauv.termcolor import cprint
+from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable
+from polyarchiv.locals import LocalRepository
+from polyarchiv.repository import ParameterizedObject
+from polyarchiv.termcolor import YELLOW
+from polyarchiv.termcolor import cprint
 
 __author__ = 'mgallet'
 

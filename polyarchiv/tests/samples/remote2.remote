@@ -1,5 +1,5 @@
 [global]
-engine=polysauv.remotes.TarArchive
+engine=polyarchiv.remotes.TarArchive
 remote_tags=
 remote_url=file:///tmp/remote/archives/
 included_local_tags=*

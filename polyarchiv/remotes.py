@@ -4,8 +4,8 @@ from __future__ import unicode_literals
 import datetime
 import logging
 
-from polysauv.termcolor import YELLOW
-from polysauv.termcolor import cprint
+from polyarchiv.termcolor import YELLOW
+from polyarchiv.termcolor import cprint
 
 try:
     # noinspection PyCompatibility
@@ -15,13 +15,13 @@ except ImportError:
     from urlparse import urlparse
 import os
 
-from polysauv.conf import Parameter, strip_split, check_executable, check_file, CheckOption, bool_setting
-from polysauv.locals import GitRepository as LocalGitRepository, LocalRepository, FileRepository
-from polysauv.repository import Repository, RepositoryInfo
-from polysauv.utils import text_type, ensure_dir
+from polyarchiv.conf import Parameter, strip_split, check_executable, check_file, CheckOption, bool_setting
+from polyarchiv.locals import GitRepository as LocalGitRepository, LocalRepository, FileRepository
+from polyarchiv.repository import Repository, RepositoryInfo
+from polyarchiv.utils import text_type, ensure_dir
 
 __author__ = 'mgallet'
-logger = logging.getLogger('polysauv.remotes')
+logger = logging.getLogger('polyarchiv.remotes')
 
 
 class RemoteRepository(Repository):

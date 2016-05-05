@@ -8,13 +8,13 @@ import os
 import re
 import subprocess
 
-from polysauv.conf import Parameter, strip_split, check_directory, check_executable
-from polysauv.filelocks import Lock
-from polysauv.repository import Repository, RepositoryInfo
-from polysauv.utils import text_type
+from polyarchiv.conf import Parameter, strip_split, check_directory, check_executable
+from polyarchiv.filelocks import Lock
+from polyarchiv.repository import Repository, RepositoryInfo
+from polyarchiv.utils import text_type
 
 __author__ = 'mgallet'
-logger = logging.getLogger('polysauv')
+logger = logging.getLogger('polyarchiv')
 
 
 class LocalRepository(Repository):
@@ -94,7 +94,7 @@ class LocalRepository(Repository):
     def add_source(self, source):
         """
         :param source: source
-        :type source: :class:`polysauv.sources.Source`
+        :type source: :class:`polyarchiv.sources.Source`
         """
         self.sources.append(source)
 
@@ -138,16 +138,16 @@ class FileRepository(LocalRepository):
     example structure:
         dir/some/files
         database-dump.sql
-        .polysauv/lock
-        .polysauv/local/global.json
-        .polysauv/remote/my_remote.json
+        .polyarchiv/lock
+        .polyarchiv/local/global.json
+        .polyarchiv/remote/my_remote.json
     """
 
     parameters = LocalRepository.parameters + [
         Parameter('local_path', converter=check_directory, help_str='absolute path to locally gather all data')
     ]
     LAST_BACKUP_FILE = '.last-backup'
-    PRIVATE_FOLDER = '.polysauv'
+    PRIVATE_FOLDER = '.polyarchiv'
 
     def __init__(self, name, local_path='.', **kwargs):
         super(FileRepository, self).__init__(name=name, **kwargs)

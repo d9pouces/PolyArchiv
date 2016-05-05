@@ -1,4 +1,4 @@
-Polysauv
+Polyarchiv
 ========
 
 Backup data from multiple local sources (organized in local repositories) and send them to one or more remote repositories.
@@ -26,27 +26,27 @@ There are also several kinds of remote repositories:
   * Duplicity: after the backup, all files are encrypted and sent to the remote repository.
 
 Each repository (either local or remote) is associated to a backup frequency. 
-If a given repository has a daily backup frequency but you execute Polysauv twice a day, only the first backup will be executed. 
+If a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed. 
 
 Installation
 ------------
 
 The simplest way is to use `pip`:
 
-    $ pip install polysauv
+    $ pip install polyarchiv
 
 Some commands are available:
 display the current configuration, local and remote repositories, sources and backup status
 
-    $ polysauv show [-C /my/config/dir] [--verbose]
+    $ polyarchiv show [-C /my/config/dir] [--verbose]
 
 backup data. If you set a frequency, repositories that are not out-of-date are not run (unless you specified `--force`)
 
-    $ polysauv backup [-C /my/config/dir] [--force]
+    $ polyarchiv backup [-C /my/config/dir] [--force]
  
 display all available engines (and their options if you specified `--verbose`)
 
-    $ polysauv help [--verbose]
+    $ polyarchiv help [--verbose]
 
 You can also generate a Debian/Ubuntu package with: 
 
@@ -56,9 +56,9 @@ You can also generate a Debian/Ubuntu package with:
 Configuration
 -------------
 
-The default configuration directory is `/etc/polysauv`. However, if you installed it in a virtualenv, 
-then its default config dir is `$VIRTUALENV/etc/polysauv`. 
-Otherwise, you can specify another config dir with `polysauv -C /my/config/dir`.
+The default configuration directory is `/etc/polyarchiv`. However, if you installed it in a virtualenv, 
+then its default config dir is `$VIRTUALENV/etc/polyarchiv`. 
+Otherwise, you can specify another config dir with `polyarchiv -C /my/config/dir`.
 
 This directory should contain configuration files for local repositories 
 (like `my-local.local`) as well as remote repositories (like `my-remote.remote`).
@@ -72,9 +72,9 @@ Here is an example of local repository, gathering data from three sources:
 Its name must end by `.local`. 
 The `[global]` section defines options for the local repository, and other sections define the three sources:
 
-    $ cat /etc/polysauv/my-local.local
+    $ cat /etc/polyarchiv/my-local.local
     [global]
-    engine=polysauv.locals.GitRepository
+    engine=polyarchiv.locals.GitRepository
     local_path=/tmp/local
     local_tags=local
     included_remote_tags=*
@@ -82,7 +82,7 @@ The `[global]` section defines options for the local repository, and other secti
     frequency=daily
     
     [source_1]
-    engine=polysauv.sources.PostgresSQL
+    engine=polyarchiv.sources.PostgresSQL
     host=localhost
     port=5432
     user=test
@@ -91,7 +91,7 @@ The `[global]` section defines options for the local repository, and other secti
     destination_path=./postgres.sql
     
     [source_2]
-    engine=polysauv.sources.MySQL
+    engine=polyarchiv.sources.MySQL
     host=localhost
     port=3306
     user=test
@@ -100,7 +100,7 @@ The `[global]` section defines options for the local repository, and other secti
     destination_path=./mysql.sql
     
     [source_3]
-    engine=polysauv.sources.RSync
+    engine=polyarchiv.sources.RSync
     source_path=/tmp/source/files
     destination_path=./files
 
@@ -110,21 +110,21 @@ Remote repositories are simpler and only have a `[global]` section.
 Their names must end by `.remote`.
 Here is a gitlab acting as remote storage for git local repo: 
 
-    $ cat /etc/polysauv/my-remote1.remote
+    $ cat /etc/polyarchiv/my-remote1.remote
     [global]
-    engine=polysauv.remotes.GitRepository
+    engine=polyarchiv.remotes.GitRepository
     frequency=daily
     remote_tags=
-    remote_url=http://gitlab.example.org/group/TestsPolysauv.git
+    remote_url=http://gitlab.example.org/group/TestsPolyarchiv.git
     remote_branch=master
     user=mgallet
     included_local_tags=*
 
 Maybe you also want a full backup (as an archive) uploaded monthly (the tenth day of each month) to a FTP server:
 
-    $ cat /etc/polysauv/my-remote2.remote
+    $ cat /etc/polyarchiv/my-remote2.remote
     [global]
-    engine=polysauv.remotes.TarArchive
+    engine=polyarchiv.remotes.TarArchive
     frequency=monthly:10
     remote_tags=
     remote_url=ftp://myftp.example.org/backups/project/
@@ -140,7 +140,7 @@ Available engines
 -----------------
 
 Several engines for sources and remote or local repositories are available.
-Use `polysauv plugins` to display them (and `polysauv plugins -v` to display all their configuration options). 
+Use `polyarchiv plugins` to display them (and `polyarchiv plugins -v` to display all their configuration options). 
 
 Associating local and remote repositories
 -----------------------------------------
@@ -151,31 +151,31 @@ A remote repository has the tag `remote` and include all local repositories `inc
 
 If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
  
-    $ cat /etc/polysauv/my-remote.remote
+    $ cat /etc/polyarchiv/my-remote.remote
     [global]
-    engine=polysauv.remotes.GitRepository
+    engine=polyarchiv.remotes.GitRepository
     excluded_local_tags=*large,huge
 
 and add the "large" tag in the local configuration:
 
-    $ cat /etc/polysauv/my-local.local
+    $ cat /etc/polyarchiv/my-local.local
     [global]
-    engine=polysauv.locals.GitRepository
+    engine=polyarchiv.locals.GitRepository
     local_path=/tmp/local
     local_tags=local,large
 
 Traditionnal shell expansion is used for comparing included and excluded tags. Tags can be applied to remote repositories:
 
-    $ cat /etc/polysauv/my-remote.remote
+    $ cat /etc/polyarchiv/my-remote.remote
     [global]
-    engine=polysauv.remotes.GitRepository
+    engine=polyarchiv.remotes.GitRepository
     remote_tags=small-only
 
 and add the "large" tag to the local configuration:
 
-    $ cat /etc/polysauv/my-local.local
+    $ cat /etc/polyarchiv/my-local.local
     [global]
-    engine=polysauv.locals.GitRepository
+    engine=polyarchiv.locals.GitRepository
     local_path=/tmp/local
     included_remote_tags=huge,large
     

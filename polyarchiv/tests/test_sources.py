@@ -9,12 +9,12 @@ __author__ = 'Matthieu Gallet'
 log = {'version': 1, 'disable_existing_loggers': True,
        'formatters': {'color': {'()': 'logging.Formatter', 'format': "%(log_color)s%(message)s%(reset)s"}},
        'handlers': {'stream': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'color'}},
-       'loggers': {'polysauv': {'handlers': ['stream', ], 'level': 'DEBUG', 'propagate': False}}}
+       'loggers': {'polyarchiv': {'handlers': ['stream', ], 'level': 'DEBUG', 'propagate': False}}}
 logging.config.dictConfig(log)
 
-from polysauv.runner import Runner
-from polysauv.locals import LocalRepository
-from polysauv.sources import RSync, PostgresSQL, MySQL
+from polyarchiv.runner import Runner
+from polyarchiv.locals import LocalRepository
+from polyarchiv.sources import RSync, PostgresSQL, MySQL
 
 
 class TestSources(TestCase):

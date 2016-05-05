@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 import os
 
-from polysauv.utils import text_type
+from polyarchiv.utils import text_type
 
 __author__ = 'mgallet'
 

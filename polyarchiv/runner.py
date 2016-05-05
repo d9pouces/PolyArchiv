@@ -10,11 +10,11 @@ import logging
 import os
 import pwd
 
-from polysauv.conf import Parameter
-from polysauv.locals import LocalRepository
-from polysauv.remotes import RemoteRepository
-from polysauv.repository import ParameterizedObject, RepositoryInfo
-from polysauv.utils import import_string
+from polyarchiv.conf import Parameter
+from polyarchiv.locals import LocalRepository
+from polyarchiv.remotes import RemoteRepository
+from polyarchiv.repository import ParameterizedObject, RepositoryInfo
+from polyarchiv.utils import import_string
 
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
@@ -24,7 +24,7 @@ except ImportError:
     from ConfigParser import ConfigParser
 
 __author__ = 'mgallet'
-logger = logging.getLogger('polysauv.runner')
+logger = logging.getLogger('polyarchiv.runner')
 
 
 class Runner(ParameterizedObject):

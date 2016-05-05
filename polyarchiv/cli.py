@@ -13,8 +13,8 @@ import sys
 
 from pkg_resources import iter_entry_points
 
-from polysauv.conf import Parameter
-from polysauv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN
+from polyarchiv.conf import Parameter
+from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN
 
 __author__ = 'mgallet'
 
@@ -31,14 +31,14 @@ def main():
         path_components = ['', 'etc']
     elif 'bin' in path_components:
         # noinspection PyTypeChecker
-        path_components = path_components[:path_components.index('bin')] + ['etc', 'polysauv']
+        path_components = path_components[:path_components.index('bin')] + ['etc', 'polyarchiv']
     else:
         path_components = ['config']
 
     log = {'version': 1, 'disable_existing_loggers': True,
            'formatters': {'color': {'()': 'logging.Formatter', 'format': "%(message)s"}},
            'handlers': {'stream': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'color'}},
-           'loggers': {'polysauv': {'handlers': ['stream', ], 'level': 'ERROR', 'propagate': False}}}
+           'loggers': {'polyarchiv': {'handlers': ['stream', ], 'level': 'ERROR', 'propagate': False}}}
 
     config_dir = os.path.sep.join(path_components)
     parser = argparse.ArgumentParser(description='backup data from multiple sources')
@@ -56,13 +56,13 @@ def main():
     command = args.command
     verbose = args.verbose
     if verbose:
-        log['loggers']['polysauv']['level'] = 'DEBUG'
+        log['loggers']['polyarchiv']['level'] = 'DEBUG'
     elif args.nrpe:
-        log['loggers']['polysauv']['level'] = 'CRITICAL'
+        log['loggers']['polyarchiv']['level'] = 'CRITICAL'
     logging.config.dictConfig(log)
     return_code = 0
 
-    from polysauv.runner import Runner  # import it after the log configuration
+    from polyarchiv.runner import Runner  # import it after the log configuration
     if command == 'backup':
         runner = Runner([args.config], command_display=args.show_commands, command_confirm=args.confirm_commands,
                         command_execute=not args.dry, command_keep_output=verbose)
@@ -87,7 +87,7 @@ def main():
                         command_execute=not args.dry, command_keep_output=verbose)
         if not verbose:
             cprint('display more info with --verbose', CYAN)
-        from polysauv.show import show_local_repository, show_remote_local_repository, show_remote_repository
+        from polyarchiv.show import show_local_repository, show_remote_local_repository, show_remote_repository
         runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
                               local_remote_command=show_remote_local_repository,
                               only_locals=args.only_locals, only_remotes=args.only_remotes)
@@ -98,13 +98,13 @@ def main():
 
         cprint('available built-in local repository engines:', YELLOW)
         # noinspection PyTypeChecker
-        display_classes('polysauv.locals', verbose=verbose)
+        display_classes('polyarchiv.locals', verbose=verbose)
         cprint('available built-in source engines:', YELLOW)
         # noinspection PyTypeChecker
-        display_classes('polysauv.sources', verbose=verbose)
+        display_classes('polyarchiv.sources', verbose=verbose)
         cprint('available built-in remote repository engines:', YELLOW)
         # noinspection PyTypeChecker
-        display_classes('polysauv.remotes', verbose=verbose)
+        display_classes('polyarchiv.remotes', verbose=verbose)
     return return_code
 
 
