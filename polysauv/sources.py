@@ -155,7 +155,7 @@ class MySQL(Source):
         if self.command_display:
             for k, v in self.get_env().items():
                 cprint('%s=%s' % (k, v), YELLOW)
-        if self.can_execute_command(cmd):
+        if self.can_execute_command(cmd + ['>', filename]):
             with open(filename, 'wb') as fd:
                 p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
                 p.communicate()
