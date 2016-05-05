@@ -3,18 +3,17 @@
 """
 from __future__ import unicode_literals
 
+import errno
 import fnmatch
 import glob
 import logging
 import os
-import errno
 import pwd
 
 from polysauv.conf import Parameter
 from polysauv.locals import LocalRepository
 from polysauv.remotes import RemoteRepository
 from polysauv.repository import ParameterizedObject, RepositoryInfo
-from polysauv.termcolor import cprint
 from polysauv.utils import import_string
 
 try:
@@ -44,11 +43,12 @@ class Runner(ParameterizedObject):
         self._find_local_repositories()
         self._find_remote_repositories()
 
-    @staticmethod
-    def _get_args_from_parser(config_file, parser, section, engine_cls):
+    def _get_args_from_parser(self, config_file, parser, section, engine_cls):
         assert isinstance(parser, ConfigParser)
         assert issubclass(engine_cls, ParameterizedObject)
-        result = {}
+        result = {'command_display': self.command_display, 'command_confirm': self.command_confirm,
+                  'command_execute': self.command_execute, 'command_keep_output': self.command_keep_output, }
+
         for parameter in engine_cls.parameters:
             assert isinstance(parameter, Parameter)
             option = parameter.option_name

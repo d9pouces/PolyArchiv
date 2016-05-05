@@ -45,6 +45,9 @@ def main():
     parser.add_argument('-v', '--verbose', action='store_true', help='print more messages', default=False)
     parser.add_argument('-f', '--force', action='store_true', help='force backup if not out-of-date', default=False)
     parser.add_argument('-n', '--nrpe', action='store_true', help='Nagios-compatible output', default=False)
+    parser.add_argument('-D', '--dry', action='store_true', help='dry mode: do not execute commands', default=False)
+    parser.add_argument('--show-commands', action='store_true', help='display all bash executed commands', default=False)
+    parser.add_argument('--confirm-commands', action='store_true', help='ask the user to confirm each command', default=False)
     parser.add_argument('--only-locals', nargs='+', help='limit to these local tags', default=[])
     parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
@@ -59,9 +62,10 @@ def main():
     logging.config.dictConfig(log)
     return_code = 0
 
-    from polysauv.runner import Runner  # import after log configuration
+    from polysauv.runner import Runner  # import it after the log configuration
     if command == 'backup':
-        runner = Runner([args.config])
+        runner = Runner([args.config], command_display=args.show_commands, command_confirm=args.confirm_commands,
+                        command_execute=not args.dry, command_keep_output=verbose)
         local_results, remote_results = runner.backup(only_locals=args.only_locals, only_remotes=args.only_remotes,
                                                       force=args.force)
         local_failures = ['local:%s' % x for (x, y) in local_results.items() if not y]
@@ -74,14 +78,16 @@ def main():
             print('OK - all backups are valid')
             return_code = 0
     elif command == 'restore':
-        runner = Runner([args.config])
+        runner = Runner([args.config], command_display=args.show_commands, command_confirm=args.confirm_commands,
+                        command_execute=not args.dry, command_keep_output=verbose)
         runner.restore(args.only_locals, args.only_remotes)
     elif command == 'config':
-        from polysauv.show import show_local_repository, show_remote_local_repository, show_remote_repository
         cprint('configuration directory: %s (you can change it with -C /other/directory)' % args.config, YELLOW)
-        runner = Runner([args.config])
+        runner = Runner([args.config], command_display=args.show_commands, command_confirm=args.confirm_commands,
+                        command_execute=not args.dry, command_keep_output=verbose)
         if not verbose:
             cprint('display more info with --verbose', CYAN)
+        from polysauv.show import show_local_repository, show_remote_local_repository, show_remote_repository
         runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
                               local_remote_command=show_remote_local_repository,
                               only_locals=args.only_locals, only_remotes=args.only_remotes)

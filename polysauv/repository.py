@@ -20,10 +20,10 @@ class ParameterizedObject(object):
     def __init__(self, name, command_display=True, command_confirm=False, command_execute=True,
                  command_keep_output=False):
         self.name = name
-        self.command_display = command_display
-        self.command_confirm = command_confirm
-        self.command_execute = command_execute
-        self.command_keep_output = command_keep_output
+        self.command_display = command_display  # display each command before running it
+        self.command_confirm = command_confirm  # ask the user to confirm each command
+        self.command_execute = command_execute  # actually run commands (if False: ‘dry’ mode)
+        self.command_keep_output = command_keep_output  # display all command outputs on stderr/stdout
 
     def can_execute_command(self, text):
         """Return False if dry mode is activated or if the command is not validated by the user.
