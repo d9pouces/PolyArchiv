@@ -238,7 +238,8 @@ class GitRepository(FileRepository):
         self.execute_command([self.git_executable, 'init'])
         self.execute_command([self.git_executable, 'add', '.'])
         end = datetime.datetime.now()
-        self.execute_command([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')])
+        self.execute_command([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')],
+                             ignore_errors=True)
 
     def restore(self):
         raise NotImplementedError
