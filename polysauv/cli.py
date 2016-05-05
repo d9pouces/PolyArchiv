@@ -7,10 +7,11 @@ from __future__ import unicode_literals
 import argparse
 import logging
 import logging.config
+import math
 import os
 import sys
 
-import math
+from pkg_resources import iter_entry_points
 
 from polysauv.conf import Parameter
 from polysauv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN
@@ -21,8 +22,6 @@ __author__ = 'mgallet'
 def main():
     """Main function, intended for use as command line executable.
 
-    Args:
-        None
     Returns:
       * :class:`int`: 0 in case of success, != 0 if something went wrong
 
@@ -58,7 +57,6 @@ def main():
     elif args.nrpe:
         log['loggers']['polysauv']['level'] = 'CRITICAL'
     logging.config.dictConfig(log)
-    logger = logging.getLogger('polysauv.cli')
     return_code = 0
 
     from polysauv.runner import Runner  # import after log configuration
@@ -91,25 +89,23 @@ def main():
         cprint('configuration directory: %s' % args.config, YELLOW)
         if not verbose:
             cprint('display available options for each engine with --verbose', CYAN)
-        from polysauv import sources, locals, remotes
 
-        cprint('available built-in local repository:', YELLOW)
+        cprint('available built-in local repository engines:', YELLOW)
         # noinspection PyTypeChecker
-        display_classes(locals, locals.LocalRepository, verbose=verbose)
-        cprint('available built-in sources:', YELLOW)
+        display_classes('polysauv.locals', verbose=verbose)
+        cprint('available built-in source engines:', YELLOW)
         # noinspection PyTypeChecker
-        display_classes(sources, sources.Source, verbose=verbose)
-        cprint('available built-in remote repository:', YELLOW)
+        display_classes('polysauv.sources', verbose=verbose)
+        cprint('available built-in remote repository engines:', YELLOW)
         # noinspection PyTypeChecker
-        display_classes(remotes, remotes.RemoteRepository, verbose=verbose)
-
+        display_classes('polysauv.remotes', verbose=verbose)
     return return_code
 
 
-def display_classes(module, cls, verbose=False):
-    for k, v in module.__dict__.items():
-        if not isinstance(v, type) or not issubclass(v, cls):
-            continue
+def display_classes(plugin_category, verbose=False):
+    """display plugins of a given category"""
+    for entry_point in iter_entry_points(plugin_category):
+        v = entry_point.load()
         cprint('  * engine=%s.%s' % (v.__module__, v.__name__), BOLD, GREEN)
         if verbose:
             cprint('    options:', GREEN)
@@ -127,9 +123,3 @@ def display_classes(module, cls, verbose=False):
                     cprint('      - %s' % parameter.option_name, GREEN)
         if verbose:
             cprint('    -----------------------------------------------------------------------------', GREEN)
-
-
-if __name__ == '__main__':
-    import doctest
-
-    doctest.testmod()
