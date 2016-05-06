@@ -27,12 +27,12 @@ logger = logging.getLogger('polyarchiv.remotes')
 class RemoteRepository(Repository):
     parameters = Repository.parameters + [
         Parameter('remote_tags', converter=strip_split,
-                  help_str='List of tags (comma-separated) associated to this remote repository'),
+                  help_str='list of tags (comma-separated) associated to this remote repository'),
         Parameter('included_local_tags', converter=strip_split,
-                  help_str='Any local repository with one of these tags (comma-separated) will be associated '
+                  help_str='any local repository with one of these tags (comma-separated) will be associated '
                            'to this remote repo. You can use ? or * as jokers in these tags.'),
         Parameter('excluded_local_tags', converter=strip_split,
-                  help_str='Any local repository with one of these tags (comma-separated) will not be associated'
+                  help_str='any local repository with one of these tags (comma-separated) will not be associated'
                            ' to this remote repo. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_local_tags and included_remote_tags.'),
     ]
@@ -125,6 +125,9 @@ def check_git_url(remote_url):
 
 
 class GitRepository(RemoteRepository):
+    """Add a remote to a local repository and push local modification to this remote.
+    Can use https (password or kerberos auth) or git+ssh remotes (with private key authentication).
+    """
     parameters = RemoteRepository.parameters + [
         Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
         Parameter('remote_url', help_str='URL of the remote server, include username and password (e.g.: '
@@ -164,6 +167,7 @@ class GitRepository(RemoteRepository):
 
 
 class Rsync(RemoteRepository):
+    """Send local files to the remote repository using ‘rsync’. """
     parameters = RemoteRepository.parameters + [
         Parameter('rsync_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "rsync")'),
@@ -215,6 +219,10 @@ def check_curl_url(remote_url):
 
 
 class TarArchive(RemoteRepository):
+    """Collect all files of your local repository into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
+    to a remote server with ‘cURL’. If the remote URL begins by ‘file://’, then the ‘cp’ command is used instead.
+
+    """
     excluded_files = {'.git', '.gitignore'}
     parameters = RemoteRepository.parameters + [
         Parameter('remote_url', converter=check_curl_url,
@@ -332,6 +340,7 @@ class TarArchive(RemoteRepository):
 
 
 class Duplicity(RemoteRepository):
+    """Send local files to the remote repository using the ‘duplicity’ tool. """
     parameters = RemoteRepository.parameters + [
         Parameter('remote_url',
                   help_str='destination URL with the username (e.g.: ftp://user:password@example.org/path/,'

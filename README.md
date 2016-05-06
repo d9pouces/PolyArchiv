@@ -52,6 +52,17 @@ You can also generate a Debian/Ubuntu package with:
 
     sudo apt-get install python-stdeb
     python setup.py --command-packages=stdeb.command  bdist_deb
+    
+Next steps
+----------
+
+  * run `polyarchiv plugins -v` to check available sources and repositories
+  * create config files for your local repositories (you should organize all your backups in several local repository, maybe one per service)
+  * create config files for your remote servers (one config file per server)
+  * run `polyarchiv config -v` to check your configuration
+  * run `polyarchiv backup --dry --show-commands --force` to check the executed script
+  * run `polyarchiv backup` in a crontab :-)
+    
 
 Configuration
 -------------
@@ -70,7 +81,7 @@ Here is an example of local repository, gathering data from three sources:
   * a directory
 
 Its name must end by `.local`. 
-The `[global]` section defines options for the local repository, and other sections define the three sources:
+The `[global]` section defines options for the local repository (the engine that powers the local backup, the frequency, …), and other sections define the three sources:
 
     $ cat /etc/polyarchiv/my-local.local
     [global]

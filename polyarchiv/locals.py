@@ -23,12 +23,12 @@ class LocalRepository(Repository):
     """
     parameters = Repository.parameters + [
         Parameter('local_tags', converter=strip_split,
-                  help_str='List of tags (comma-separated) associated to this local repository'),
+                  help_str='list of tags (comma-separated) associated to this local repository'),
         Parameter('included_remote_tags', converter=strip_split,
-                  help_str='Any remote repository with one of these tags (comma-separated) will be associated '
+                  help_str='any remote repository with one of these tags (comma-separated) will be associated '
                            'to this local repo. You can use ? or * as jokers in these tags.'),
         Parameter('excluded_remote_tags', converter=strip_split,
-                  help_str='Any remote repository with one of these tags (comma-separated) will not be associated'
+                  help_str='any remote repository with one of these tags (comma-separated) will not be associated'
                            ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_local_tags and included_remote_tags.'),
     ]
@@ -136,13 +136,7 @@ class LocalRepository(Repository):
 
 
 class FileRepository(LocalRepository):
-    """
-    example structure:
-        dir/some/files
-        database-dump.sql
-        .polyarchiv/lock
-        .polyarchiv/local/global.json
-        .polyarchiv/remote/my_remote.json
+    """Collect files from all sources in the folder ‘local_path’.
     """
 
     parameters = LocalRepository.parameters + [
@@ -223,6 +217,8 @@ class FileRepository(LocalRepository):
 
 
 class GitRepository(FileRepository):
+    """Create a local git repository. Collect files from all sources and commit them locally.
+    """
     parameters = FileRepository.parameters + [
         Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
     ]
