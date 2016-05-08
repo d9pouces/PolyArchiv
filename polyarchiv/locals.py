@@ -11,6 +11,8 @@ import subprocess
 from polyarchiv.conf import Parameter, strip_split, check_directory, check_executable
 from polyarchiv.filelocks import Lock
 from polyarchiv.repository import Repository, RepositoryInfo
+from polyarchiv.termcolor import RED
+from polyarchiv.termcolor import cprint
 from polyarchiv.utils import text_type
 
 __author__ = 'mgallet'
@@ -74,7 +76,7 @@ class LocalRepository(Repository):
             info.last_success = datetime.datetime.now()
             info.last_message = 'ok'
         except Exception as e:
-            logger.exception('unable to perform backup', exc_info=e)
+            cprint('unable to perform backup: %s' % text_type(e), RED)
             info.fail_count += 1
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
@@ -85,7 +87,7 @@ class LocalRepository(Repository):
                 if self.can_execute_command(''):
                     self.release_lock(lock_)
             except Exception as e:
-                logger.critical('unable to release lock. %s' % str(e))
+                cprint('unable to release lock. %s' % text_type(e), RED)
         if self.can_execute_command('# register this backup state'):
             self.set_info(info)
         return info.last_state_valid

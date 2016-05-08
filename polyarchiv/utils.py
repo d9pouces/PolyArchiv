@@ -17,6 +17,7 @@ else:
 
 def get_input_text(prompt):
     encoding = 'utf-8'
+    # noinspection PyTypeChecker
     if hasattr(sys.stdin, 'encoding') and sys.stdin.encoding:
         encoding = sys.stdin.encoding
     if sys.version_info[0] == 2:
@@ -66,7 +67,7 @@ def import_string(import_name, silent=False):
         return getattr(__import__(module, None, None, [obj]), obj)
     except (ImportError, AttributeError):
         if not silent:
-            raise
+            raise ImportError('Unable to import %s' % import_name)
 
 
 def before_time_replace(dt, year=None, month=None, day=None, dow=None, hour=None, minute=None, second=None,

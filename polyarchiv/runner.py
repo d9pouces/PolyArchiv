@@ -16,7 +16,8 @@ from polyarchiv.conf import Parameter
 from polyarchiv.locals import LocalRepository
 from polyarchiv.remotes import RemoteRepository
 from polyarchiv.repository import ParameterizedObject, RepositoryInfo
-from polyarchiv.utils import import_string
+from polyarchiv.termcolor import cprint, RED
+from polyarchiv.utils import import_string, text_type
 
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
@@ -45,8 +46,19 @@ class Runner(ParameterizedObject):
         self.remote_repositories = {}
         self.local_config_files = []
         self.remote_config_files = []
-        self._find_local_repositories()
-        self._find_remote_repositories()
+
+    def load(self):
+        result = True
+        try:
+            self._find_local_repositories()
+            self._find_remote_repositories()
+        except ValueError as e:
+            result = False
+            cprint(text_type(e), RED)
+        except ImportError as e:
+            result = False
+            cprint(text_type(e), RED)
+        return result
 
     def _get_args_from_parser(self, config_file, parser, section, engine_cls):
         assert isinstance(parser, ConfigParser)
@@ -63,7 +75,7 @@ class Runner(ParameterizedObject):
             try:
                 result[parameter.arg_name] = parameter.converter(value)
             except ValueError as e:
-                logger.error('Error in %s, section [%s], value %s: %s' % (config_file, section, option, value))
+                cprint('In file ‘%s’, section ‘%s’, option ‘%s’' % (config_file, section, option), RED)
                 raise e
         return result
 
@@ -74,6 +86,7 @@ class Runner(ParameterizedObject):
                 count += 1
                 parser = ConfigParser()
                 try:
+                    # noinspection PyTypeChecker
                     open(config_file, 'rb').read(1)
                     parser.read([config_file])
                 except IOError as e:
@@ -82,33 +95,46 @@ class Runner(ParameterizedObject):
                         logger.info('%s is ignored because user %s cannot read it' % (config_file, username))
                         continue
                     raise
-                logger.info('file %s added to the configuration' % config_file)
+                logger.info('File %s added to the configuration' % config_file)
                 yield config_file, parser
             if count == 0:
-                logger.info('no %s file found in %s' % (pattern, path))
+                logger.info('No %s file found in %s' % (pattern, path))
 
     def _find_local_repositories(self):
         for config_file, parser in self._iter_config_parsers('*.local'):
-            self.local_config_files.append(config_file)
             engine = parser.get(self.global_section, self.engine_option)
-            if engine.lower() in self.available_local_engines:
-                engine_cls = self.available_local_engines[engine.lower()]
+            engine_alias = engine.lower()
+            if engine_alias in self.available_local_engines:
+                engine_cls = self.available_local_engines[engine_alias]
             else:
-                engine_cls = import_string(engine)
+                try:
+                    engine_cls = import_string(engine)
+                except ImportError:
+                    msg = 'In file ‘%s’, section ‘%s’: invalid engine ‘%s’' % (config_file, self.global_section, engine)
+                    raise ImportError(msg)
+            # noinspection PyTypeChecker
             name = os.path.basename(config_file).rpartition('.')[0]
             parameters = self._get_args_from_parser(config_file, parser, self.global_section, engine_cls)
             local = engine_cls(name, **parameters)
-            self.local_repositories[name] = local
             for section in parser.sections():
                 if section == self.global_section or not parser.has_option(section, 'engine'):
                     continue
-                if engine.lower() in self.available_source_engines:
-                    engine_cls = self.available_source_engines[engine.lower()]
+                engine = parser.get(section, self.engine_option)
+                engine_alias = engine.lower()
+                if engine_alias in self.available_source_engines:
+                    engine_cls = self.available_source_engines[engine_alias]
                 else:
-                    engine_cls = import_string(parser.get(section, self.engine_option))
+                    try:
+                        engine_cls = import_string(engine)
+                    except ImportError:
+                        msg = 'In file ‘%s’, section ‘%s’: invalid engine ‘%s’' % \
+                              (config_file, self.global_section, engine)
+                        raise ImportError(msg)
                 parameters = self._get_args_from_parser(config_file, parser, section, engine_cls)
                 source = engine_cls(section, local, **parameters)
                 local.add_source(source)
+            self.local_config_files.append(config_file)
+            self.local_repositories[name] = local
 
     def _find_remote_repositories(self):
         for config_file, parser in self._iter_config_parsers('*.remote'):
@@ -117,7 +143,12 @@ class Runner(ParameterizedObject):
             if engine.lower() in self.available_remote_engines:
                 engine_cls = self.available_remote_engines[engine.lower()]
             else:
-                engine_cls = import_string(engine)
+                try:
+                    engine_cls = import_string(engine)
+                except ImportError:
+                    msg = 'In file ‘%s’, section ‘%s’: invalid engine ‘%s’' % (config_file, self.global_section, engine)
+                    raise ImportError(msg)
+            # noinspection PyTypeChecker
             name = os.path.basename(config_file).rpartition('.')[0]
             parameters = self._get_args_from_parser(config_file, parser, self.global_section, engine_cls)
             remote = engine_cls(name, **parameters)
@@ -221,7 +252,7 @@ class Runner(ParameterizedObject):
                     continue
                 result = remote.backup(local, force=force)
                 if result:
-                    logger.error('[OK] remote repository %s on local repository %s' % (remote.name, local.name))
+                    logger.info('[OK] remote repository %s on local repository %s' % (remote.name, local.name))
                     remote_results[(remote.name, local.name)] = True
                 else:
                     logger.error('[KO] remote repository %s on local repository %s' % (remote.name, local.name))

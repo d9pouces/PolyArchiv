@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 import datetime
 import logging
 
-from polyarchiv.termcolor import YELLOW
+from polyarchiv.termcolor import YELLOW, RED
 from polyarchiv.termcolor import cprint
 
 try:
@@ -72,7 +72,7 @@ class RemoteRepository(Repository):
             info.last_success = datetime.datetime.now()
             info.last_message = 'ok'
         except Exception as e:
-            logger.exception('unable to perform backup', exc_info=e)
+            cprint('unable to perform backup: %s' % text_type(e), RED)
             info.fail_count += 1
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
@@ -82,7 +82,7 @@ class RemoteRepository(Repository):
                 if self.can_execute_command(''):
                     local_repository.release_lock(lock_)
             except Exception as e:
-                logger.critical('unable to release lock. %s' % str(e))
+                cprint('unable to release lock. %s' % text_type(e), RED)
         if self.can_execute_command('# register this remote state'):
             self.set_info(local_repository, info)
         return info.last_state_valid

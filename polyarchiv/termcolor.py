@@ -26,6 +26,8 @@
 from __future__ import print_function
 import os
 
+import sys
+
 __ALL__ = ['colored', 'cprint']
 
 VERSION = (1, 1, 0)
@@ -105,7 +107,15 @@ def cprint(text, *args, **kwargs):
     color = colors[0] if colors else None
     on_colors = [x for x in args if x in HIGHLIGHTS]
     on_color = on_colors[0] if on_colors else None
-    print((colored(text, color, on_color, attrs)), **kwargs)
+
+    if hasattr(sys.stdout, 'encoding') and sys.stdout.encoding:
+        if sys.stdout.isatty():
+            content = colored(text, color, on_color, attrs)
+        else:
+            content = text
+    else:
+        content = text.encode('utf-8')
+    print(content, **kwargs)
 
 
 if __name__ == '__main__':
