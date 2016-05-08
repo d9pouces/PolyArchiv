@@ -21,10 +21,10 @@ from polyarchiv.utils import import_string, text_type
 
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
-    from configparser import ConfigParser
+    from configparser import ConfigParser, Error as ConfigError
 except ImportError:
     # noinspection PyUnresolvedReferences,PyCompatibility
-    from ConfigParser import ConfigParser
+    from ConfigParser import ConfigParser, Error as ConfigError
 
 __author__ = 'mgallet'
 logger = logging.getLogger('polyarchiv.runner')
@@ -95,6 +95,8 @@ class Runner(ParameterizedObject):
                         logger.info('%s is ignored because user %s cannot read it' % (config_file, username))
                         continue
                     raise
+                except ConfigError as e:
+                    raise ValueError('File ‘%s’ is not a valid ‘.ini’ file' % config_file)
                 logger.info('File %s added to the configuration' % config_file)
                 yield config_file, parser
             if count == 0:
