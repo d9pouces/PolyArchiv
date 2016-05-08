@@ -1,0 +1,6 @@
+[global]
+engine=rsync
+remote_tags=
+remote_url=/var/backups/remotes/remote1
+included_local_tags=*
+excluded_local_tags=

@@ -62,10 +62,11 @@ def check_executable(value):
     """TODO check if value is a valid executable"""
     if os.path.isfile(value):
         return True
-    for search_dir in os.environ.get('PATH', '').split(':'):
+    path = os.environ.get('PATH', '')
+    for search_dir in path.split(':'):
         if os.path.isfile(os.path.join(search_dir, value)):
             return True
-    raise ValueError('Executable %s not found in $PATH' % value)
+    raise ValueError('Executable ‘%s’ not found in $PATH=%s' % (value, path))
 
 
 class CheckOption(object):

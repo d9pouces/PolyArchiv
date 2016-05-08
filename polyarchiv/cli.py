@@ -65,6 +65,8 @@ def main():
         log['loggers']['polyarchiv']['level'] = 'CRITICAL'
     logging.config.dictConfig(log)
     return_code = 0
+    if args.dry:
+        cprint('dry mode is selected: no write operation will be performed', YELLOW)
 
     from polyarchiv.runner import Runner  # import it after the log configuration
     if command == 'backup':
@@ -97,7 +99,7 @@ def main():
                         command_execute=not args.dry, command_keep_output=verbose)
         if runner.load():
             if not verbose:
-                cprint('display more info with --verbose', CYAN)
+                cprint('you can display more info with --verbose', CYAN)
             from polyarchiv.show import show_local_repository, show_remote_local_repository, show_remote_repository
             runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
                                   local_remote_command=show_remote_local_repository,
@@ -111,13 +113,13 @@ def main():
         if not verbose:
             cprint('display available options for each engine with --verbose', CYAN)
 
-        cprint('available local repository engines:', YELLOW)
+        cprint('available local repository engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
         display_classes('polyarchiv.locals', verbose=verbose, width=width)
-        cprint('available source engines:', YELLOW)
+        cprint('available source engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
         display_classes('polyarchiv.sources', verbose=verbose, width=width)
-        cprint('available remote repository engines:', YELLOW)
+        cprint('available remote repository engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
         display_classes('polyarchiv.remotes', verbose=verbose, width=width)
     else:
@@ -151,4 +153,4 @@ def display_classes(plugin_category, verbose=False, width=80):
                 if verbose:
                     cprint('      - %s' % parameter.option_name, GREEN)
         if verbose:
-            cprint('    -----------------------------------------------------------------------------', GREEN)
+            cprint('    ' + '-' * (width - 4), GREEN)

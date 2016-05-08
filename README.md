@@ -37,6 +37,8 @@ The simplest way is to use `pip`:
     
 You can also install it from the source:
 
+    $ git clone https://github.com/d9pouces/PolyArchiv.git
+    $ cd PolyArchiv
     $ python setup.py install 
     
 If you do not want to install globally, you can use the `--user` option.

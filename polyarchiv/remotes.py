@@ -178,7 +178,7 @@ class Rsync(RemoteRepository):
                   help_str='absolute path of the private key file (for SSH key authentication)'),
     ]
 
-    def __init__(self, name, rsync_executable='tar', remote_url='', keytab=None, private_key=None, **kwargs):
+    def __init__(self, name, rsync_executable='rsync', remote_url='', keytab=None, private_key=None, **kwargs):
         super(Rsync, self).__init__(name, **kwargs)
         self.rsync_executable = rsync_executable
         self.remote_url = remote_url
@@ -198,9 +198,9 @@ class Rsync(RemoteRepository):
         if not remote_url.endswith(os.path.sep):
             remote_url += os.path.sep
         if self.private_key:
-            cmd += ['ssh -i %s' % self.private_key]
+            cmd += ['-e', 'ssh -i %s' % self.private_key]
         else:
-            cmd += ['ssh']
+            cmd += ['-e', 'ssh']
         cmd += [local_path, remote_url]
         self.execute_command(cmd, cwd=local_repository.local_path)
 

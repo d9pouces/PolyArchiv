@@ -18,7 +18,7 @@ from polyarchiv.sources import RSync, PostgresSQL, MySQL
 
 
 class TestSources(TestCase):
-    dirpath = os.path.join(os.path.dirname(__file__), 'samples')
+    dirpath = os.path.join(os.path.dirname(__file__), 'tests')
     #
     # def test_rsync(self):
     #     runner = Runner([self.dirpath])

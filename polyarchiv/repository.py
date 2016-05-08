@@ -8,7 +8,7 @@ import os
 import pipes
 import subprocess
 
-from polyarchiv.conf import Parameter
+from polyarchiv.conf import Parameter, check_executable
 from polyarchiv.termcolor import cprint, YELLOW
 from polyarchiv.utils import get_is_time_elapsed, text_type, get_input_text
 
@@ -49,12 +49,16 @@ class ParameterizedObject(object):
 
     def execute_command(self, cmd, ignore_errors=False, cwd=None, stderr=None, stdout=None, stdin=None, env=None,
                         error_str=None):
+        check_executable(cmd[0])
         return_code = 0
         cmd_text = [x for x in cmd]
+        # noinspection PyTypeChecker
         if hasattr(stdin, 'name') and stdin.name:
             cmd_text += ['<',  stdin.name]
+        # noinspection PyTypeChecker
         if hasattr(stdout, 'name') and stdout.name:
             cmd_text += ['>',  stdout.name]
+        # noinspection PyTypeChecker
         if hasattr(stderr, 'name') and stderr.name:
             cmd_text += ['2>',  stderr.name]
         if env and self.command_display:
@@ -75,10 +79,12 @@ class ParameterizedObject(object):
 
     @property
     def stderr(self):
+        # noinspection PyTypeChecker
         return open(os.devnull, 'wb') if not self.command_keep_output else None
 
     @property
     def stdout(self):
+        # noinspection PyTypeChecker
         return open(os.devnull, 'wb') if not self.command_keep_output else None
 
     def ensure_dir(self, dirname, parent=False):
@@ -91,11 +97,14 @@ class ParameterizedObject(object):
         if parent:
             dirname = os.path.dirname(dirname)
         if os.path.exists(dirname) and not os.path.isdir(dirname):
-            raise IOError('%s exists but is not a directory' % dirname)
+            raise ValueError('%s exists but is not a directory' % dirname)
         elif os.path.isdir(dirname):
             return
         if self.can_execute_command(['mkdir', '-p', dirname]):
-            os.makedirs(dirname)
+            try:
+                os.makedirs(dirname)
+            except OSError:
+                raise ValueError('Unable to create the %s directory' % dirname)
 
 
 class RepositoryInfo(object):
@@ -123,6 +132,7 @@ class RepositoryInfo(object):
         return self.last_fail
 
     def to_dict(self):
+        # noinspection PyTypeChecker
         result = {x: getattr(self, x) for x in ('last_state_valid', 'success_count', 'fail_count', 'total_size',
                                                 'last_message')}
         result['last_success'] = self.datetime_to_str(self.last_success)
@@ -157,6 +167,7 @@ class RepositoryInfo(object):
     def datetime_from_str(value=None):
         if value is None:
             return None
+        # noinspection PyTypeChecker
         return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
 
     def to_str(self):
