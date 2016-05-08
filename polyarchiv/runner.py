@@ -16,7 +16,7 @@ from polyarchiv.conf import Parameter
 from polyarchiv.locals import LocalRepository
 from polyarchiv.remotes import RemoteRepository
 from polyarchiv.repository import ParameterizedObject, RepositoryInfo
-from polyarchiv.termcolor import cprint, RED
+from polyarchiv.termcolor import cprint, RED, GREEN
 from polyarchiv.utils import import_string, text_type
 
 try:
@@ -75,7 +75,7 @@ class Runner(ParameterizedObject):
             try:
                 result[parameter.arg_name] = parameter.converter(value)
             except ValueError as e:
-                cprint('In file ‘%s’, section ‘%s’, option ‘%s’' % (config_file, section, option), RED)
+                cprint('In file ‘%s’, section ‘%s’, option ‘%s’:' % (config_file, section, option), RED)
                 raise e
         return result
 
@@ -102,6 +102,10 @@ class Runner(ParameterizedObject):
 
     def _find_local_repositories(self):
         for config_file, parser in self._iter_config_parsers('*.local'):
+            if not parser.has_option(self.global_section, self.engine_option):
+                msg = 'In file ‘%s’, please specify the ‘%s’ option in the ‘%s’ section' % \
+                      (config_file, self.engine_option, self.global_section)
+                raise ValueError(msg)
             engine = parser.get(self.global_section, self.engine_option)
             engine_alias = engine.lower()
             if engine_alias in self.available_local_engines:
@@ -110,6 +114,7 @@ class Runner(ParameterizedObject):
                 try:
                     engine_cls = import_string(engine)
                 except ImportError:
+                    cprint('List of built-in engines: %s ' % ', '.join(self.available_local_engines), GREEN)
                     msg = 'In file ‘%s’, section ‘%s’: invalid engine ‘%s’' % (config_file, self.global_section, engine)
                     raise ImportError(msg)
             # noinspection PyTypeChecker
@@ -117,8 +122,12 @@ class Runner(ParameterizedObject):
             parameters = self._get_args_from_parser(config_file, parser, self.global_section, engine_cls)
             local = engine_cls(name, **parameters)
             for section in parser.sections():
-                if section == self.global_section or not parser.has_option(section, 'engine'):
+                if section == self.global_section:
                     continue
+                if not parser.has_option(section, self.engine_option):
+                    msg = 'In file ‘%s’, please specify the ‘%s’ option in the ‘%s’ source' % \
+                          (config_file, self.engine_option, section)
+                    raise ValueError(msg)
                 engine = parser.get(section, self.engine_option)
                 engine_alias = engine.lower()
                 if engine_alias in self.available_source_engines:
@@ -127,6 +136,7 @@ class Runner(ParameterizedObject):
                     try:
                         engine_cls = import_string(engine)
                     except ImportError:
+                        cprint('List of built-in engines: %s ' % ', '.join(self.available_source_engines), GREEN)
                         msg = 'In file ‘%s’, section ‘%s’: invalid engine ‘%s’' % \
                               (config_file, self.global_section, engine)
                         raise ImportError(msg)
@@ -139,6 +149,10 @@ class Runner(ParameterizedObject):
     def _find_remote_repositories(self):
         for config_file, parser in self._iter_config_parsers('*.remote'):
             self.remote_config_files.append(config_file)
+            if not parser.has_option(self.global_section, self.engine_option):
+                msg = 'In file ‘%s’, please specify the ‘%s’ option in the ‘%s’ section' % \
+                      (config_file, self.engine_option, self.global_section)
+                raise ValueError(msg)
             engine = parser.get(self.global_section, self.engine_option)
             if engine.lower() in self.available_remote_engines:
                 engine_cls = self.available_remote_engines[engine.lower()]
@@ -146,6 +160,7 @@ class Runner(ParameterizedObject):
                 try:
                     engine_cls = import_string(engine)
                 except ImportError:
+                    cprint('List of built-in engines: %s ' % ', '.join(self.available_remote_engines))
                     msg = 'In file ‘%s’, section ‘%s’: invalid engine ‘%s’' % (config_file, self.global_section, engine)
                     raise ImportError(msg)
             # noinspection PyTypeChecker

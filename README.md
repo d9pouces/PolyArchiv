@@ -34,6 +34,12 @@ Installation
 The simplest way is to use `pip`:
 
     $ pip install polyarchiv
+    
+You can also install it from the source:
+
+    $ python setup.py install 
+    
+If you do not want to install globally, you can use the `--user` option.
 
 Some commands are available:
 display the current configuration, local and remote repositories, sources and backup status
