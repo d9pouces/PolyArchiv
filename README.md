@@ -38,10 +38,10 @@ There are several kinds of local repositories:
   
 There are also several kinds of remote repositories:
 
-  * GitRepository (requires a local git repository): after the backup, local commits are pushed to this remote git repository,
-  * Rsync: after the backup, all files are synchronized to the remote repository,
-  * TarArchive: after the backup, all files are archived in a single .tar.gz archive and sent to the remote repo (via ftp, scp, http, smb, or a basic cp),
-  * Duplicity: after the backup, all files are encrypted and sent to the remote repository.
+  * gitrepository (requires a local git repository): after the backup, local commits are pushed to this remote git repository,
+  * rsync: after the backup, all files are synchronized to the remote repository,
+  * tararchive: after the backup, all files are archived in a single .tar.gz archive and sent to the remote repo (via ftp, scp, http, smb, or a basic cp),
+  * duplicity: after the backup, all files are encrypted and sent to the remote repository.
 
 Each repository (either local or remote) is associated to a backup frequency. 
 If a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed. 
@@ -143,7 +143,9 @@ The `[global]` section defines options for the local repository (the engine that
 
 The kind of repository (either local or remote) and of each source is defined by the "engine" option.
 You can define as many local repositories (each of them with one or more sources) as you want.
-Remote repositories are simpler and only have a `[global]` section.
+**You cannot use `DEFAULT`, `global` and `variables` as source name.**
+
+Remote repositories are simpler and by default only have a `[global]` section.
 Their names must end by `.remote`.
 Here is a gitlab acting as remote storage for git local repo: 
 
@@ -152,10 +154,13 @@ Here is a gitlab acting as remote storage for git local repo:
     engine=git
     frequency=daily
     remote_tags=
-    remote_url=http://gitlab.example.org/group/TestsPolyarchiv.git
+    remote_url=http://gitlab.example.org/group/%(name)s.git
     remote_branch=master
     user=mgallet
     included_local_tags=*
+
+`%(name)s` will be replaced by the name of the local repository; for example the name of the `my-local.local` local repository is 
+obviously `my-local`). You can specify (a bit) more complex replacement rules (see below).
 
 Maybe you also want a full backup (as an archive) uploaded monthly (the tenth day of each month) to a FTP server:
 
@@ -164,7 +169,7 @@ Maybe you also want a full backup (as an archive) uploaded monthly (the tenth da
     engine=tar
     frequency=monthly:10
     remote_tags=
-    remote_url=ftp://myftp.example.org/backups/project/
+    remote_url=ftp://myftp.example.org/backups/%(name)s/
     remote_branch=master
     user=mgallet
     password=p@ssw0rd
@@ -229,3 +234,45 @@ and add the "large" tag to the local configuration:
     included_remote_tags=huge,large
     
 Since the remote repository does not present either the `huge` tag or the `large` tag, it will not be applied.
+
+Replacement rules
+-----------------
+
+Some parameters of remote repositories may use variables to be customized for each local repository.
+Check `polyarchiv plugins -v` for a complete documentation of each parameter.
+By default, only the `name` variable is defined and is equal to the basename of the corresponding config file.
+
+In the local config file, you can add a new section `[variables]`. 
+Of course, the name of the option is the name of the variable.
+
+In the remote config, you can also override some variables defined in local repositories,
+by adding a new section, specific to this local repository.
+Check the example below:
+
+    $ cat /etc/polyarchiv/my-local-1.local
+    [global]
+    engine=git
+    [variables]
+    group=MyGroup1
+    
+    $ cat /etc/polyarchiv/my-local-2.local
+    [global]
+    engine=git
+    [variables]
+    group=MyGroup2
+    name=MY-LOCAL-2
+    ; you can override the default `name` variable
+
+    $ cat /etc/polyarchiv/my-remote.remote
+    [global]
+    engine=git
+    remote_url=http://gitlab.example.org/%(group)s/%(name)s.git
+    ; requires a `group` variable in each local repository
+    ; the `name` variable always exists
+    
+    [my-local-2]
+    group=MY-GROUP-2
+    ; you can override the `group` variable of `my-local-2` only in the `my-remote` remote repository.
+
+`my-local-1` is sent to `remote_url=http://gitlab.example.org/MyGroup1/my-local-1.git`.
+`my-local-2` is sent to `remote_url=http://gitlab.example.org/MY-GROUP-2/MY-LOCAL-2.git`.
