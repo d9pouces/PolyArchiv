@@ -42,6 +42,7 @@ class LocalRepository(Repository):
         self.included_remote_tags = ['*'] if included_remote_tags is None else included_remote_tags
         self.excluded_remote_tags = excluded_remote_tags or []
         self.sources = []
+        self.variables = {}
 
     def backup(self, force=False):
         """ perform the backup and log all errors

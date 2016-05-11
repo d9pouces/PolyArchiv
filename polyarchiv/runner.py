@@ -34,6 +34,7 @@ class Runner(ParameterizedObject):
     """Run backup and restore operations for all specified configurations
     """
     global_section = 'global'
+    variables_section = 'variables'
     engine_option = 'engine'
 
     def __init__(self, config_directories, **kwargs):
@@ -123,8 +124,14 @@ class Runner(ParameterizedObject):
             name = os.path.basename(config_file).rpartition('.')[0]
             parameters = self._get_args_from_parser(config_file, parser, self.global_section, engine_cls)
             local = engine_cls(name, **parameters)
+            assert isinstance(local, LocalRepository)
+
+            variables_section = self.variables_section
+            if parser.has_section(variables_section):
+                local.variables = {opt: parser.get(variables_section, opt) for opt in parser.options(variables_section)}
+
             for section in parser.sections():
-                if section == self.global_section:
+                if section == self.global_section or section == variables_section:
                     continue
                 if not parser.has_option(section, self.engine_option):
                     msg = 'In file ‘%s’, please specify the ‘%s’ option in the ‘%s’ source' % \
@@ -150,7 +157,6 @@ class Runner(ParameterizedObject):
 
     def _find_remote_repositories(self):
         for config_file, parser in self._iter_config_parsers('*.remote'):
-            self.remote_config_files.append(config_file)
             if not parser.has_option(self.global_section, self.engine_option):
                 msg = 'In file ‘%s’, please specify the ‘%s’ option in the ‘%s’ section' % \
                       (config_file, self.engine_option, self.global_section)
@@ -169,6 +175,12 @@ class Runner(ParameterizedObject):
             name = os.path.basename(config_file).rpartition('.')[0]
             parameters = self._get_args_from_parser(config_file, parser, self.global_section, engine_cls)
             remote = engine_cls(name, **parameters)
+            assert isinstance(remote, RemoteRepository)
+            for section in parser.sections():
+                if section == self.global_section:
+                    continue
+                remote.local_variables[section] = {opt: parser.get(section, opt) for opt in parser.options(section)}
+            self.remote_config_files.append(config_file)
             self.remote_repositories[name] = remote
 
     @staticmethod
@@ -276,7 +288,7 @@ class Runner(ParameterizedObject):
                     remote_results[(remote.name, local.name)] = False
         return local_results, remote_results
 
-    def restore(self, only_locals=None, only_remotes=None):
+    def restore(self, only_locals=None, only_remotes=None, no_remote=False):
         """Run a backup operation
 
         :param only_locals: limit to the selected local repositories
@@ -291,19 +303,20 @@ class Runner(ParameterizedObject):
                 continue
             best_remote_date = None
             best_remote = None
-            for remote_name, remote in self.remote_repositories.items():
-                assert isinstance(remote, RemoteRepository)
-                if only_remotes and remote_name not in only_remotes:
-                    continue
-                elif not self.can_associate(local, remote):
-                    continue
-                remote_info = remote.get_info(local)
-                assert isinstance(remote_info, RepositoryInfo)
-                if remote_info.last_success is None:
-                    continue
-                if best_remote_date is None or best_remote_date < remote_info.last_success:
-                    best_remote = remote
-                    best_remote_date = remote_info.last_success
-            if best_remote is not None:
-                best_remote.restore(local)
+            if not no_remote:
+                for remote_name, remote in self.remote_repositories.items():
+                    assert isinstance(remote, RemoteRepository)
+                    if only_remotes and remote_name not in only_remotes:
+                        continue
+                    elif not self.can_associate(local, remote):
+                        continue
+                    remote_info = remote.get_info(local)
+                    assert isinstance(remote_info, RepositoryInfo)
+                    if remote_info.last_success is None:
+                        continue
+                    if best_remote_date is None or best_remote_date < remote_info.last_success:
+                        best_remote = remote
+                        best_remote_date = remote_info.last_success
+                if best_remote is not None:
+                    best_remote.restore(local)
             local.restore()

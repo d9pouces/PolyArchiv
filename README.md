@@ -1,7 +1,25 @@
 Polyarchiv
 ==========
 
+
 Backup data from multiple local sources (organized in local repositories) and send them to one or more remote repositories.
+
+                                                    /--------------------------\
+       local repository 1: git          ___________ | remote repository 1: git |
+    /------------------------\         /            |   data of local 1        |
+    |     source 1: files    |---->---/             \--------------------------/
+    |     source 2: mysql    |                      
+    |     source 3: mysql    |---->---\
+    \------------------------/         \____________ /----------------------------\
+                                           _________ | remote repository 2: files |
+                                         /           |   data of local 1          | 
+     local repository 2: files          /            |   data of local 2          |
+    /------------------------\         /             \----------------------------/
+    |     source 1: files    |---->---/
+    |     source 2: mysql    |
+    \------------------------/
+    
+    
 Configuration is based on simple `.ini` files: 
     
   * `my-local-repo.local` defines a local repository named `my-local-repo`,
@@ -41,7 +59,7 @@ You can also install it from the source:
     $ cd PolyArchiv
     $ python setup.py install 
     
-If you do not want to install globally, you can use the `--user` option.
+If you do not want to globally install it, you can use the `--user` option.
 
 Some commands are available:
 display the current configuration, local and remote repositories, sources and backup status
@@ -69,7 +87,7 @@ Next steps
   * create config files for your remote servers (one config file per server)
   * run `polyarchiv config -v` to check your configuration
   * run `polyarchiv backup --dry --show-commands --force` to check the executed script
-  * run `polyarchiv backup` in a crontab :-)
+  * run `polyarchiv backup` in a cron :-)
     
 
 Configuration

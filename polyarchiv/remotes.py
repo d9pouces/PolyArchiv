@@ -42,6 +42,22 @@ class RemoteRepository(Repository):
         self.remote_tags = ['remote'] if remote_tags is None else remote_tags
         self.included_local_tags = ['*'] if included_local_tags is None else included_local_tags
         self.excluded_local_tags = excluded_local_tags or []
+        self.local_variables = {}
+        # values specific to a local: self.local_values[local_repository.name][key] = value
+        # used to override remote parameters
+
+    def format_value(self, value, local_repository):
+        assert isinstance(local_repository, LocalRepository)
+        variables = {'name': local_repository.name}
+        variables.update(local_repository.variables)
+        if local_repository.name in self.local_variables:
+            variables.update(self.local_variables[local_repository.name])
+        try:
+            formatted_value = value % variables
+        except KeyError as e:
+            txt = text_type(e)[len('KeyError:'):]
+            raise ValueError('Unable to format ‘%s’: variable %s is missing' % (value, txt))
+        return formatted_value
 
     def backup(self, local_repository, force=False):
         """ perform the backup and log all errors
@@ -132,12 +148,12 @@ class GitRepository(RemoteRepository):
         Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
         Parameter('remote_url', help_str='URL of the remote server, include username and password (e.g.: '
                                          'git@mygitlab.example.org:username/project.git,'
-                                         'https://username:password@mygitlab.example.org/username/project.git)'),
-        Parameter('remote_branch', help_str='name of the remote branch'),
+                                         'https://username:password@mygitlab.example.org/username/project.git) [*]'),
+        Parameter('remote_branch', help_str='name of the remote branch [*]'),
         Parameter('keytab', converter=check_file,
-                  help_str='absolute path of the keytab file (for Kerberos authentication)'),
+                  help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
         Parameter('private_key', converter=check_file,
-                  help_str='absolute path of the private key file (for SSH key authentication)'),
+                  help_str='absolute path of the private key file (for SSH key authentication) [*]'),
     ]
 
     def __init__(self, name, remote_url='', remote_branch='master', git_executable='git',
@@ -154,11 +170,15 @@ class GitRepository(RemoteRepository):
         assert isinstance(local_repository, LocalGitRepository)  # just to help PyCharm
         cmd = []
         if self.keytab:
-            cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
-        cmd += [self.git_executable, 'push', self.remote_url, '+master:%s' % self.remote_branch]
+            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
+        remote_url = self.format_value(self.remote_url, local_repository)
+        remote_branch = self.format_value(self.remote_branch, local_repository)
+        cmd += [self.git_executable, 'push', remote_url, '+master:%s' % remote_branch]
         # noinspection PyTypeChecker
-        if self.private_key and not self.remote_url.startswith('http'):
-            cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (self.private_key, ' '.join(cmd))]
+        private_key = self.private_key
+        if private_key and not remote_url.startswith('http'):
+            private_key = self.format_value(private_key, local_repository)
+            cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
         self.execute_command(cmd, cwd=local_repository.local_path)
 
     def get_last_backup_date(self, local_repository):
@@ -171,11 +191,11 @@ class Rsync(RemoteRepository):
     parameters = RemoteRepository.parameters + [
         Parameter('rsync_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "rsync")'),
-        Parameter('remote_url', help_str='remote server and path (e.g. login:password@server:/foo/bar/'),
+        Parameter('remote_url', help_str='remote server and path (e.g. login:password@server:/foo/bar/ [*]'),
         Parameter('keytab', converter=check_file,
-                  help_str='absolute path of the keytab file (for Kerberos authentication)'),
+                  help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
         Parameter('private_key', converter=check_file,
-                  help_str='absolute path of the private key file (for SSH key authentication)'),
+                  help_str='absolute path of the private key file (for SSH key authentication) [*]'),
     ]
 
     def __init__(self, name, rsync_executable='rsync', remote_url='', keytab=None, private_key=None, **kwargs):
@@ -189,16 +209,18 @@ class Rsync(RemoteRepository):
         assert isinstance(local_repository, FileRepository)
         cmd = []
         if self.keytab:
-            cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
+            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
         cmd += [self.rsync_executable, '-az', '--delete', '--exclude=%s' % local_repository.PRIVATE_FOLDER, '-S']
         local_path = local_repository.local_path
         if not local_path.endswith(os.path.sep):
             local_path += os.path.sep
-        remote_url = self.remote_url
+        remote_url = self.format_value(self.remote_url, local_repository)
         if not remote_url.endswith(os.path.sep):
             remote_url += os.path.sep
-        if self.private_key:
-            cmd += ['-e', 'ssh -i %s' % self.private_key]
+        private_key = self.private_key
+        if private_key:
+            private_key = self.format_value(private_key, local_repository)
+            cmd += ['-e', 'ssh -i %s' % private_key]
         else:
             cmd += ['-e', 'ssh']
         cmd += [local_path, remote_url]
@@ -230,20 +252,20 @@ class TarArchive(RemoteRepository):
                            '‘https://example.org/path’). ‘file://’ URLs are handled by a ‘cp’ command, other ones'
                            ' are handled by ‘curl’ command. Most of protocols known by cURL can be used:'
                            ' ftp(s), http(s) with WebDAV, scp, sftp, smb, smbs. You can specify user and password'
-                           ' in URL: ‘scheme://user:password@host/path’'),
-        Parameter('user', help_str='username (if not set in the URL)'),
-        Parameter('password', help_str='password (if not set in the URL)'),
-        Parameter('archive_prefix', help_str='prefix of the archive names (default: "archive")'),
-        Parameter('proxy', help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080)'),
+                           ' in URL: ‘scheme://user:password@host/path’ [*]'),
+        Parameter('user', help_str='username (if not set in the URL) [*]'),
+        Parameter('password', help_str='password (if not set in the URL) [*]'),
+        Parameter('archive_prefix', help_str='prefix of the archive names (default: "archive") [*]'),
+        Parameter('proxy', help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080) [*]'),
         Parameter('insecure', converter=bool_setting, help_str='true|false: do not check certificates'),
-        Parameter('cert', converter=check_file, help_str='[HTTPS|FTPS backend] certificate to provide to the server'),
+        Parameter('cert', converter=check_file, help_str='[HTTPS|FTPS backend] certificate to provide to the server [*]'),
         Parameter('cacert', converter=check_file, help_str='[HTTPS|FTPS backend] CA certificate authenticating'
-                                                           ' the server'),
+                                                           ' the server [*]'),
         Parameter('date_format', help_str='date format for the generated archives (default: "%Y-%m-%d_%H-%M")'),
         Parameter('keytab', converter=check_file,
-                  help_str='absolute path of the keytab file (for Kerberos authentication)'),
+                  help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
         Parameter('private_key', converter=check_file,
-                  help_str='[HTTPS|FTPS|SSH backend] absolute path of the private key file'),
+                  help_str='[HTTPS|FTPS|SSH backend] absolute path of the private key file [*]'),
         Parameter('tar_format', converter=CheckOption(['tar.gz', 'tar.bz2', 'tar.xz']),
                   help_str='one of "tar.gz", "tar.bz2" (default), "tar.xz"'),
         Parameter('tar_executable', converter=check_executable,
@@ -281,8 +303,9 @@ class TarArchive(RemoteRepository):
         filenames.sort()
         # noinspection PyTypeChecker
         now_str = datetime.datetime.now().strftime(self.date_format)
+        prefix = self.format_value(self.archive_prefix, local_repository)
         archive_filename = os.path.join(local_repository.local_path,
-                                        '%s-%s.%s' % (self.archive_prefix, now_str, self.tar_format))
+                                        '%s-%s.%s' % (prefix, now_str, self.tar_format))
         if self.tar_format == 'tar.gz':
             cmd = [self.tar_executable, '-czf']
         elif self.tar_format == 'tar.bz2':
@@ -299,8 +322,8 @@ class TarArchive(RemoteRepository):
         else:
             cmd = []
             if self.keytab:
-                cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
-            remote_url = self.remote_url
+                cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
+            remote_url = self.format_value(self.remote_url, local_repository)
             # noinspection PyTypeChecker
             if not remote_url.endswith('/'):
                 remote_url += '/'
@@ -314,16 +337,17 @@ class TarArchive(RemoteRepository):
                 if self.insecure:
                     cmd += ['-k']
                 if self.cacert:
-                    cmd += ['--cacert', self.cacert]
+                    cmd += ['--cacert', self.format_value(self.cacert, local_repository)]
                 if self.cert:
-                    cmd += ['--cert', self.cert]
+                    cmd += ['--cert', self.format_value(self.cert, local_repository)]
                 parsed_url = urlparse(remote_url)
-                if not parsed_url.username and not parsed_url.password:
-                    cmd += ['-u', '%s:%s' % (self.user, self.password)]
+                if not parsed_url.username and not parsed_url.password and self.user and self.password:
+                    cmd += ['-u', '%s:%s' % (self.format_value(self.user, local_repository),
+                                             self.format_value(self.password, local_repository))]
                 if self.private_key:
-                    cmd += ['--key', self.private_key]
+                    cmd += ['--key', self.format_value(self.private_key, local_repository)]
                 if self.proxy:
-                    cmd += ['-x', self.proxy, '--proxy-anyauth']
+                    cmd += ['-x', self.format_value(self.proxy, local_repository), '--proxy-anyauth']
                 cmd += ['-T', archive_filename]
                 # noinspection PyTypeChecker
                 if remote_url.startswith('ftps'):
@@ -345,15 +369,15 @@ class Duplicity(RemoteRepository):
         Parameter('remote_url',
                   help_str='destination URL with the username (e.g.: ftp://user:password@example.org/path/,'
                            'https://user:password@example.org/path). Please check Duplicity\'s documentation.'
-                           'Password can be separately set with the ‘password’ option.'),
-        Parameter('encrypt_key_id', help_str='[GPG] encrypt with this public key instead of symmetric encryption.'),
-        Parameter('sign_key_id', help_str='[GPG] All backup files will be signed with keyid key.'),
-        Parameter('encrypt_passphrase', help_str='[GPG] This passphrase is passed to GnuPG.'),
-        Parameter('sign_passphrase', help_str='[GPG] This passphrase is passed to GnuPG for the sign_key.'),
+                           'Password can be separately set with the ‘password’ option. [*]'),
+        Parameter('encrypt_key_id', help_str='[GPG] encrypt with this public key instead of symmetric encryption. [*]'),
+        Parameter('sign_key_id', help_str='[GPG] All backup files will be signed with keyid key. [*]'),
+        Parameter('encrypt_passphrase', help_str='[GPG] This passphrase is passed to GnuPG. [*]'),
+        Parameter('sign_passphrase', help_str='[GPG] This passphrase is passed to GnuPG for the sign_key. [*]'),
         Parameter('no_encryption', converter=bool_setting, help_str='true|false: do not use GnuPG to encrypt '
                                                                     'remote files.'),
-        Parameter('private_key', converter=check_file, help_str='[SSH backend] The private SSH key (filename)'),
-        Parameter('password', help_str='upload password'),
+        Parameter('private_key', converter=check_file, help_str='[SSH backend] The private SSH key (filename) [*]'),
+        Parameter('password', help_str='upload password [*]'),
 
         Parameter('full_if_older_than',
                   help_str='Perform a full backup if an incremental backup is requested, but the latest full backup in '
@@ -373,7 +397,7 @@ class Duplicity(RemoteRepository):
 
         Parameter('gpg_encrypt_secret_keyring',
                   help_str='[GPG] This option can only be used with encrypt_key, and changes the path to the secret '
-                           'keyring for the encrypt key to filename. Default to ‘~/.gnupg/secring.gpg’'),
+                           'keyring for the encrypt key to filename. Default to ‘~/.gnupg/secring.gpg’ [*]'),
         Parameter('gpg_options', converter=check_executable,
                   help_str='[GPG] Allows you to pass options to gpg encryption.  The options list should be of the '
                            'form "--opt1 --opt2=parm"'),
@@ -382,7 +406,7 @@ class Duplicity(RemoteRepository):
         Parameter('ssh_options',
                   help_str='[SSH backend] Options for SSH. The options list should be of '
                            'the form "-oOpt1=\'parm1\' -oOpt2=\'parm2\'".'),
-        Parameter('cacert', converter=check_file, help_str='[HTTPS backend] certificate to use to verify the server'),
+        Parameter('cacert', converter=check_file, help_str='[HTTPS backend] certificate to use to verify the server [*]'),
         Parameter('insecure', converter=bool_setting,
                   help_str='[HTTPS backend] true|false: do not check certificate for SSL connections'),
         Parameter('duplicity_executable', converter=check_executable,
@@ -429,27 +453,29 @@ class Duplicity(RemoteRepository):
         local_path = local_repository.local_path
         if not local_path.endswith(os.path.sep):
             local_path += os.path.sep
-        remote_url = self.remote_url
+        remote_url = self.format_value(self.remote_url, local_repository)
         if not remote_url.endswith(os.path.sep):
             remote_url += os.path.sep
         if self.encrypt_key_id:
-            cmd += ['--encrypt-key', self.encrypt_key_id]
+            cmd += ['--encrypt-key', self.format_value(self.encrypt_key_id, local_repository)]
         if self.sign_key_id:
-            cmd += ['--sign-key', self.sign_key_id]
+            cmd += ['--sign-key', self.format_value(self.sign_key_id, local_repository)]
         if self.encrypt_passphrase:
-            env['PASSPHRASE'] = self.encrypt_passphrase
+            env['PASSPHRASE'] = self.format_value(self.encrypt_passphrase, local_repository)
         if self.sign_passphrase:
-            env['SIGN_PASSPHRASE'] = self.sign_passphrase
+            env['SIGN_PASSPHRASE'] = self.format_value(self.sign_passphrase, local_repository)
         if self.no_encryption:
             cmd += ['--no-encryption']
         if self.ssh_options and self.private_key:
-            cmd += ['--ssh-options', '%s -oIdentityFile=%s' % (self.ssh_options, self.private_key)]
+            private_key = self.format_value(self.private_key, local_repository)
+            cmd += ['--ssh-options', '%s -oIdentityFile=%s' % (self.ssh_options, private_key)]
         elif self.private_key:
-            cmd += ['--ssh-options', '-oIdentityFile=%s' % self.private_key]
+            private_key = self.format_value(self.private_key, local_repository)
+            cmd += ['--ssh-options', '-oIdentityFile=%s' % private_key]
         elif self.ssh_options:
             cmd += ['--ssh-options', self.ssh_options]
         if self.password:
-            env['FTP_PASSWORD'] = self.password
+            env['FTP_PASSWORD'] = self.format_value(self.password, local_repository)
         if self.full_if_older_than:
             cmd += ['--full-if-older-than', self.full_if_older_than]
         if self.max_block_size:
@@ -459,13 +485,14 @@ class Duplicity(RemoteRepository):
         if self.volsize:
             cmd += ['--volsize', self.volsize]
         if self.gpg_encrypt_secret_keyring:
-            cmd += ['--encrypt-secret-keyring filename', self.gpg_encrypt_secret_keyring]
+            keyring = self.format_value(self.gpg_encrypt_secret_keyring, local_repository)
+            cmd += ['--encrypt-secret-keyring filename', keyring]
         if self.gpg_options:
             cmd += ['--gpg-options', self.gpg_options]
         if self.rsync_options:
             cmd += ['--rsync-options', self.rsync_options]
         if self.cacert:
-            cmd += ['--ssl-cacert-file', self.cacert]
+            cmd += ['--ssl-cacert-file', self.format_value(self.cacert, local_repository)]
         if self.insecure:
             cmd += ['--ssl-no-check-certificate']
         if self.gpg_executable:
