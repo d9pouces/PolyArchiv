@@ -143,7 +143,7 @@ The `[repository]` section defines options for the local repository (the engine 
 
 The kind of repository (either local or remote) and of each source is defined by the `engine` option.
 You can define as many local repositories (each of them with one or more sources) as you want.
-**You cannot use `DEFAULT`, `repository` and `variables` as source name.**
+**You cannot use `DEFAULT`, `repository` or `variables` as source name.**
 
 Remote repositories are simpler and by default only have a `[repository]` section.
 Their names must end by `.remote`.

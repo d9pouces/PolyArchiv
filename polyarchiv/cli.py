@@ -30,7 +30,7 @@ def main():
     """
     path_components = sys.executable.split(os.path.sep)
     if sys.executable.startswith('/usr/'):
-        path_components = ['', 'etc']
+        path_components = ['', 'etc', 'polyarchiv']
     elif 'bin' in path_components:
         # noinspection PyTypeChecker
         path_components = path_components[:path_components.index('bin')] + ['etc', 'polyarchiv']
