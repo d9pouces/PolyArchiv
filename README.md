@@ -5,16 +5,16 @@ Polyarchiv
 Backup data from multiple local sources (organized in local repositories) and send them to one or more remote repositories.
 
                                                     /--------------------------\
-       local repository 1: git          ___________ | remote repository 1: git |
-    /------------------------\         /            |   data of local 1        |
+       local repository 1: git          ________\__ | remote repository 1: git |
+    /------------------------\         /        /   |   data of local 1        |
     |     source 1: files    |---->---/             \--------------------------/
     |     source 2: mysql    |                      
     |     source 3: mysql    |---->---\
-    \------------------------/         \____________ /----------------------------\
-                                           _________ | remote repository 2: files |
-                                         /           |   data of local 1          | 
-     local repository 2: files          /            |   data of local 2          |
-    /------------------------\         /             \----------------------------/
+    \------------------------/         \________\___ /----------------------------\
+                                                /    | remote repository 2: files |
+                                                     |   data of local 1          | 
+     local repository 2: files          ________\___ |   data of local 2          |
+    /------------------------\         /        /    \----------------------------/
     |     source 1: files    |---->---/
     |     source 2: mysql    |
     \------------------------/
