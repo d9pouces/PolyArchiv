@@ -1,4 +1,4 @@
-[global]
+[repository]
 engine=rsync
 remote_tags=
 remote_url=/var/backups/remotes/remote1

@@ -1,4 +1,4 @@
-[global]
+[repository]
 engine=polyarchiv.locals.GitRepository
 local_path=/tmp/local
 local_tags=local

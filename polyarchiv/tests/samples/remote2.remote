@@ -1,4 +1,4 @@
-[global]
+[repository]
 engine=polyarchiv.remotes.TarArchive
 remote_tags=
 remote_url=file:///tmp/remote/archives/

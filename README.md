@@ -107,10 +107,10 @@ Here is an example of local repository, gathering data from three sources:
   * a directory
 
 Its name must end by `.local`. 
-The `[global]` section defines options for the local repository (the engine that powers the local backup, the frequency, …), and other sections define the three sources:
+The `[repository]` section defines options for the local repository (the engine that powers the local backup, the frequency, …), and other sections define the three sources:
 
     $ cat /etc/polyarchiv/my-local.local
-    [global]
+    [repository]
     engine=git
     local_path=/tmp/local
     local_tags=local
@@ -141,16 +141,16 @@ The `[global]` section defines options for the local repository (the engine that
     source_path=/tmp/source/files
     destination_path=./files
 
-The kind of repository (either local or remote) and of each source is defined by the "engine" option.
+The kind of repository (either local or remote) and of each source is defined by the `engine` option.
 You can define as many local repositories (each of them with one or more sources) as you want.
-**You cannot use `DEFAULT`, `global` and `variables` as source name.**
+**You cannot use `DEFAULT`, `repository` and `variables` as source name.**
 
-Remote repositories are simpler and by default only have a `[global]` section.
+Remote repositories are simpler and by default only have a `[repository]` section.
 Their names must end by `.remote`.
 Here is a gitlab acting as remote storage for git local repo: 
 
     $ cat /etc/polyarchiv/my-remote1.remote
-    [global]
+    [repository]
     engine=git
     frequency=daily
     remote_tags=
@@ -165,7 +165,7 @@ obviously `my-local`). You can specify (a bit) more complex replacement rules (s
 Maybe you also want a full backup (as an archive) uploaded monthly (the tenth day of each month) to a FTP server:
 
     $ cat /etc/polyarchiv/my-remote2.remote
-    [global]
+    [repository]
     engine=tar
     frequency=monthly:10
     remote_tags=
@@ -206,14 +206,14 @@ A remote repository has the tag `remote` and include all local repositories `inc
 If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
  
     $ cat /etc/polyarchiv/my-remote.remote
-    [global]
+    [repository]
     engine=git
     excluded_local_tags=*large,huge
 
 and add the "large" tag in the local configuration:
 
     $ cat /etc/polyarchiv/my-local.local
-    [global]
+    [repository]
     engine=git
     local_path=/tmp/local
     local_tags=local,large
@@ -221,14 +221,14 @@ and add the "large" tag in the local configuration:
 Traditionnal shell expansion is used for comparing included and excluded tags. Tags can be applied to remote repositories:
 
     $ cat /etc/polyarchiv/my-remote.remote
-    [global]
+    [repository]
     engine=git
     remote_tags=small-only
 
 and add the "large" tag to the local configuration:
 
     $ cat /etc/polyarchiv/my-local.local
-    [global]
+    [repository]
     engine=git
     local_path=/tmp/local
     included_remote_tags=huge,large
@@ -250,13 +250,13 @@ by adding a new section, specific to this local repository.
 Check the example below:
 
     $ cat /etc/polyarchiv/my-local-1.local
-    [global]
+    [repository]
     engine=git
     [variables]
     group=MyGroup1
     
     $ cat /etc/polyarchiv/my-local-2.local
-    [global]
+    [repository]
     engine=git
     [variables]
     group=MyGroup2
@@ -264,7 +264,7 @@ Check the example below:
     ; you can override the default `name` variable
 
     $ cat /etc/polyarchiv/my-remote.remote
-    [global]
+    [repository]
     engine=git
     remote_url=http://gitlab.example.org/%(group)s/%(name)s.git
     ; requires a `group` variable in each local repository
