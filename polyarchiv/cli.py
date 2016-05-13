@@ -111,8 +111,6 @@ def main():
                         command_confirm=args.confirm_commands,
                         command_execute=not args.dry, command_keep_output=verbose)
         if runner.load():
-            if not verbose:
-                cprint('you can display more info with --verbose', CYAN)
             from polyarchiv.show import show_local_repository, show_remote_local_repository, \
                 show_remote_repository
             values = {'return_text': [], 'return_code': 0}
