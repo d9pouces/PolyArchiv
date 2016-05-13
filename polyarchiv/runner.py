@@ -48,17 +48,19 @@ class Runner(ParameterizedObject):
         self.local_config_files = []
         self.remote_config_files = []
 
-    def load(self):
+    def load(self, show_errors=True):
         result = True
         try:
             self._find_local_repositories()
             self._find_remote_repositories()
         except ValueError as e:
             result = False
-            cprint(text_type(e), RED)
+            if show_errors:
+                cprint(text_type(e), RED)
         except ImportError as e:
             result = False
-            cprint(text_type(e), RED)
+            if show_errors:
+                cprint(text_type(e), RED)
         return result
 
     def _get_args_from_parser(self, config_file, parser, section, engine_cls):

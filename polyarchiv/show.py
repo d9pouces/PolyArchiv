@@ -8,8 +8,7 @@ from polyarchiv.locals import LocalRepository
 from polyarchiv.remotes import RemoteRepository
 from polyarchiv.repository import RepositoryInfo
 from polyarchiv.sources import Source
-from polyarchiv.termcolor import cprint, RED, YELLOW, GREEN, BOLD, CYAN, CONCEALED
-from polyarchiv.utils import text_type
+from polyarchiv.termcolor import cprint, RED, YELLOW, GREEN, BOLD, CYAN
 
 __author__ = 'Matthieu Gallet'
 

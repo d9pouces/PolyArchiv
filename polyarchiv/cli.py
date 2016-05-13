@@ -5,6 +5,7 @@ Parse arguments and logger, use translated strings.
 from __future__ import unicode_literals
 
 import argparse
+import functools
 import logging
 import logging.config
 import math
@@ -15,6 +16,7 @@ import sys
 import subprocess
 from pkg_resources import iter_entry_points
 
+from polyarchiv.check import check_local_repository, check_remote_local_repository
 from polyarchiv.conf import Parameter
 from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN, GREY, RED
 
@@ -104,6 +106,35 @@ def main():
             runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
                                   local_remote_command=show_remote_local_repository,
                                   only_locals=args.only_locals, only_remotes=args.only_remotes)
+    elif command == 'check':
+        runner = Runner([args.config], command_display=args.show_commands,
+                        command_confirm=args.confirm_commands,
+                        command_execute=not args.dry, command_keep_output=verbose)
+        if runner.load():
+            if not verbose:
+                cprint('you can display more info with --verbose', CYAN)
+            from polyarchiv.show import show_local_repository, show_remote_local_repository, \
+                show_remote_repository
+            values = {'return_text': [], 'return_code': 0}
+            local_command = functools.partial(check_local_repository, values)
+            remote_command = functools.partial(check_remote_local_repository, values)
+            runner.apply_commands(local_command=local_command, local_remote_command=remote_command,
+                                  only_locals=args.only_locals, only_remotes=args.only_remotes)
+            return_code = values['return_code']
+            msg = ', '.join(values['return_text'])
+        else:
+            msg = 'Unable to load configuration'
+            return_code = 2
+        if args.nrpe:
+            if return_code == 2:
+                msg = 'CRITICAL - %s' % msg
+            elif return_code == 1:
+                msg = 'WARNING - %s' % msg
+            elif return_code == 0:
+                msg = 'OK - %s' % msg
+            else:
+                msg = 'UNKNOWN - %s' % msg
+        cprint(msg)
     elif command == 'plugins':
         width = 80
         tput_cols = subprocess.check_output(['tput', 'cols']).decode().strip()
