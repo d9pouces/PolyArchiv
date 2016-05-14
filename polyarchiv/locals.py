@@ -224,10 +224,15 @@ class GitRepository(FileRepository):
     """
     parameters = FileRepository.parameters + [
         Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
+        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")'),
+        Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
     ]
 
-    def __init__(self, name, git_executable='git', **kwargs):
+    def __init__(self, name, git_executable='git', commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
+                 **kwargs):
         super(GitRepository, self).__init__(name=name, **kwargs)
+        self.commit_name = commit_name
+        self.commit_email = commit_email
         self.git_executable = git_executable
 
     def post_source_backup(self):
@@ -236,12 +241,19 @@ class GitRepository(FileRepository):
         if not os.path.isfile(path) and self.can_execute_command('echo \'%s/\' > %s' % (self.PRIVATE_FOLDER, path)):
             with codecs.open(path, 'w', encoding='utf-8') as fd:
                 fd.write("%s/\n" % self.PRIVATE_FOLDER)
+        git_config_path = os.path.join(self.private_path, '.gitconfig')
+        if not os.path.isfile(git_config_path):
+            self.execute_command([self.git_executable, 'config', '--global', 'user.email', self.commit_email],
+                                 env={'HOME': self.private_path})
+            self.execute_command([self.git_executable, 'config', '--global', 'user.name', self.commit_name],
+                                 env={'HOME': self.private_path})
         os.chdir(self.local_path)
         self.execute_command([self.git_executable, 'init'], cwd=self.local_path)
         self.execute_command([self.git_executable, 'add', '.'])
         end = datetime.datetime.now()
+        # noinspection PyTypeChecker
         self.execute_command([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')],
-                             ignore_errors=True)
+                             ignore_errors=True, env={'HOME': self.private_path})
 
     def restore(self):
         raise NotImplementedError

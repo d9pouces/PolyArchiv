@@ -257,9 +257,9 @@ class PostgresSQL(MySQL):
 
 
 class Ldap(Source):
-    """Dump a OpenLDAP database using slapcat to a filename in the local repository"""
+    """Dump a OpenLDAP database using slapcat to a filename in the local repository.
+    Must be run on the LDAP server."""
     parameters = Source.parameters + [
-        Parameter('database', help_str='number of the database (usually 0 and 1)'),
         Parameter('destination_path', help_str='filename of the dump (not an absolute path)'),
         Parameter('dump_executable', converter=check_executable,
                   help_str='path of the slapcat executable (default: "slapcat")'),

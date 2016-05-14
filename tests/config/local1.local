@@ -28,3 +28,12 @@ destination_path=mysql.sql
 engine=rsync
 source_path=/var/data/some-files
 destination_path=files
+
+[source_4]
+engine=ldap
+host=localhost
+port=3306
+user=test
+password=testtest
+database=testdb
+destination_path=ldap.ldif

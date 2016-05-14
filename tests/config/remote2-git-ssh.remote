@@ -1,0 +1,4 @@
+[repository]
+engine=git
+remote_url=localhost:remotes/remote-git/%(name)s.git
+included_local_tags=*

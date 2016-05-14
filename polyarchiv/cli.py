@@ -120,6 +120,8 @@ def main():
                                   only_locals=args.only_locals, only_remotes=args.only_remotes)
             return_code = values['return_code']
             msg = ', '.join(values['return_text'])
+            if return_code == 0:
+                msg = 'everything is valid'
         else:
             msg = 'Unable to load configuration'
             return_code = 2

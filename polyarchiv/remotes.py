@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 import datetime
 import logging
 
+import subprocess
+
 from polyarchiv.termcolor import YELLOW, RED
 from polyarchiv.termcolor import cprint
 
@@ -168,12 +170,14 @@ class GitRepository(RemoteRepository):
     def do_backup(self, local_repository):
         assert local_repository.__class__ == LocalGitRepository
         assert isinstance(local_repository, LocalGitRepository)  # just to help PyCharm
+        remote_url = self.format_value(self.remote_url, local_repository)
+        remote_branch = self.format_value(self.remote_branch, local_repository)
+
         cmd = []
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
-        remote_url = self.format_value(self.remote_url, local_repository)
-        remote_branch = self.format_value(self.remote_branch, local_repository)
-        cmd += [self.git_executable, 'push', remote_url, '+master:%s' % remote_branch]
+
+        cmd += [self.git_executable, 'push', remote_url, 'master:+%s' % remote_branch]
         # noinspection PyTypeChecker
         private_key = self.private_key
         if private_key and not remote_url.startswith('http'):
@@ -408,7 +412,8 @@ class Duplicity(RemoteRepository):
         Parameter('ssh_options',
                   help_str='[SSH backend] Options for SSH. The options list should be of '
                            'the form "-oOpt1=\'parm1\' -oOpt2=\'parm2\'".'),
-        Parameter('cacert', converter=check_file, help_str='[HTTPS backend] certificate to use to verify the server [*]'),
+        Parameter('cacert', converter=check_file,
+                  help_str='[HTTPS backend] certificate to use to verify the server [*]'),
         Parameter('insecure', converter=bool_setting,
                   help_str='[HTTPS backend] true|false: do not check certificate for SSL connections'),
         Parameter('duplicity_executable', converter=check_executable,

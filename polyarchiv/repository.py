@@ -55,6 +55,8 @@ class ParameterizedObject(object):
         # noinspection PyTypeChecker
         if hasattr(stdin, 'name') and stdin.name:
             cmd_text += ['<',  stdin.name]
+        elif stdin is None:
+            stdin = subprocess.PIPE
         # noinspection PyTypeChecker
         if hasattr(stdout, 'name') and stdout.name:
             cmd_text += ['>',  stdout.name]

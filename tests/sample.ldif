@@ -7,7 +7,7 @@
 ## have a STRUCTURAL objectclass (organization in this case)
 # this is an ENTRY sequence and is preceded by a BLANK line
 
-dn: dc=example,dc=com
+dn: dc=example,dc=nodomain
 dc: example
 description: My wonderful company as much text as you want to place
  in this line up to 32K continuation data for the line above must
@@ -21,7 +21,7 @@ o: Example, Inc.
 ## uses mixed upper and lower case for objectclass
 # this is an ENTRY sequence and is preceded by a BLANK line
 
-dn: ou=people, dc=example,dc=com
+dn: ou=people, dc=example,dc=nodomain
 ou: people
 description: All people in organisation
 objectclass: organizationalunit
@@ -31,7 +31,7 @@ objectclass: organizationalunit
 # this is an ENTRY sequence and is preceded by a BLANK line
 # the ou: Human Resources is the department name
 
-dn: cn=Robert Smith,ou=people,dc=example,dc=com
+dn: cn=Robert Smith,ou=people,dc=example,dc=nodomain
 objectclass: inetOrgPerson
 cn: Robert Smith
 cn: Robert J Smith

@@ -21,10 +21,10 @@ from polyarchiv.utils import import_string, text_type
 
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
-    from configparser import ConfigParser, Error as ConfigError
+    from configparser import RawConfigParser, Error as ConfigError
 except ImportError:
     # noinspection PyUnresolvedReferences,PyCompatibility
-    from ConfigParser import ConfigParser, Error as ConfigError
+    from ConfigParser import RawConfigParser, Error as ConfigError
 
 __author__ = 'mgallet'
 logger = logging.getLogger('polyarchiv.runner')
@@ -64,7 +64,7 @@ class Runner(ParameterizedObject):
         return result
 
     def _get_args_from_parser(self, config_file, parser, section, engine_cls):
-        assert isinstance(parser, ConfigParser)
+        assert isinstance(parser, RawConfigParser)
         assert issubclass(engine_cls, ParameterizedObject)
         result = {'command_display': self.command_display, 'command_confirm': self.command_confirm,
                   'command_execute': self.command_execute, 'command_keep_output': self.command_keep_output}
@@ -87,7 +87,7 @@ class Runner(ParameterizedObject):
             count = 0
             for config_file in glob.glob(os.path.join(path, pattern)):
                 count += 1
-                parser = ConfigParser()
+                parser = RawConfigParser()
                 try:
                     # noinspection PyTypeChecker
                     open(config_file, 'rb').read(1)
