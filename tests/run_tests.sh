@@ -8,22 +8,22 @@ echo "ALTER USER test WITH ENCRYPTED PASSWORD 'testtest'" | sudo -u postgres psq
 echo "ALTER ROLE test CREATEDB" | sudo -u postgres psql -d postgres
 echo "CREATE DATABASE testdb OWNER test" | sudo -u postgres psql -d postgres
 echo "GRANT ALL PRIVILEGES ON DATABASE testdb TO test" | sudo -u postgres psql -d postgres
-cat /vagrant/samples/world_postgresql.sql | sudo -u postgres psql -d testdb
+cat /vagrant/tests/world_postgresql.sql | sudo -u postgres psql -d testdb
 echo "ALTER TABLE city OWNER TO test" | sudo -u postgres psql -d testdb
 echo "ALTER TABLE country OWNER TO test" | sudo -u postgres psql -d testdb
 echo "ALTER TABLE countrylanguage OWNER TO test" | sudo -u postgres psql -d testdb
 
 # create a mysql database and fill it with some data
-sudo apt-get install -y mysql-server mysql-client
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server mysql-client
 echo "CREATE USER 'test'@'localhost' IDENTIFIED BY 'testtest'" | sudo mysql
 echo "GRANT ALL PRIVILEGES ON testdb.* TO 'test'@'localhost'" | sudo mysql
 echo "FLUSH PRIVILEGES" | sudo mysql
 echo "CREATE DATABASE testdb" | sudo mysql
-cat /vagrant/samples/world_mysql.sql  | sudo mysql testdb
+cat /vagrant/tests/world_mysql.sql  | sudo mysql testdb
 
 # create a OpenLDAP database and
-#sudo apt-get install -y openldap
-#ldapadd -H ldap://ldaphost.example.com -x -D "cn=jimbob,dc=example,dc=com"  -f /tmp/createdit.ldif -w dirtysecret
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y slapd ldap-utils
+ldapadd -H ldapi:// -f /vagrant/tests/sample.ldif
 # create a single data file
 sudo mkdir -p /var/data/some-files
 echo "added" | sudo tee /var/data/some-files/file01

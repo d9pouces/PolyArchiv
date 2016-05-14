@@ -25,6 +25,5 @@ EOF
 sudo apt-get update
 sudo locale-gen fr_FR.UTF-8
 sudo apt-get install -y python-pip
-bash /vagrant/tests/run_tests.sh
     SHELL
 end

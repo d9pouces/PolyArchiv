@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
 import logging.config
 import os
 from unittest import TestCase
@@ -11,10 +12,6 @@ log = {'version': 1, 'disable_existing_loggers': True,
        'handlers': {'stream': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'color'}},
        'loggers': {'polyarchiv': {'handlers': ['stream', ], 'level': 'DEBUG', 'propagate': False}}}
 logging.config.dictConfig(log)
-
-from polyarchiv.runner import Runner
-from polyarchiv.locals import LocalRepository
-from polyarchiv.sources import RSync, PostgresSQL, MySQL
 
 
 class TestSources(TestCase):

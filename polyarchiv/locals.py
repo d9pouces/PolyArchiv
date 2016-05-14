@@ -139,7 +139,7 @@ class LocalRepository(Repository):
 
 
 class FileRepository(LocalRepository):
-    """Collect files from all sources in the folder ‘local_path’.
+    """Collect files from all sources in the folder 'local_path'.
     """
 
     parameters = LocalRepository.parameters + [

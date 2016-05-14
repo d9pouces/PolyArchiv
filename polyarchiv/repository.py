@@ -24,7 +24,7 @@ class ParameterizedObject(object):
         self.name = name
         self.command_display = command_display  # display each command before running it
         self.command_confirm = command_confirm  # ask the user to confirm each command
-        self.command_execute = command_execute  # actually run commands (if False: ‘dry’ mode)
+        self.command_execute = command_execute  # actually run commands (if False: 'dry' mode)
         self.command_keep_output = command_keep_output  # display all command outputs on stderr/stdout
 
     def can_execute_command(self, text):

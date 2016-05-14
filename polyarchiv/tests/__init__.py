@@ -9,13 +9,8 @@ You should consider to install :mod:`Distribute` to run all tests with::
 
 """
 from __future__ import unicode_literals
-__author__ = 'mgallet'
 import unittest
+__author__ = 'mgallet'
 
 if __name__ == '__main__':
     unittest.main()
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()

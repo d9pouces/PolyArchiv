@@ -67,7 +67,7 @@ class Runner(ParameterizedObject):
         assert isinstance(parser, ConfigParser)
         assert issubclass(engine_cls, ParameterizedObject)
         result = {'command_display': self.command_display, 'command_confirm': self.command_confirm,
-                  'command_execute': self.command_execute, 'command_keep_output': self.command_keep_output, }
+                  'command_execute': self.command_execute, 'command_keep_output': self.command_keep_output}
 
         for parameter in engine_cls.parameters:
             assert isinstance(parameter, Parameter)
@@ -78,7 +78,7 @@ class Runner(ParameterizedObject):
             try:
                 result[parameter.arg_name] = parameter.converter(value)
             except ValueError as e:
-                cprint('In file ‘%s’, section ‘%s’, option ‘%s’:' % (config_file, section, option), RED)
+                cprint('In file \'%s\', section \'%s\', option \'%s\':' % (config_file, section, option), RED)
                 raise e
         return result
 
@@ -98,8 +98,8 @@ class Runner(ParameterizedObject):
                         logger.info('%s is ignored because user %s cannot read it' % (config_file, username))
                         continue
                     raise
-                except ConfigError as e:
-                    raise ValueError('File ‘%s’ is not a valid ‘.ini’ file' % config_file)
+                except ConfigError:
+                    raise ValueError('File \'%s\' is not a valid \'.ini\' file' % config_file)
                 logger.info('File %s added to the configuration' % config_file)
                 yield config_file, parser
             if count == 0:
@@ -108,7 +108,7 @@ class Runner(ParameterizedObject):
     def _find_local_repositories(self):
         for config_file, parser in self._iter_config_parsers('*.local'):
             if not parser.has_option(self.repository_section, self.engine_option):
-                msg = 'In file ‘%s’, please specify the ‘%s’ option in the ‘%s’ section' % \
+                msg = 'In file \'%s\', please specify the \'%s\' option in the \'%s\' section' % \
                       (config_file, self.engine_option, self.repository_section)
                 raise ValueError(msg)
             engine = parser.get(self.repository_section, self.engine_option)
@@ -120,8 +120,8 @@ class Runner(ParameterizedObject):
                     engine_cls = import_string(engine)
                 except ImportError:
                     cprint('List of built-in engines: %s ' % ', '.join(self.available_local_engines), GREEN)
-                    msg = 'In file ‘%s’, section ‘%s’: invalid engine ‘%s’' % (config_file, self.repository_section, engine)
-                    raise ImportError(msg)
+                    raise ImportError('In file \'%s\', section \'%s\': invalid engine \'%s\'' %
+                                      (config_file, self.repository_section, engine))
             # noinspection PyTypeChecker
             name = os.path.basename(config_file).rpartition('.')[0]
             parameters = self._get_args_from_parser(config_file, parser, self.repository_section, engine_cls)
@@ -136,9 +136,8 @@ class Runner(ParameterizedObject):
                 if section == self.repository_section or section == variables_section:
                     continue
                 if not parser.has_option(section, self.engine_option):
-                    msg = 'In file ‘%s’, please specify the ‘%s’ option in the ‘%s’ source' % \
-                          (config_file, self.engine_option, section)
-                    raise ValueError(msg)
+                    raise ValueError('In file \'%s\', please specify the \'%s\' option in the \'%s\' source' %
+                                     (config_file, self.engine_option, section))
                 engine = parser.get(section, self.engine_option)
                 engine_alias = engine.lower()
                 if engine_alias in self.available_source_engines:
@@ -148,9 +147,8 @@ class Runner(ParameterizedObject):
                         engine_cls = import_string(engine)
                     except ImportError:
                         cprint('List of built-in engines: %s ' % ', '.join(self.available_source_engines), GREEN)
-                        msg = 'In file ‘%s’, section ‘%s’: invalid engine ‘%s’' % \
-                              (config_file, self.repository_section, engine)
-                        raise ImportError(msg)
+                        raise ImportError('In file \'%s\', section \'%s\': invalid engine \'%s\'' %
+                                          (config_file, self.repository_section, engine))
                 parameters = self._get_args_from_parser(config_file, parser, section, engine_cls)
                 source = engine_cls(section, local, **parameters)
                 local.add_source(source)
@@ -160,9 +158,8 @@ class Runner(ParameterizedObject):
     def _find_remote_repositories(self):
         for config_file, parser in self._iter_config_parsers('*.remote'):
             if not parser.has_option(self.repository_section, self.engine_option):
-                msg = 'In file ‘%s’, please specify the ‘%s’ option in the ‘%s’ section' % \
-                      (config_file, self.engine_option, self.repository_section)
-                raise ValueError(msg)
+                raise ValueError('In file \'%s\', please specify the \'%s\' option in the \'%s\' section' %
+                                 (config_file, self.engine_option, self.repository_section))
             engine = parser.get(self.repository_section, self.engine_option)
             if engine.lower() in self.available_remote_engines:
                 engine_cls = self.available_remote_engines[engine.lower()]
@@ -171,8 +168,8 @@ class Runner(ParameterizedObject):
                     engine_cls = import_string(engine)
                 except ImportError:
                     cprint('List of built-in engines: %s ' % ', '.join(self.available_remote_engines))
-                    msg = 'In file ‘%s’, section ‘%s’: invalid engine ‘%s’' % (config_file, self.repository_section, engine)
-                    raise ImportError(msg)
+                    raise ImportError('In file \'%s\', section \'%s\': invalid engine \'%s\'' %
+                                      (config_file, self.repository_section, engine))
             # noinspection PyTypeChecker
             name = os.path.basename(config_file).rpartition('.')[0]
             parameters = self._get_args_from_parser(config_file, parser, self.repository_section, engine_cls)
@@ -293,6 +290,7 @@ class Runner(ParameterizedObject):
     def restore(self, only_locals=None, only_remotes=None, no_remote=False):
         """Run a backup operation
 
+        :param no_remote: do not use remote repositories
         :param only_locals: limit to the selected local repositories
         :type only_locals: :class:`list` of `str`
         :param only_remotes: limit to the selected remote repositories

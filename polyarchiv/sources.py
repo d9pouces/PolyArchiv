@@ -71,8 +71,8 @@ class RSync(Source):
         :param rsync_executable: path of the rsync executable
         :param exclude: exclude files matching PATTERN. If PATTERN starts with '@', it must be the absolute path of
             a file (cf. the --exclude-from option from rsync)
-        :param include: don't exclude files matching PATTERN. If PATTERN starts with '@', it must be the absolute path of
-            a file (cf. the --include-from option from rsync)
+        :param include: don't exclude files matching PATTERN. If PATTERN starts with '@', it must be the absolute path
+            of a file (cf. the --include-from option from rsync)
         :param preserve_hard_links: preserve hard links
         """
         super(RSync, self).__init__(name, local_repository, **kwargs)
@@ -87,10 +87,12 @@ class RSync(Source):
         cmd = [self.rsync_executable, '-a', '--delete', '-S', ]
         if self.preserve_hard_links:
             cmd.append('-H')
+        # noinspection PyTypeChecker
         if self.exclude and self.exclude.startswith('@'):
             cmd += ['--exclude-from', self.exclude[1:]]
         elif self.exclude:
             cmd += ['--exclude', self.exclude]
+        # noinspection PyTypeChecker
         if self.include and self.include.startswith('@'):
             cmd += ['--include-from', self.include[1:]]
         elif self.include:
@@ -158,10 +160,12 @@ class MySQL(Source):
             for k, v in self.get_env().items():
                 cprint('%s=%s' % (k, v), YELLOW)
         if self.can_execute_command(cmd + ['>', filename]):
+            # noinspection PyTypeChecker
             with open(filename, 'wb') as fd:
                 p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
                 p.communicate()
         else:
+            # noinspection PyTypeChecker
             with open(os.devnull, 'wb') as fd:
                 p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
                 p.communicate()
@@ -179,6 +183,7 @@ class MySQL(Source):
         if self.command_display:
             for k, v in self.get_env():
                 cprint('%s=%s' % (k, v), YELLOW)
+        # noinspection PyTypeChecker
         with open(filename, 'rb') as fd:
             self.execute_command(cmd, env=env, stdin=fd, stderr=self.stderr, stdout=self.stdout)
 

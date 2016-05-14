@@ -66,7 +66,7 @@ def check_executable(value):
     for search_dir in path.split(':'):
         if os.path.isfile(os.path.join(search_dir, value)):
             return True
-    raise ValueError('Executable ‘%s’ not found in $PATH=%s' % (value, path))
+    raise ValueError('Executable \'%s\' not found in $PATH=%s' % (value, path))
 
 
 class CheckOption(object):

@@ -56,7 +56,7 @@ class RemoteRepository(Repository):
             formatted_value = value % variables
         except KeyError as e:
             txt = text_type(e)[len('KeyError:'):]
-            raise ValueError('Unable to format ‘%s’: variable %s is missing' % (value, txt))
+            raise ValueError('Unable to format \'%s\': variable %s is missing' % (value, txt))
         return formatted_value
 
     def backup(self, local_repository, force=False):
@@ -187,7 +187,7 @@ class GitRepository(RemoteRepository):
 
 
 class Rsync(RemoteRepository):
-    """Send local files to the remote repository using ‘rsync’. """
+    """Send local files to the remote repository using 'rsync'. """
     parameters = RemoteRepository.parameters + [
         Parameter('rsync_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "rsync")'),
@@ -242,23 +242,25 @@ def check_curl_url(remote_url):
 
 class TarArchive(RemoteRepository):
     """Collect all files of your local repository into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
-    to a remote server with ‘cURL’. If the remote URL begins by ‘file://’, then the ‘cp’ command is used instead.
+    to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
 
     """
     excluded_files = {'.git', '.gitignore'}
     parameters = RemoteRepository.parameters + [
         Parameter('remote_url', converter=check_curl_url,
-                  help_str='destination URL (e.g.: ‘ftp://example.org/path/’ or '
-                           '‘https://example.org/path’). ‘file://’ URLs are handled by a ‘cp’ command, other ones'
-                           ' are handled by ‘curl’ command. Most of protocols known by cURL can be used:'
+                  help_str='destination URL (e.g.: \'ftp://example.org/path/\' or '
+                           '\'https://example.org/path\'). \'file://\' URLs are handled by a \'cp\' command, other ones'
+                           ' are handled by \'curl\' command. Most of protocols known by cURL can be used:'
                            ' ftp(s), http(s) with WebDAV, scp, sftp, smb, smbs. You can specify user and password'
-                           ' in URL: ‘scheme://user:password@host/path’ [*]'),
+                           ' in URL: \'scheme://user:password@host/path\' [*]'),
         Parameter('user', help_str='username (if not set in the URL) [*]'),
         Parameter('password', help_str='password (if not set in the URL) [*]'),
         Parameter('archive_prefix', help_str='prefix of the archive names (default: "archive") [*]'),
-        Parameter('proxy', help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080) [*]'),
+        Parameter('proxy',
+                  help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080) [*]'),
         Parameter('insecure', converter=bool_setting, help_str='true|false: do not check certificates'),
-        Parameter('cert', converter=check_file, help_str='[HTTPS|FTPS backend] certificate to provide to the server [*]'),
+        Parameter('cert', converter=check_file,
+                  help_str='[HTTPS|FTPS backend] certificate to provide to the server [*]'),
         Parameter('cacert', converter=check_file, help_str='[HTTPS|FTPS backend] CA certificate authenticating'
                                                            ' the server [*]'),
         Parameter('date_format', help_str='date format for the generated archives (default: "%Y-%m-%d_%H-%M")'),
@@ -364,12 +366,12 @@ class TarArchive(RemoteRepository):
 
 
 class Duplicity(RemoteRepository):
-    """Send local files to the remote repository using the ‘duplicity’ tool. """
+    """Send local files to the remote repository using the 'duplicity' tool. """
     parameters = RemoteRepository.parameters + [
         Parameter('remote_url',
                   help_str='destination URL with the username (e.g.: ftp://user:password@example.org/path/,'
                            'https://user:password@example.org/path). Please check Duplicity\'s documentation.'
-                           'Password can be separately set with the ‘password’ option. [*]'),
+                           'Password can be separately set with the \'password\' option. [*]'),
         Parameter('encrypt_key_id', help_str='[GPG] encrypt with this public key instead of symmetric encryption. [*]'),
         Parameter('sign_key_id', help_str='[GPG] All backup files will be signed with keyid key. [*]'),
         Parameter('encrypt_passphrase', help_str='[GPG] This passphrase is passed to GnuPG. [*]'),
@@ -397,7 +399,7 @@ class Duplicity(RemoteRepository):
 
         Parameter('gpg_encrypt_secret_keyring',
                   help_str='[GPG] This option can only be used with encrypt_key, and changes the path to the secret '
-                           'keyring for the encrypt key to filename. Default to ‘~/.gnupg/secring.gpg’ [*]'),
+                           'keyring for the encrypt key to filename. Default to \'~/.gnupg/secring.gpg\' [*]'),
         Parameter('gpg_options', converter=check_executable,
                   help_str='[GPG] Allows you to pass options to gpg encryption.  The options list should be of the '
                            'form "--opt1 --opt2=parm"'),
@@ -410,9 +412,9 @@ class Duplicity(RemoteRepository):
         Parameter('insecure', converter=bool_setting,
                   help_str='[HTTPS backend] true|false: do not check certificate for SSL connections'),
         Parameter('duplicity_executable', converter=check_executable,
-                  help_str='path of the duplicity executable (default: "duplicity")'),
+                  help_str='path of the duplicity executable (default: \'duplicity\')'),
         Parameter('gpg_executable', converter=check_executable,
-                  help_str='path of the gpg executable (default: "gpg")'),
+                  help_str='path of the gpg executable (default: \'gpg\')'),
     ]
 
     def __init__(self, name, remote_url='', encrypt_key_id=None, sign_key_id=None, encrypt_passphrase=None,
@@ -499,7 +501,7 @@ class Duplicity(RemoteRepository):
             cmd += ['--gpg-binary', self.gpg_executable]
 
         for i in (0, 1):
-            # only required for the optional ‘verify’ pass
+            # only required for the optional 'verify' pass
             cmd_args = [x for x in cmd]
             if i == 0 and self.always_full:
                 cmd_args += ['full']

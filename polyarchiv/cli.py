@@ -151,9 +151,9 @@ def main():
         cprint('available remote repository engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
         display_classes('polyarchiv.remotes', verbose=verbose, width=width)
-        cprint('[*] this parameter can use variables. Please refer to the ‘Replacement rules’ section in the README', RED)
+        cprint('[*] this parameter can use variables. See the README (\'Replacement rules\' section)', RED)
     else:
-        cprint('unknown command ‘%s’' % command, RED)
+        cprint('unknown command \'%s\'' % command, RED)
         cprint('available commands: backup|restore|config|plugins', YELLOW)
     return return_code
 
