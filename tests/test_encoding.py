@@ -1,4 +1,5 @@
 # coding=utf-8
+from __future__ import unicode_literals, print_function
 import sys
 import os
 sys.path += [os.path.dirname(os.path.dirname(__file__))]
@@ -6,8 +7,7 @@ sys.path += [os.path.dirname(os.path.dirname(__file__))]
 from polyarchiv.termcolor import cprint, RED
 
 print('*** python%s ***' % sys.version_info[0])
-print('LC_ALL=%s' % os.environ.get('LC_ALL', ''))
-print('LC_CTYPE=%s' % os.environ.get('LC_CTYPE', ''))
-print('sys.stdout.encoding=%s' % sys.stdout.encoding)
-print('sys.stdout.isatty()=%s' % sys.stdout.isatty())
+print('LC_ALL=%s, LC_CTYPE=%s' % (os.environ.get('LC_ALL', ''), os.environ.get('LC_CTYPE', '')))
+print('sys.stdout.encoding=%s, sys.stdout.isatty()=%s' % (sys.stdout.encoding, sys.stdout.isatty()))
 cprint('accents:éè', RED)
+print(' ')
