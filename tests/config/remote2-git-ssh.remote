@@ -1,4 +1,5 @@
 [repository]
 engine=git
-remote_url=localhost:remotes/remote-git/%(name)s.git
+remote_url=vagrant@localhost:remotes/remote-git/%(name)s.git
 included_local_tags=*
+private_key=/home/vagrant/.ssh/id_rsa

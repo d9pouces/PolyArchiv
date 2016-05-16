@@ -1,0 +1,9 @@
+[repository]
+engine=gitlab
+remote_url=localhost:remotes/remote-git/%(name)s.git
+included_local_tags=*
+api_key=4utHentic4ti0n_token
+gitlab_url=http://vagrant/
+project_name=root/%(name)s
+username=root
+password=secret_pass

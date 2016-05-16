@@ -6,7 +6,7 @@ import json
 import logging
 
 import subprocess
-from urllib import urlencode
+from urllib import urlencode, quote_plus
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
@@ -185,7 +185,7 @@ class GitRepository(RemoteRepository):
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
 
-        cmd += [self.git_executable, 'push', remote_url, 'master:+%s' % remote_branch]
+        cmd += [self.git_executable, 'push', remote_url, 'master:%s' % remote_branch]
         # noinspection PyTypeChecker
         private_key = self.private_key
         if private_key and not remote_url.startswith('http'):
@@ -221,29 +221,32 @@ class GitlabRepository(GitRepository):
                  **kwargs):
         parsed = urlparse(gitlab_url)
         if private_key:
-            remote_url = '%s@%s' % (username, parsed.hostname)
+            remote_url = '%s@%s.git' % (username, parsed.hostname)
         else:
-            remote_url = '%s://%s:%s@%s/%s' % (parsed.scheme, username, password, parsed.hostname, project_name)
+            remote_url = '%s://%s:%s@%s/%s.git' % (parsed.scheme, username, password, parsed.hostname, project_name)
+        # noinspection PyTypeChecker
         super(GitlabRepository, self).__init__(name, private_key=private_key, remote_url=remote_url, **kwargs)
         self.api_key = api_key
         self.project_name = project_name
-        self.api_url = '%s://%s/api/v3/' % (parsed.scheme, parsed.hostname)
+        self.api_url = '%s://%s/api/v3' % (parsed.scheme, parsed.hostname)
 
     def check_remote_url(self, local_repository):
         project_name = self.format_value(self.project_name, local_repository)
         api_url = self.format_value(self.api_url, local_repository)
         api_key = self.format_value(self.api_key, local_repository)
+        remote_url = self.format_value(self.remote_url, local_repository)
         headers = {'PRIVATE-TOKEN': api_key}
-        r = requests.get('%s/projects/%s' % (api_url, urlencode(project_name)), headers=headers)
+        r = requests.get('%s/projects/%s' % (api_url, quote_plus(project_name)), headers=headers)
         if r.status_code == requests.codes.ok:
             return True
-        namespace, sep, name = self.project_name.partition('/')
-        json_data = json.dumps({'name': name, 'namespace_id': namespace})
-        if self.can_execute_command(['curl', '-X', 'POST', '-H', 'PRIVATE-TOKEN: %s' % self.api_key,
-                                     '--data-binary', json_data, '%s/projects/' % api_url]):
-            r = requests.post('%s/projects/' % api_url, headers=headers, data=json_data)
+        # noinspection PyTypeChecker
+        namespace, sep, name = project_name.partition('/')
+        data = {'name': name, 'namespace': namespace}
+        if self.can_execute_command(['curl', '-X', 'POST', '-H', 'PRIVATE-TOKEN: %s' % api_key,
+                                     '%s/projects/?%s' % (api_url, urlencode(data))]):
+            r = requests.post('%s/projects/' % api_url, headers=headers, params=data)
             if r.status_code > 200:
-                raise ValueError('Unable to create repository %s' % self.remote_url)
+                raise ValueError('Unable to create repository %s' % remote_url)
         # GET /projects/:id/events
         return True
 
@@ -317,7 +320,7 @@ class TarArchive(RemoteRepository):
                            ' in URL: \'scheme://user:password@host/path\' [*]'),
         Parameter('user', help_str='username (if not set in the URL) [*]'),
         Parameter('password', help_str='password (if not set in the URL) [*]'),
-        Parameter('archive_prefix', help_str='prefix of the archive names (default: "archive") [*]'),
+        Parameter('archive_prefix', help_str='prefix of the archive names (default: "%(name)s") [*]'),
         Parameter('proxy',
                   help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080) [*]'),
         Parameter('insecure', converter=bool_setting, help_str='true|false: do not check certificates'),
@@ -339,7 +342,7 @@ class TarArchive(RemoteRepository):
     ]
 
     def __init__(self, name, tar_executable='tar', curl_executable='curl', remote_url='', user='', password='',
-                 insecure=False, cacert=None, cert=None, archive_prefix='archive',
+                 insecure=False, cacert=None, cert=None, archive_prefix='%(name)s',
                  keytab=None, private_key=None, tar_format='tar.bz2', date_format='%Y-%m-%d_%H-%M', proxy=None,
                  **kwargs):
         super(TarArchive, self).__init__(name, **kwargs)
