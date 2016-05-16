@@ -42,9 +42,11 @@ echo "added" | sudo tee /var/data/some-files/file01
 mkdir -p $HOME/.ssh
 ssh-keygen -N "" -f $HOME/.ssh/id_rsa
 cp $HOME/.ssh/id_rsa.pub $HOME/.ssh/authorized_keys
-mkdir -p $HOME/remotes/remote-git
-
-
+mkdir -p $HOME/remotes/remote-git/local1.git
+pushd $HOME/remotes/remote-git/local1.git
+git init
+git config --bool core.bare true
+popd
 ########################################################################################################################
 # run backups and some commands
 ########################################################################################################################

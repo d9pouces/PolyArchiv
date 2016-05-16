@@ -2,10 +2,14 @@
 from __future__ import unicode_literals
 
 import datetime
+import json
 import logging
 
 import subprocess
+from urllib import urlencode
 
+# noinspection PyProtectedMember
+from polyarchiv._vendor import requests
 from polyarchiv.termcolor import YELLOW, RED
 from polyarchiv.termcolor import cprint
 
@@ -144,22 +148,25 @@ def check_git_url(remote_url):
 
 class GitRepository(RemoteRepository):
     """Add a remote to a local repository and push local modification to this remote.
-    Can use https (password or kerberos auth) or git+ssh remotes (with private key authentication).
+    Can use https (with password or kerberos auth) or git+ssh remotes (with private key authentication).
     """
     parameters = RemoteRepository.parameters + [
         Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
-        Parameter('remote_url', help_str='URL of the remote server, include username and password (e.g.: '
-                                         'git@mygitlab.example.org:username/project.git,'
-                                         'https://username:password@mygitlab.example.org/username/project.git) [*]'),
         Parameter('remote_branch', help_str='name of the remote branch [*]'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
         Parameter('private_key', converter=check_file,
                   help_str='absolute path of the private key file (for SSH key authentication) [*]'),
+        Parameter('remote_url', help_str='URL of the remote server, including username and password (e.g.: '
+                                         'git@mygitlab.example.org/project.git or '
+                                         'https://username:password@mygitlab.example.org/username/project.git). '
+                                         'The password is not required for SSH connections (you should use SSH keys).'
+                                         'The remote repository must already exists. If you created it by hand, do not '
+                                         'forget to set \'git config --bool core.bare true\'. [*]'),
     ]
 
-    def __init__(self, name, remote_url='', remote_branch='master', git_executable='git',
-                 keytab=None, private_key=None, **kwargs):
+    def __init__(self, name, remote_url='', remote_branch='master', git_executable='git', private_key=None,
+                 keytab=None, **kwargs):
         super(GitRepository, self).__init__(name, **kwargs)
         self.keytab = keytab
         self.private_key = private_key
@@ -172,7 +179,8 @@ class GitRepository(RemoteRepository):
         assert isinstance(local_repository, LocalGitRepository)  # just to help PyCharm
         remote_url = self.format_value(self.remote_url, local_repository)
         remote_branch = self.format_value(self.remote_branch, local_repository)
-
+        if not self.check_remote_url(local_repository):
+            raise ValueError('Invalid remote repository: %s' % remote_url)
         cmd = []
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
@@ -188,6 +196,56 @@ class GitRepository(RemoteRepository):
     def get_last_backup_date(self, local_repository):
         # git archive --remote=git://git.foo.com/project.git HEAD:path /to/directory filename | tar -x
         pass
+
+    def check_remote_url(self, local_repository):
+        return True
+
+
+class GitlabRepository(GitRepository):
+    """Add a remote to a local repository and push local modification to this remote.
+    If the 'private_key' is set, then git+ssh is used for pushing data.
+    Otherwise, use password or kerberos auth with git+http.
+
+    The remote repository is automatically created if required using the HTTP API provided by Gitlab.
+    """
+    parameters = GitRepository.parameters[:-1] + [
+        Parameter('gitlab_url', help_str='HTTP URL of the gitlab server (e.g.: \'https://mygitlab.example.org/\') [*]'),
+        Parameter('project_name', help_str='Name of the Gitlab project (e.g. \'myuser/myproject\')[*]'),
+        Parameter('username', help_str='Username to use for pushing data. If you use git+ssh, use the SSH username'
+                                       ' (often \'git\'), otherwise use your real username. [*]'),
+        Parameter('password', help_str='Password for HTTP auth (if private_key and keytab are not set) [*]'),
+        Parameter('api_key', help_str='API key allowing for creating new repositories [*]'),
+    ]
+
+    def __init__(self, name, gitlab_url='', api_key=None, project_name='', username='', password='', private_key=None,
+                 **kwargs):
+        parsed = urlparse(gitlab_url)
+        if private_key:
+            remote_url = '%s@%s' % (username, parsed.hostname)
+        else:
+            remote_url = '%s://%s:%s@%s/%s' % (parsed.scheme, username, password, parsed.hostname, project_name)
+        super(GitlabRepository, self).__init__(name, private_key=private_key, remote_url=remote_url, **kwargs)
+        self.api_key = api_key
+        self.project_name = project_name
+        self.api_url = '%s://%s/api/v3/' % (parsed.scheme, parsed.hostname)
+
+    def check_remote_url(self, local_repository):
+        project_name = self.format_value(self.project_name, local_repository)
+        api_url = self.format_value(self.api_url, local_repository)
+        api_key = self.format_value(self.api_key, local_repository)
+        headers = {'PRIVATE-TOKEN': api_key}
+        r = requests.get('%s/projects/%s' % (api_url, urlencode(project_name)), headers=headers)
+        if r.status_code == requests.codes.ok:
+            return True
+        namespace, sep, name = self.project_name.partition('/')
+        json_data = json.dumps({'name': name, 'namespace_id': namespace})
+        if self.can_execute_command(['curl', '-X', 'POST', '-H', 'PRIVATE-TOKEN: %s' % self.api_key,
+                                     '--data-binary', json_data, '%s/projects/' % api_url]):
+            r = requests.post('%s/projects/' % api_url, headers=headers, data=json_data)
+            if r.status_code > 200:
+                raise ValueError('Unable to create repository %s' % self.remote_url)
+        # GET /projects/:id/events
+        return True
 
 
 class Rsync(RemoteRepository):

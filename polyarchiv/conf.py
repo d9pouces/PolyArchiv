@@ -83,7 +83,7 @@ class CheckOption(object):
 class Parameter(object):
     """class that maps an option in a .ini file to a argument name."""
 
-    def __init__(self, arg_name, option_name=None, converter=str, to_str=str_or_blank, help_str=None):
+    def __init__(self, arg_name, option_name=None, converter=str, to_str=str_or_blank, help_str=None, required=False):
         """:param arg_name: the name of parameter passed to the engine
         :type arg_name: `str` or `unicode`
         :param option_name: option name in a .ini file
@@ -96,12 +96,14 @@ class Parameter(object):
         :param help_str: any text that can serve has help in documentation.
             If None, then `settings.%s_HELP % setting_name` will be used as help text.
         :type help_str: `str` or `unicode`
+        :param required: this parameter is required
         """
         self.arg_name = arg_name
         self.option_name = option_name or arg_name
         self.converter = converter
         self.to_str = to_str
         self.help_str = help_str
+        self.required = required
 
     def __str__(self):
         return self.option_name

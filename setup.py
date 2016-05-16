@@ -20,6 +20,7 @@ sources = ['rsync = polyarchiv.sources:RSync',
            'postgressql = polyarchiv.sources:PostgresSQL',
            'ldap = polyarchiv.sources:Ldap', ]
 remotes = ['git = polyarchiv.remotes:GitRepository',
+           'gitlab = polyarchiv.remotes:GitlabRepository',
            'rsync = polyarchiv.remotes:Rsync',
            'tar = polyarchiv.remotes:TarArchive',
            'duplicity = polyarchiv.remotes:Duplicity', ]
