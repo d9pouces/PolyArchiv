@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-sudo apt-get install -y git python-pip tree
+sudo apt-get install -y git python-pip tree vim
 mkdir -p $HOME/.ssh
 ssh-keygen -N "" -f $HOME/.ssh/id_rsa
 cp $HOME/.ssh/id_rsa.pub $HOME/.ssh/authorized_keys
@@ -63,7 +63,7 @@ user.authentication_token = '4utHentic4ti0n_token'
 user.password_automatically_set = false
 user.save!
 EOF
-# add the public key
+# add the public key to gitlab
 URL=`cat ~/.ssh/id_rsa.pub | python -c 'from urllib import urlencode; import sys; print("http://vagrant/api/v3/user/keys?" + urlencode({"title": "default", "key": sys.stdin.read().decode()}))'`
 curl -X POST -H 'PRIVATE-TOKEN:4utHentic4ti0n_token' ${URL}
 

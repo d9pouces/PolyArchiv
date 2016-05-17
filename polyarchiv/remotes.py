@@ -10,6 +10,7 @@ from urllib import urlencode, quote_plus
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
+from polyarchiv.backends import StorageBackend
 from polyarchiv.termcolor import YELLOW, RED
 from polyarchiv.termcolor import cprint
 
@@ -580,3 +581,22 @@ class Duplicity(RemoteRepository):
                 for k, v in env.items():
                     cprint('%s=%s' % (k, v), YELLOW)
             self.execute_command(cmd_args, cwd=local_repository.local_path, env=env)
+
+
+class SmartTarArchive(RemoteRepository, StorageBackend):
+    """
+    hourly_period
+    daily_period
+    weekly_period
+    monthly_period
+    """
+    parameters = RemoteRepository.parameters + [
+        Parameter('hourly_period'),
+        Parameter('daily_period'),
+        Parameter('weekly_period'),
+        Parameter('monthly_period'),
+    ]
+
+    def do_backup(self, local_repository):
+        pass
+
