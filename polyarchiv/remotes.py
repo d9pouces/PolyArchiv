@@ -2,15 +2,11 @@
 from __future__ import unicode_literals
 
 import datetime
-import json
 import logging
-
-import subprocess
 from urllib import urlencode, quote_plus
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
-from polyarchiv.backends import StorageBackend
 from polyarchiv.termcolor import YELLOW, RED
 from polyarchiv.termcolor import cprint
 
@@ -384,7 +380,7 @@ class TarArchive(RemoteRepository):
             raise ValueError('invalid tar format: %s' % self.tar_format)
         cmd.append(archive_filename)
         cmd += filenames
-        returncode = self.execute_command(cmd, cwd=local_repository.local_path, ignore_errors=True)
+        returncode, stdout, stderr = self.execute_command(cmd, cwd=local_repository.local_path, ignore_errors=True)
         if returncode != 0:
             error = ValueError('unable to create archive %s' % archive_filename)
         else:
@@ -422,7 +418,7 @@ class TarArchive(RemoteRepository):
                     cmd += ['--ftp-ssl', 'ftp' + remote_url[4:]]
                 else:
                     cmd += [remote_url]
-            returncode = self.execute_command(cmd)
+            returncode, stdout, stderr = self.execute_command(cmd)
             if returncode != 0:
                 error = ValueError('unable to create archive %s' % archive_filename)
         if os.path.isfile(archive_filename) and self.can_execute_command(['rm', archive_filename]):
@@ -583,7 +579,7 @@ class Duplicity(RemoteRepository):
             self.execute_command(cmd_args, cwd=local_repository.local_path, env=env)
 
 
-class SmartTarArchive(RemoteRepository, StorageBackend):
+class SmartTarArchive(RemoteRepository):
     """
     hourly_period
     daily_period

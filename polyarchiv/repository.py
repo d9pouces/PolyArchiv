@@ -56,7 +56,7 @@ class ParameterizedObject(object):
         if hasattr(stdin, 'name') and stdin.name:
             cmd_text += ['<',  stdin.name]
         elif stdin is None:
-            stdin = subprocess.PIPE
+            stdin = open(os.devnull, 'rb')
         # noinspection PyTypeChecker
         if hasattr(stdout, 'name') and stdout.name:
             cmd_text += ['>',  stdout.name]
@@ -71,13 +71,15 @@ class ParameterizedObject(object):
         if self.can_execute_command(cmd_text):
             p = subprocess.Popen(cmd, stdin=stdin, stderr=stderr or self.stderr, stdout=stdout or self.stdout,
                                  cwd=cwd, env=env)
-            p.communicate()
+            stdout, stderr = p.communicate()
             return_code = p.returncode
             if return_code != 0 and error_str:
                 logger.error(error_str)
             if return_code != 0 and not ignore_errors:
                 raise subprocess.CalledProcessError(return_code, cmd[0])
-        return return_code
+        else:
+            stdout, stderr = None, None
+        return return_code, stdout, stderr
 
     @property
     def stderr(self):
