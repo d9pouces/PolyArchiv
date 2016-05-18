@@ -2,8 +2,9 @@
 from __future__ import unicode_literals
 
 from unittest import TestCase
+from xml.dom.minidom import parseString
 
-data = """<?xml version="1.0" encoding="utf-8" ?>
+PROPFIND_DATA = """<?xml version="1.0" encoding="utf-8" ?>
    <D:multistatus xmlns:D="DAV:">
      <D:response>
           <D:href>http://www.foo.bar/container/</D:href>
@@ -80,4 +81,8 @@ data = """<?xml version="1.0" encoding="utf-8" ?>
 
 
 class WebdavTest(TestCase):
-    pass
+    def test_read_propfind(self):
+        data = parseString(PROPFIND_DATA)
+        for response in data.getElementsByTagName('D:response'):
+            href = response.getElementsByTagName('D:href')[0]
+            print(href.childNodes[0].data)

@@ -21,6 +21,7 @@ import shutil
 import posix
 
 import subprocess
+from xml.dom.minidom import parseString
 
 
 class StorageBackend(object):
@@ -97,7 +98,15 @@ class FileStorageBackend(StorageBackend):
             shutil.copy(abspath, dst)
 
     def listdir(self, path):
-        return os.listdir(self.abspath(path))
+        abspath = self.abspath(path)
+        values = os.listdir(abspath)
+        dirnames, filenames = [], []
+        for x in values:
+            if os.path.isdir(os.path.join(abspath, x)):
+                dirnames.append(x)
+            elif os.path.isfile(os.path.join(abspath, x)):
+                filenames.append(x)
+        return path, dirnames, filenames
 
     def rename(self, src, dst):
         self.makedirs(os.path.dirname(dst))
@@ -126,9 +135,6 @@ class WebdavStorageBackend(StorageBackend):
     def copy_from(self, src, dst):
         self.execute_command(self.curl_cmd('-o', dst, self.abspath(src)))
 
-    def stat(self, path):
-        pass
-
     def copy_to(self, src, dst):
         self.execute_command(self.curl_cmd('-T', src, self.abspath(dst)))
 
@@ -149,6 +155,12 @@ class WebdavStorageBackend(StorageBackend):
         if p.returncode != 0:
             raise ValueError('Unable to get properties of %s' % self.abspath(path))
         content = stdout.decode('utf-8')
+        xml_content = parseString(content)
+        dirnames, filenames = [], []
+        for response in xml_content.getElementsByTagName('D:response'):
+            href = response.getElementsByTagName('D:href')[0]
+            print(href.childNodes[0].data)
+        return path, dirnames, filenames
 
 
 class SSHStorageBackend(StorageBackend):
