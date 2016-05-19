@@ -6,6 +6,12 @@ import codecs
 import os.path
 import re
 from setuptools import setup
+try:
+    # noinspection PyUnresolvedReferences,PyCompatibility
+    from configparser import RawConfigParser, Error as ConfigError
+except ImportError:
+    # noinspection PyUnresolvedReferences,PyCompatibility
+    from ConfigParser import RawConfigParser, Error as ConfigError
 
 version = None
 for line in codecs.open(os.path.join('polyarchiv', '__init__.py'), 'r', encoding='utf-8'):
@@ -15,17 +21,16 @@ for line in codecs.open(os.path.join('polyarchiv', '__init__.py'), 'r', encoding
 with codecs.open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as fd:
     long_description = fd.read()
 
-sources = ['rsync = polyarchiv.sources:RSync',
-           'mysql = polyarchiv.sources:MySQL',
-           'postgressql = polyarchiv.sources:PostgresSQL',
-           'ldap = polyarchiv.sources:Ldap', ]
-remotes = ['git = polyarchiv.remotes:GitRepository',
-           'gitlab = polyarchiv.remotes:GitlabRepository',
-           'rsync = polyarchiv.remotes:Rsync',
-           'tar = polyarchiv.remotes:TarArchive',
-           'duplicity = polyarchiv.remotes:Duplicity', ]
-locals_ = ['files = polyarchiv.locals:FileRepository',
-           'git = polyarchiv.locals:GitRepository', ]
+sources, remotes, locals_ = [], [], []
+if os.path.isfile(os.path.join(__file__, '..', 'engines.ini')):
+    parser = RawConfigParser()
+    parser.read([os.path.join(__file__, '..', 'engines.ini')])
+    if parser.has_section('sources'):
+        sources = ['%s = %s' % (key, value) for key, value in parser.items('sources')]
+    if parser.has_section('remotes'):
+        remotes = ['%s = %s' % (key, value) for key, value in parser.items('remotes')]
+    if parser.has_section('locals'):
+        locals_ = ['%s = %s' % (key, value) for key, value in parser.items('locals')]
 
 setup(
     name='polyarchiv',
