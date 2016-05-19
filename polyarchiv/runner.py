@@ -42,9 +42,9 @@ class Runner(ParameterizedObject):
     def __init__(self, config_directories, engines_file=None, **kwargs):
         super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
-        self.available_local_engines = {x.name.lower(): x.load() for x in iter_entry_points('polyarchiv.locals')}
-        self.available_remote_engines = {x.name.lower(): x.load() for x in iter_entry_points('polyarchiv.remotes')}
-        self.available_source_engines = {x.name.lower(): x.load() for x in iter_entry_points('polyarchiv.sources')}
+        self.available_local_engines = {}
+        self.available_remote_engines = {}
+        self.available_source_engines = {}
         if iter_entry_points:
             self.available_local_engines.update({x.name.lower(): x.load()
                                                  for x in iter_entry_points('polyarchiv.locals')})
