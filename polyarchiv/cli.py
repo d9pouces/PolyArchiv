@@ -23,7 +23,7 @@ from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN, GREY, RED
 __author__ = 'mgallet'
 
 
-def main():
+def main(engines_file=None):
     """Main function, intended for use as command line executable.
 
     Returns:
@@ -72,8 +72,9 @@ def main():
 
     from polyarchiv.runner import Runner  # import it after the log configuration
     if command == 'backup':
-        runner = Runner([args.config], command_display=args.show_commands, command_confirm=args.confirm_commands,
-                        command_execute=not args.dry, command_keep_output=verbose)
+        runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
+                        command_confirm=args.confirm_commands, command_execute=not args.dry,
+                        command_keep_output=verbose)
         if runner.load():
             local_results, remote_results = runner.backup(only_locals=args.only_locals, only_remotes=args.only_remotes,
                                                           force=args.force)
@@ -91,14 +92,16 @@ def main():
                 cprint('CRITICAL - unable to load configuration')
             return_code = 1
     elif command == 'restore':
-        runner = Runner([args.config], command_display=args.show_commands, command_confirm=args.confirm_commands,
-                        command_execute=not args.dry, command_keep_output=verbose)
+        runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
+                        command_confirm=args.confirm_commands, command_execute=not args.dry,
+                        command_keep_output=verbose)
         if runner.load():
             runner.restore(args.only_locals, args.only_remotes)
     elif command == 'config':
         cprint('configuration directory: %s (you can change it with -C /other/directory)' % args.config, YELLOW)
-        runner = Runner([args.config], command_display=args.show_commands, command_confirm=args.confirm_commands,
-                        command_execute=not args.dry, command_keep_output=verbose)
+        runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
+                        command_confirm=args.confirm_commands, command_execute=not args.dry,
+                        command_keep_output=verbose)
         if runner.load():
             if not verbose:
                 cprint('you can display more info with --verbose', CYAN)
@@ -107,7 +110,7 @@ def main():
                                   local_remote_command=show_remote_local_repository,
                                   only_locals=args.only_locals, only_remotes=args.only_remotes)
     elif command == 'check':
-        runner = Runner([args.config], command_display=args.show_commands,
+        runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
                         command_confirm=args.confirm_commands,
                         command_execute=not args.dry, command_keep_output=verbose)
         if runner.load():

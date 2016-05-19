@@ -9,8 +9,10 @@ import glob
 import logging
 import os
 import pwd
-
-from pkg_resources import iter_entry_points
+try:
+    from pkg_resources import iter_entry_points
+except ImportError:
+    iter_entry_points = None
 
 from polyarchiv.conf import Parameter
 from polyarchiv.locals import LocalRepository
@@ -37,12 +39,28 @@ class Runner(ParameterizedObject):
     variables_section = 'variables'
     engine_option = 'engine'
 
-    def __init__(self, config_directories, **kwargs):
+    def __init__(self, config_directories, engines_file=None, **kwargs):
         super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
         self.available_local_engines = {x.name.lower(): x.load() for x in iter_entry_points('polyarchiv.locals')}
         self.available_remote_engines = {x.name.lower(): x.load() for x in iter_entry_points('polyarchiv.remotes')}
         self.available_source_engines = {x.name.lower(): x.load() for x in iter_entry_points('polyarchiv.sources')}
+        if iter_entry_points:
+            self.available_local_engines.update({x.name.lower(): x.load()
+                                                 for x in iter_entry_points('polyarchiv.locals')})
+            self.available_remote_engines.update({x.name.lower(): x.load()
+                                                  for x in iter_entry_points('polyarchiv.remotes')})
+            self.available_source_engines.update({x.name.lower(): x.load()
+                                                  for x in iter_entry_points('polyarchiv.sources')})
+        if engines_file is not None:
+            parser = RawConfigParser()
+            parser.read([os.path.join(__file__, '..', 'engines.ini')])
+            if parser.has_section('sources'):
+                self.available_source_engines.update({key.lower(): value for key, value in parser.items('sources')})
+            if parser.has_section('remotes'):
+                self.available_remote_engines.update({key.lower(): value for key, value in parser.items('remotes')})
+            if parser.has_section('locals'):
+                self.available_local_engines.update({key.lower(): value for key, value in parser.items('locals')})
         self.local_repositories = {}
         self.remote_repositories = {}
         self.local_config_files = []
