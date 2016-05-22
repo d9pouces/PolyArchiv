@@ -18,6 +18,13 @@ Backup data from multiple local sources (organized in local repositories) and se
     |     source 1: files    |---->---/
     |     source 2: mysql    |
     \------------------------/
+
+     local repository 3: files
+    /-----------------------------\
+    |     source 1: files         |
+    |     source 2: postgresql    |  (local backup)
+    |     source 3: mysql         |
+    \-----------------------------/
     
     
 Configuration is based on simple `.ini` files: 
@@ -43,8 +50,11 @@ There are also several kinds of remote repositories:
   * tararchive: after the backup, all files are archived in a single .tar.gz archive and sent to the remote repo (via ftp, scp, http, smb, or a basic cp),
   * duplicity: after the backup, all files are encrypted and sent to the remote repository.
 
+These remote repositories are optionnal and you can use only local backups.
+
 Each repository (either local or remote) is associated to a backup frequency. 
-If a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed. 
+If a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
+
 
 Installation
 ------------

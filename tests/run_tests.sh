@@ -73,7 +73,7 @@ curl -X POST -H 'PRIVATE-TOKEN:4utHentic4ti0n_token' ${URL}
 ########################################################################################################################
 
 # create the backup paths (both local and remote ones)
-sudo mkdir -p /var/backups/locals/local1 /var/backups/remotes/remote1
+sudo mkdir -p /var/backups/locals/local1 /var/backups/locals/local2 /var/backups/remotes/remote1 /var/backups/remotes/remote2
 
 # locally install polyarchiv
 cd /vagrant
