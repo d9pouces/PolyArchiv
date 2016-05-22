@@ -45,22 +45,26 @@ class Runner(ParameterizedObject):
         self.available_local_engines = {}
         self.available_remote_engines = {}
         self.available_source_engines = {}
+
         if iter_entry_points:
-            self.available_local_engines.update({x.name.lower(): x.load()
-                                                 for x in iter_entry_points('polyarchiv.locals')})
-            self.available_remote_engines.update({x.name.lower(): x.load()
-                                                  for x in iter_entry_points('polyarchiv.remotes')})
-            self.available_source_engines.update({x.name.lower(): x.load()
-                                                  for x in iter_entry_points('polyarchiv.sources')})
+            def import_points(name):
+                return {x.name.lower().strip(): x.load() for x in iter_entry_points(name)}
+            self.available_local_engines.update(import_points('polyarchiv.locals'))
+            self.available_remote_engines.update(import_points('polyarchiv.remotes'))
+            self.available_source_engines.update(import_points('polyarchiv.sources'))
         if engines_file is not None:
             parser = RawConfigParser()
-            parser.read([os.path.join(__file__, '..', 'engines.ini')])
+            parser.read([engines_file])
+
+            def import_items(name):
+                return {key.lower(): import_string(value) for key, value in parser.items(name)}
             if parser.has_section('sources'):
-                self.available_source_engines.update({key.lower(): value for key, value in parser.items('sources')})
+                self.available_source_engines.update(import_items('sources'))
             if parser.has_section('remotes'):
-                self.available_remote_engines.update({key.lower(): value for key, value in parser.items('remotes')})
+                self.available_remote_engines.update(import_items('remotes'))
             if parser.has_section('locals'):
-                self.available_local_engines.update({key.lower(): value for key, value in parser.items('locals')})
+                self.available_local_engines.update(import_items('locals'))
+        print(self.available_local_engines)
         self.local_repositories = {}
         self.remote_repositories = {}
         self.local_config_files = []
