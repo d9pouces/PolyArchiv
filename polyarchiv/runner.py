@@ -64,7 +64,7 @@ class Runner(ParameterizedObject):
                 self.available_remote_engines.update(import_items('remotes'))
             if parser.has_section('locals'):
                 self.available_local_engines.update(import_items('locals'))
-        print(self.available_local_engines)
+
         self.local_repositories = {}
         self.remote_repositories = {}
         self.local_config_files = []
