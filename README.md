@@ -250,7 +250,11 @@ Replacement rules
 
 Some parameters of remote repositories may use variables to be customized for each local repository.
 Check `polyarchiv plugins -v` for a complete documentation of each parameter.
-By default, only the `name` variable is defined and is equal to the basename of the corresponding config file.
+By default, only the following variables are defined:
+
+  * `name`: basename of the corresponding config file.
+  * `fqdn`: local hostname, with the domain name (e.g., `vm1.test.example.org`)
+  * `hostname`: local hostname (e.g., `vm1`)
 
 In the local config file, you can add a new section `[variables]`. 
 Of course, the name of the option is the name of the variable.

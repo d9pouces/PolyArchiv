@@ -143,7 +143,7 @@ class FileRepository(LocalRepository):
     """
 
     parameters = LocalRepository.parameters + [
-        Parameter('local_path', converter=check_directory, help_str='absolute path to locally gather all data')
+        Parameter('local_path', converter=check_directory, help_str='absolute path where all data are locally gathered')
     ]
     LAST_BACKUP_FILE = '.last-backup'
     PRIVATE_FOLDER = '.polyarchiv'

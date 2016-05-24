@@ -11,10 +11,8 @@ import logging.config
 import math
 import os
 import re
-import sys
-
 import subprocess
-from pkg_resources import iter_entry_points
+import sys
 
 from polyarchiv.check import check_local_repository, check_remote_local_repository
 from polyarchiv.conf import Parameter
@@ -71,10 +69,10 @@ def main(engines_file=None):
         cprint('dry mode is selected: no write operation will be performed', YELLOW)
 
     from polyarchiv.runner import Runner  # import it after the log configuration
+    runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
+                    command_confirm=args.confirm_commands, command_execute=not args.dry,
+                    command_keep_output=verbose)
     if command == 'backup':
-        runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
-                        command_confirm=args.confirm_commands, command_execute=not args.dry,
-                        command_keep_output=verbose)
         if runner.load():
             local_results, remote_results = runner.backup(only_locals=args.only_locals, only_remotes=args.only_remotes,
                                                           force=args.force)
@@ -92,16 +90,10 @@ def main(engines_file=None):
                 cprint('CRITICAL - unable to load configuration')
             return_code = 1
     elif command == 'restore':
-        runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
-                        command_confirm=args.confirm_commands, command_execute=not args.dry,
-                        command_keep_output=verbose)
         if runner.load():
             runner.restore(args.only_locals, args.only_remotes)
     elif command == 'config':
         cprint('configuration directory: %s (you can change it with -C /other/directory)' % args.config, YELLOW)
-        runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
-                        command_confirm=args.confirm_commands, command_execute=not args.dry,
-                        command_keep_output=verbose)
         if runner.load():
             if not verbose:
                 cprint('you can display more info with --verbose', CYAN)
@@ -110,9 +102,6 @@ def main(engines_file=None):
                                   local_remote_command=show_remote_local_repository,
                                   only_locals=args.only_locals, only_remotes=args.only_remotes)
     elif command == 'check':
-        runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
-                        command_confirm=args.confirm_commands,
-                        command_execute=not args.dry, command_keep_output=verbose)
         if runner.load():
             from polyarchiv.show import show_local_repository, show_remote_local_repository, \
                 show_remote_repository
@@ -147,15 +136,17 @@ def main(engines_file=None):
         if not verbose:
             cprint('display available options for each engine with --verbose', CYAN)
 
+        available_local_engines, available_source_engines, available_remote_engines = \
+            Runner.find_available_engines(engines_file)
         cprint('available local repository engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
-        display_classes('polyarchiv.locals', verbose=verbose, width=width)
+        display_classes(available_local_engines, verbose=verbose, width=width)
         cprint('available source engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
-        display_classes('polyarchiv.sources', verbose=verbose, width=width)
+        display_classes(available_source_engines, verbose=verbose, width=width)
         cprint('available remote repository engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
-        display_classes('polyarchiv.remotes', verbose=verbose, width=width)
+        display_classes(available_remote_engines, verbose=verbose, width=width)
         cprint('[*] this parameter can use variables. See the README (\'Replacement rules\' section)', RED)
     else:
         cprint('unknown command \'%s\'' % command, RED)
@@ -165,9 +156,8 @@ def main(engines_file=None):
 
 def display_classes(plugin_category, verbose=False, width=80):
     """display plugins of a given category"""
-    for entry_point in iter_entry_points(plugin_category):
-        engine_cls = entry_point.load()
-        cprint('  * engine=%s' % entry_point.name, BOLD, GREEN)
+    for name, engine_cls in plugin_category.items():
+        cprint('  * engine=%s' % name, BOLD, GREEN)
         if engine_cls.__doc__:
             cprint('    ' + engine_cls.__doc__.strip(), GREY, BOLD)
 

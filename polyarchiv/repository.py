@@ -56,6 +56,7 @@ class ParameterizedObject(object):
         if hasattr(stdin, 'name') and stdin.name:
             cmd_text += ['<',  stdin.name]
         elif stdin is None:
+            # noinspection PyTypeChecker
             stdin = open(os.devnull, 'rb')
         # noinspection PyTypeChecker
         if hasattr(stdout, 'name') and stdout.name:
@@ -113,7 +114,7 @@ class ParameterizedObject(object):
 
 class RepositoryInfo(object):
     def __init__(self, last_state_valid=None, last_success=None, last_fail=None, success_count=0, fail_count=0,
-                 total_size=0, last_message=''):
+                 total_size=0, last_message='', config_hash=None):
         self.last_state_valid = last_state_valid  # None, True, False
         self.last_success = last_success  # expected to be filled by datetime.datetime.now()
         self.last_fail = last_fail  # expected to be filled by datetime.datetime.now()
@@ -121,6 +122,7 @@ class RepositoryInfo(object):
         self.fail_count = fail_count  # number of failed backups
         self.total_size = total_size  # total size (in bytes) of the backup
         self.last_message = last_message  # should be "ok" for a success, or an informative message on error
+        self.config_hash = config_hash  # md5 hash of the config file
 
     @property
     def last(self):
@@ -141,6 +143,7 @@ class RepositoryInfo(object):
                                                 'last_message')}
         result['last_success'] = self.datetime_to_str(self.last_success)
         result['last_fail'] = self.datetime_to_str(self.last_fail)
+        result['config_hash'] = self.config_hash
         return result
 
     @classmethod
@@ -158,6 +161,8 @@ class RepositoryInfo(object):
             kwargs['last_fail'] = cls.datetime_from_str(data['last_fail'])
         if data['last_success']:
             kwargs['last_success'] = cls.datetime_from_str(data['last_success'])
+        if data.get('config_hash'):
+            kwargs['config_hash'] = data['config_hash']
         return RepositoryInfo(**kwargs)
 
     @staticmethod

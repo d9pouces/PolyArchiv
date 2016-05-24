@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 
 import datetime
 import logging
-from urllib import urlencode, quote_plus
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
@@ -12,10 +11,10 @@ from polyarchiv.termcolor import cprint
 
 try:
     # noinspection PyCompatibility
-    from urllib.parse import urlparse
+    from urllib.parse import urlparse, urlencode, quote_plus
 except ImportError:
     # noinspection PyUnresolvedReferences,PyCompatibility
-    from urlparse import urlparse
+    from urlparse import urlparse, urlencode, quote_plus
 import os
 
 from polyarchiv.conf import Parameter, strip_split, check_executable, check_file, CheckOption, bool_setting
@@ -51,7 +50,7 @@ class RemoteRepository(Repository):
 
     def format_value(self, value, local_repository):
         assert isinstance(local_repository, LocalRepository)
-        variables = {'name': local_repository.name}
+        variables = {}
         variables.update(local_repository.variables)
         if local_repository.name in self.local_variables:
             variables.update(self.local_variables[local_repository.name])
@@ -595,4 +594,3 @@ class SmartTarArchive(RemoteRepository):
 
     def do_backup(self, local_repository):
         pass
-

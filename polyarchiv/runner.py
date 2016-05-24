@@ -9,6 +9,8 @@ import glob
 import logging
 import os
 import pwd
+import socket
+
 try:
     from pkg_resources import iter_entry_points
 except ImportError:
@@ -38,20 +40,28 @@ class Runner(ParameterizedObject):
     repository_section = 'repository'
     variables_section = 'variables'
     engine_option = 'engine'
-
+    
     def __init__(self, config_directories, engines_file=None, **kwargs):
         super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
-        self.available_local_engines = {}
-        self.available_remote_engines = {}
-        self.available_source_engines = {}
+        self.available_local_engines, self.available_source_engines, self.available_remote_engines = \
+            self.find_available_engines(engines_file)
+        self.local_repositories = {}
+        self.remote_repositories = {}
+        self.local_config_files = []
+        self.remote_config_files = []
 
+    @staticmethod
+    def find_available_engines(engines_file=None):
+        available_local_engines = {}
+        available_remote_engines = {}
+        available_source_engines = {}
         if iter_entry_points:
             def import_points(name):
                 return {x.name.lower().strip(): x.load() for x in iter_entry_points(name)}
-            self.available_local_engines.update(import_points('polyarchiv.locals'))
-            self.available_remote_engines.update(import_points('polyarchiv.remotes'))
-            self.available_source_engines.update(import_points('polyarchiv.sources'))
+            available_local_engines.update(import_points('polyarchiv.locals'))
+            available_remote_engines.update(import_points('polyarchiv.remotes'))
+            available_source_engines.update(import_points('polyarchiv.sources'))
         if engines_file is not None:
             parser = RawConfigParser()
             parser.read([engines_file])
@@ -59,16 +69,12 @@ class Runner(ParameterizedObject):
             def import_items(name):
                 return {key.lower(): import_string(value) for key, value in parser.items(name)}
             if parser.has_section('sources'):
-                self.available_source_engines.update(import_items('sources'))
+                available_source_engines.update(import_items('sources'))
             if parser.has_section('remotes'):
-                self.available_remote_engines.update(import_items('remotes'))
+                available_remote_engines.update(import_items('remotes'))
             if parser.has_section('locals'):
-                self.available_local_engines.update(import_items('locals'))
-
-        self.local_repositories = {}
-        self.remote_repositories = {}
-        self.local_config_files = []
-        self.remote_config_files = []
+                available_local_engines.update(import_items('locals'))
+        return available_local_engines, available_source_engines, available_remote_engines
 
     def load(self, show_errors=True):
         result = True
@@ -150,9 +156,17 @@ class Runner(ParameterizedObject):
             local = engine_cls(name, **parameters)
             assert isinstance(local, LocalRepository)
 
+            # noinspection PyBroadException
+            try:
+                fqdn = socket.gethostname()
+            except Exception:
+                fqdn = 'localhost'
+            # noinspection PyTypeChecker
+            local.variables = {'name': name, 'fqdn': fqdn, 'hostname': fqdn.partition('.')[0]}
             variables_section = self.variables_section
             if parser.has_section(variables_section):
-                local.variables = {opt: parser.get(variables_section, opt) for opt in parser.options(variables_section)}
+                variables = {opt: parser.get(variables_section, opt) for opt in parser.options(variables_section)}
+                local.variables.update(variables)
 
             for section in parser.sections():
                 if section == self.repository_section or section == variables_section:
