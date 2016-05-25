@@ -365,14 +365,16 @@ class TarArchive(RemoteRepository):
     excluded_files = {'.git', '.gitignore'}
     parameters = RemoteRepository.parameters + [
         Parameter('remote_url', converter=check_curl_url,
-                  help_str='destination URL (e.g.: \'ftp://example.org/path/\' or '
-                           '\'https://example.org/path\'). \'file://\' URLs are handled by a \'cp\' command, other ones'
+                  help_str='destination URL (e.g.: \'ftp://example.org/path/%(name)s.tar.gz\' or '
+                           '\'https://example.org/path/\'). '
+                           '\'file://\' URLs are handled by a \'cp\' command, other ones'
                            ' are handled by \'curl\' command. Most of protocols known by cURL can be used:'
                            ' ftp(s), http(s) with WebDAV, scp, sftp, smb, smbs. You can specify user and password'
-                           ' in URL: \'scheme://user:password@host/path\' [*]'),
+                           ' in URL: \'scheme://user:password@host/path\'. [*]'),
         Parameter('user', help_str='username (if not set in the URL) [*]'),
         Parameter('password', help_str='password (if not set in the URL) [*]'),
-        Parameter('archive_prefix', help_str='prefix of the archive names (default: "%(name)s") [*]'),
+        Parameter('archive_prefix', help_str='prefix of the archive names (default: "%(name)s"). '
+                                             'Only used if the remote URL finishes by \'/\' [*]'),
         Parameter('proxy',
                   help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080) [*]'),
         Parameter('insecure', converter=bool_setting, help_str='true|false: do not check certificates'),
@@ -443,9 +445,6 @@ class TarArchive(RemoteRepository):
             if self.keytab:
                 cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
             remote_url = self.format_value(self.remote_url, local_repository)
-            # noinspection PyTypeChecker
-            if not remote_url.endswith('/'):
-                remote_url += '/'
             # noinspection PyTypeChecker
             if remote_url.startswith('file://'):
                 ensure_dir(remote_url[7:], parent=False)

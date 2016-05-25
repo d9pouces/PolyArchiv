@@ -99,7 +99,6 @@ Next steps
   * run `polyarchiv backup --dry --show-commands --force` to check the executed script
   * run `polyarchiv backup` in a cron :-)
     
-
 Configuration
 -------------
 
