@@ -15,7 +15,8 @@ try:
     from urllib.parse import urlparse, urlencode, quote_plus
 except ImportError:
     # noinspection PyUnresolvedReferences,PyCompatibility
-    from urlparse import urlparse, urlencode, quote_plus
+    from urlparse import urlparse
+    from urllib import urlencode, quote_plus
 import os
 
 from polyarchiv.conf import Parameter, strip_split, check_executable, check_file, CheckOption, bool_setting
