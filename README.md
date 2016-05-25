@@ -5,24 +5,24 @@ Polyarchiv
 Backup data from multiple local sources (organized in local repositories) and send them to one or more remote repositories.
 
                                                     /--------------------------\
-       local repository 1: git          ________\__ | remote repository 1: git |
+       local repository 1               ________\__ | remote repository 1: git |
     /------------------------\         /        /   |   data of local 1        |
     |     source 1: files    |---->---/             \--------------------------/
-    |     source 2: mysql    |                      
+    |     source 2: mysql    |                      * http://mygit/backups/local1.git
     |     source 3: mysql    |---->---\
     \------------------------/         \________\___ /----------------------------\
-                                                /    | remote repository 2: files |
+                                                /    | remote repository 2: tar   |
                                                      |   data of local 1          | 
-     local repository 2: files          ________\___ |   data of local 2          |
+     local repository 2                 ________\___ |   data of local 2          |
     /------------------------\         /        /    \----------------------------/
-    |     source 1: files    |---->---/
-    |     source 2: mysql    |
+    |     source 1: files    |---->---/             * ftp://server/backups/local1/date.tar.gz
+    |     source 2: mysql    |                      * ftp://server/backups/local2/date.tar.gz
     \------------------------/
 
-     local repository 3: files
+     local repository 3
     /-----------------------------\
     |     source 1: files         |
-    |     source 2: postgresql    |  (local backup)
+    |     source 2: postgresql    |  (local backup only)
     |     source 3: mysql         |
     \-----------------------------/
     
@@ -255,6 +255,9 @@ By default, only the following variables are defined:
   * `name`: basename of the corresponding config file.
   * `fqdn`: local hostname, with the domain name (e.g., `vm1.test.example.org`)
   * `hostname`: local hostname (e.g., `vm1`)
+  * the time of backup is also available, with a separate variable for each component: `Y`, `d` `M`, …
+    Please check https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior to discover all of them.
+
 
 In the local config file, you can add a new section `[variables]`. 
 Of course, the name of the option is the name of the variable.

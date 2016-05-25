@@ -11,6 +11,8 @@ import os
 import pwd
 import socket
 
+import datetime
+
 try:
     from pkg_resources import iter_entry_points
 except ImportError:
@@ -134,6 +136,15 @@ class Runner(ParameterizedObject):
                 logger.info('No %s file found in %s' % (pattern, path))
 
     def _find_local_repositories(self):
+        now = datetime.datetime.now()
+        common_values = {x: now.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'}
+        # noinspection PyBroadException
+        try:
+            fqdn = socket.gethostname()
+        except Exception:
+            fqdn = 'localhost'
+        common_values.update({'fqdn': fqdn, 'hostname': fqdn.partition('.')[0]})
+
         for config_file, parser in self._iter_config_parsers('*.local'):
             if not parser.has_option(self.repository_section, self.engine_option):
                 msg = 'In file \'%s\', please specify the \'%s\' option in the \'%s\' section' % \
@@ -156,13 +167,9 @@ class Runner(ParameterizedObject):
             local = engine_cls(name, **parameters)
             assert isinstance(local, LocalRepository)
 
-            # noinspection PyBroadException
-            try:
-                fqdn = socket.gethostname()
-            except Exception:
-                fqdn = 'localhost'
             # noinspection PyTypeChecker
-            local.variables = {'name': name, 'fqdn': fqdn, 'hostname': fqdn.partition('.')[0]}
+            local.variables = {'name': name}
+            local.variables.update(common_values)
             variables_section = self.variables_section
             if parser.has_section(variables_section):
                 variables = {opt: parser.get(variables_section, opt) for opt in parser.options(variables_section)}

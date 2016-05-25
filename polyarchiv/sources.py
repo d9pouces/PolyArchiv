@@ -132,7 +132,7 @@ class MySQL(Source):
     ]
 
     def __init__(self, name, local_repository, host='localhost', port='3306', user='', password='', database='',
-                 destination_path='', dump_executable='mysqldump', restore_executable='mysql', **kwargs):
+                 destination_path='mysql_dump.sql', dump_executable='mysqldump', restore_executable='mysql', **kwargs):
         super(MySQL, self).__init__(name, local_repository, **kwargs)
         self.restore_executable = restore_executable
         self.dump_executable = dump_executable

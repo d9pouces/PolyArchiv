@@ -16,6 +16,7 @@ try:
 except ImportError:
     # noinspection PyUnresolvedReferences,PyCompatibility
     from urlparse import urlparse
+    # noinspection PyUnresolvedReferences,PyCompatibility
     from urllib import urlencode, quote_plus
 import os
 
