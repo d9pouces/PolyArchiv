@@ -10,11 +10,11 @@ Backup data from multiple local sources (organized in local repositories) and se
     |     source 1: files    |---->---/             \--------------------------/
     |     source 2: mysql    |                      * http://mygit/backups/local1.git
     |     source 3: mysql    |---->---\
-    \------------------------/         \________\___ /----------------------------\
-                                                /    | remote repository 2: tar   |
-     local repository 2:                             |   data of local 1          | 
-     data of www.example.com            ________\___ |   data of local 2          |
-    /------------------------\         /        /    \----------------------------/
+    \------------------------/         \________\___ /-------------------------------\
+                                                /    | remote repository 2: tar+curl |
+     local repository 2:                             |   data of local 1             | 
+     data of www.example.com            ________\___ |   data of local 2             |
+    /------------------------\         /        /    \-------------------------------/
     |     source 1: files    |---->---/             * ftp://server/backups/local1/date.tar.gz
     |     source 2: mysql    |                      * ftp://server/backups/local2/date.tar.gz
     \------------------------/
