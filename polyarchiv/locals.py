@@ -103,11 +103,16 @@ class LocalRepository(Repository):
         """
         self.sources.append(source)
 
-    def get_cwd(self):
+    @property
+    def data_path(self):
         """Must return a valid directory where a source can write its files.
         If the local repository is not the filesystem, any file written in this directory by a source must be stored
         to the local repository's storage.
         """
+        raise NotImplementedError
+
+    @property
+    def metadata_path(self):
         raise NotImplementedError
 
     def pre_source_backup(self):
@@ -123,10 +128,10 @@ class LocalRepository(Repository):
         """
         raise NotImplementedError
 
-    def get_info(self, name=None, kind='local'):
+    def get_info(self):
         raise NotImplementedError
 
-    def set_info(self, info, name=None, kind='local'):
+    def set_info(self, info):
         raise NotImplementedError
 
     def get_lock(self):
@@ -135,6 +140,11 @@ class LocalRepository(Repository):
 
     def release_lock(self, lock_):
         """Release the lock object provided by the above method"""
+        raise NotImplementedError
+
+    def remote_private_path(self, remote_repository):
+        from polyarchiv.remotes import RemoteRepository
+        assert isinstance(remote_repository, RemoteRepository)
         raise NotImplementedError
 
 
@@ -146,38 +156,45 @@ class FileRepository(LocalRepository):
         Parameter('local_path', converter=check_directory, help_str='absolute path where all data are locally gathered')
     ]
     LAST_BACKUP_FILE = '.last-backup'
-    PRIVATE_FOLDER = '.polyarchiv'
+    METADATA_FOLDER = 'metadata'
+    DATA_FOLDER = 'backups'
 
     def __init__(self, name, local_path='.', **kwargs):
         super(FileRepository, self).__init__(name=name, **kwargs)
         self.local_path = local_path
 
     def pre_source_backup(self):
-        self.ensure_dir(self.local_path)
+        self.ensure_dir(self.data_path)
 
     def post_source_backup(self):
         last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
-        filename = os.path.join(self.local_path, self.LAST_BACKUP_FILE)
+        filename = os.path.join(self.data_path, self.LAST_BACKUP_FILE)
         if self.can_execute_command('echo \'%s\' > %s' % (last_backup_date, filename)):
             with codecs.open(filename, 'w', encoding='utf-8') as fd:
                 fd.write(last_backup_date)
 
-    def get_cwd(self):
-        self.ensure_dir(self.local_path)
-        return self.local_path
+    @property
+    def data_path(self):
+        path = os.path.join(self.local_path, self.DATA_FOLDER)
+        self.ensure_dir(path)
+        return path
 
     @property
-    def private_path(self):
-        return os.path.join(self.local_path, self.PRIVATE_FOLDER)
+    def metadata_path(self):
+        path = os.path.join(self.local_path, self.METADATA_FOLDER, 'local')
+        self.ensure_dir(path)
+        return path
 
     @property
     def lock_filepath(self):
-        return os.path.join(self.private_path, 'lock')
+        return os.path.join(self.metadata_path, 'lock')
 
-    def get_info(self, name=None, kind='local'):
-        if name is None:
-            name = self.name
-        path = os.path.join(self.private_path, kind, '%s.json' % name)
+    def remote_private_path(self, remote_repository):
+        path = os.path.join(self.local_path, self.METADATA_FOLDER, 'remotes', remote_repository.name)
+        return path
+
+    def get_info(self):
+        path = os.path.join(self.metadata_path, '%s.json' % self.name)
         self.ensure_dir(path, parent=True)
         if os.path.isfile(path):
             with codecs.open(path, 'r', encoding='utf-8') as fd:
@@ -186,11 +203,9 @@ class FileRepository(LocalRepository):
         else:
             return RepositoryInfo()
 
-    def set_info(self, info, name=None, kind='local'):
-        if name is None:
-            name = self.name
+    def set_info(self, info):
         assert isinstance(info, RepositoryInfo)
-        path = os.path.join(self.private_path, kind, '%s.json' % name)
+        path = os.path.join(self.metadata_path, '%s.json' % self.name)
         self.ensure_dir(path, parent=True)
         content = info.to_str()
         with codecs.open(path, 'w', encoding='utf-8') as fd:
@@ -238,22 +253,22 @@ class GitRepository(FileRepository):
     def post_source_backup(self):
         super(GitRepository, self).post_source_backup()
         path = os.path.join(self.local_path, '.gitignore')
-        if not os.path.isfile(path) and self.can_execute_command('echo \'%s/\' > %s' % (self.PRIVATE_FOLDER, path)):
+        if not os.path.isfile(path) and self.can_execute_command('echo \'%s/\' > %s' % (self.METADATA_FOLDER, path)):
             with codecs.open(path, 'w', encoding='utf-8') as fd:
-                fd.write("%s/\n" % self.PRIVATE_FOLDER)
-        git_config_path = os.path.join(self.private_path, '.gitconfig')
+                fd.write("%s/\n" % self.METADATA_FOLDER)
+        git_config_path = os.path.join(self.metadata_path, '.gitconfig')
         if not os.path.isfile(git_config_path):
             self.execute_command([self.git_executable, 'config', '--global', 'user.email', self.commit_email],
-                                 env={'HOME': self.private_path})
+                                 env={'HOME': self.metadata_path})
             self.execute_command([self.git_executable, 'config', '--global', 'user.name', self.commit_name],
-                                 env={'HOME': self.private_path})
+                                 env={'HOME': self.metadata_path})
         os.chdir(self.local_path)
         self.execute_command([self.git_executable, 'init'], cwd=self.local_path)
         self.execute_command([self.git_executable, 'add', '.'])
         end = datetime.datetime.now()
         # noinspection PyTypeChecker
         self.execute_command([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')],
-                             ignore_errors=True, env={'HOME': self.private_path})
+                             ignore_errors=True, env={'HOME': self.metadata_path})
 
     def restore(self):
         raise NotImplementedError

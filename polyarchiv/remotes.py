@@ -1,6 +1,7 @@
 # -*- coding=utf-8 -*-
 from __future__ import unicode_literals
 
+import codecs
 import datetime
 import logging
 
@@ -18,7 +19,7 @@ except ImportError:
 import os
 
 from polyarchiv.conf import Parameter, strip_split, check_executable, check_file, CheckOption, bool_setting
-from polyarchiv.locals import GitRepository as LocalGitRepository, LocalRepository, FileRepository
+from polyarchiv.locals import LocalRepository
 from polyarchiv.repository import Repository, RepositoryInfo
 from polyarchiv.utils import text_type, ensure_dir
 
@@ -109,24 +110,36 @@ class RemoteRepository(Repository):
         raise NotImplementedError
 
     # noinspection PyMethodMayBeStatic
-    def get_info(self, local_repository, name=None, kind='remote'):
+    def get_info(self, local_repository):
         assert isinstance(local_repository, LocalRepository)
-        if name is None:
-            name = self.name
-        return local_repository.get_info(name, kind=kind)
+        path = os.path.join(self.private_path(local_repository), '%s.json' % self.name)
+        self.ensure_dir(path, parent=True)
+        if os.path.isfile(path):
+            with codecs.open(path, 'r', encoding='utf-8') as fd:
+                content = fd.read()
+            return RepositoryInfo.from_str(content)
+        else:
+            return RepositoryInfo()
 
     # noinspection PyMethodMayBeStatic
-    def set_info(self, local_repository, info, name=None, kind='remote'):
+    def set_info(self, local_repository, info):
         assert isinstance(local_repository, LocalRepository)
-        if name is None:
-            name = self.name
-        return local_repository.set_info(info, name=name, kind=kind)
+        assert isinstance(info, RepositoryInfo)
+        path = os.path.join(self.private_path(local_repository), '%s.json' % self.name)
+        self.ensure_dir(path, parent=True)
+        content = info.to_str()
+        with codecs.open(path, 'w', encoding='utf-8') as fd:
+            fd.write(content)
 
     def get_last_backup_date(self, local_repository):
         raise NotImplementedError
 
     def restore(self, local_repository):
         raise NotImplementedError
+
+    def private_path(self, local_repository):
+        assert isinstance(local_repository, LocalRepository)
+        return local_repository.remote_private_path(self)
 
 
 def check_git_url(remote_url):
@@ -146,6 +159,7 @@ class GitRepository(RemoteRepository):
     """Add a remote to a local repository and push local modification to this remote.
     Can use https (with password or kerberos auth) or git+ssh remotes (with private key authentication).
     """
+
     parameters = RemoteRepository.parameters + [
         Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
         Parameter('remote_branch', help_str='name of the remote branch [*]'),
@@ -159,20 +173,45 @@ class GitRepository(RemoteRepository):
                                          'The password is not required for SSH connections (you should use SSH keys).'
                                          'The remote repository must already exists. If you created it by hand, do not '
                                          'forget to set \'git config --bool core.bare true\'. [*]'),
+        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")'),
+        Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
     ]
 
     def __init__(self, name, remote_url='', remote_branch='master', git_executable='git', private_key=None,
-                 keytab=None, **kwargs):
+                 keytab=None, commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net', **kwargs):
         super(GitRepository, self).__init__(name, **kwargs)
         self.keytab = keytab
         self.private_key = private_key
         self.remote_url = remote_url
         self.remote_branch = remote_branch
         self.git_executable = git_executable
+        self.commit_name = commit_name
+        self.commit_email = commit_email
 
     def do_backup(self, local_repository):
-        assert local_repository.__class__ == LocalGitRepository
-        assert isinstance(local_repository, LocalGitRepository)  # just to help PyCharm
+        assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
+
+        # path = os.path.join(self.local_path, '.gitignore')
+        # if not os.path.isfile(path) and self.can_execute_command('echo \'%s/\' > %s' % (self.PRIVATE_FOLDER, path)):
+        #     with codecs.open(path, 'w', encoding='utf-8') as fd:
+        #         fd.write("%s/\n" % self.PRIVATE_FOLDER)
+        worktree = local_repository.data_path
+        git_dir = self.private_path(local_repository)
+        git_config_path = os.path.join(git_dir, '.gitconfig')
+        if not os.path.isfile(git_config_path):
+            self.execute_command([self.git_executable, 'config', '--global', 'user.email', self.commit_email],
+                                 env={'HOME': git_dir})
+            self.execute_command([self.git_executable, 'config', '--global', 'user.name', self.commit_name],
+                                 env={'HOME': git_dir})
+        os.chdir(worktree)
+        suffix = ['--git-dir', git_dir, '--work-tree', worktree]
+        self.execute_command([self.git_executable, 'init', ] + suffix, cwd=worktree)
+        self.execute_command([self.git_executable, 'add', '.'] + suffix)
+        end = datetime.datetime.now()
+        # noinspection PyTypeChecker
+        self.execute_command([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')] + suffix,
+                             ignore_errors=True, env={'HOME': self.private_path})
+
         remote_url = self.format_value(self.remote_url, local_repository)
         remote_branch = self.format_value(self.remote_branch, local_repository)
         if not self.check_remote_url(local_repository):
@@ -182,12 +221,13 @@ class GitRepository(RemoteRepository):
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
 
         cmd += [self.git_executable, 'push', remote_url, 'master:%s' % remote_branch]
+        cmd += suffix
         # noinspection PyTypeChecker
         private_key = self.private_key
         if private_key and not remote_url.startswith('http'):
             private_key = self.format_value(private_key, local_repository)
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
-        self.execute_command(cmd, cwd=local_repository.local_path)
+        self.execute_command(cmd, cwd=worktree)
 
     def get_last_backup_date(self, local_repository):
         # git archive --remote=git://git.foo.com/project.git HEAD:path /to/directory filename | tar -x
@@ -195,6 +235,9 @@ class GitRepository(RemoteRepository):
 
     def check_remote_url(self, local_repository):
         return True
+
+    def restore(self, local_repository):
+        raise NotImplementedError
 
 
 class GitlabRepository(GitRepository):
@@ -246,9 +289,13 @@ class GitlabRepository(GitRepository):
         # GET /projects/:id/events
         return True
 
+    def restore(self, local_repository):
+        raise NotImplementedError
+
 
 class Rsync(RemoteRepository):
     """Send local files to the remote repository using 'rsync'. """
+
     parameters = RemoteRepository.parameters + [
         Parameter('rsync_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "rsync")'),
@@ -267,12 +314,12 @@ class Rsync(RemoteRepository):
         self.private_key = private_key
 
     def do_backup(self, local_repository):
-        assert isinstance(local_repository, FileRepository)
+        assert isinstance(local_repository, LocalRepository)
         cmd = []
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
-        cmd += [self.rsync_executable, '-az', '--delete', '--exclude=%s' % local_repository.PRIVATE_FOLDER, '-S']
-        local_path = local_repository.local_path
+        cmd += [self.rsync_executable, '-az', '--delete', '-S']
+        local_path = local_repository.data_path
         if not local_path.endswith(os.path.sep):
             local_path += os.path.sep
         remote_url = self.format_value(self.remote_url, local_repository)
@@ -285,7 +332,13 @@ class Rsync(RemoteRepository):
         else:
             cmd += ['-e', 'ssh']
         cmd += [local_path, remote_url]
-        self.execute_command(cmd, cwd=local_repository.local_path)
+        self.execute_command(cmd, cwd=local_repository.data_path)
+
+    def restore(self, local_repository):
+        raise NotImplementedError
+
+    def get_last_backup_date(self, local_repository):
+        raise NotImplementedError
 
 
 def check_curl_url(remote_url):
@@ -306,6 +359,7 @@ class TarArchive(RemoteRepository):
     to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
 
     """
+
     excluded_files = {'.git', '.gitignore'}
     parameters = RemoteRepository.parameters + [
         Parameter('remote_url', converter=check_curl_url,
@@ -358,16 +412,16 @@ class TarArchive(RemoteRepository):
         self.cert = cert
 
     def do_backup(self, local_repository):
-        assert isinstance(local_repository, FileRepository)
+        assert isinstance(local_repository, LocalRepository)
         error = None
-        excluded_files = self.excluded_files | {local_repository.PRIVATE_FOLDER}
-        filenames = {x for x in os.listdir(local_repository.local_path)} - excluded_files
+        excluded_files = self.excluded_files
+        filenames = {x for x in os.listdir(local_repository.data_path)} - excluded_files
         filenames = [x for x in filenames]
         filenames.sort()
         # noinspection PyTypeChecker
         now_str = datetime.datetime.now().strftime(self.date_format)
         prefix = self.format_value(self.archive_prefix, local_repository)
-        archive_filename = os.path.join(local_repository.local_path,
+        archive_filename = os.path.join(local_repository.data_path,
                                         '%s-%s.%s' % (prefix, now_str, self.tar_format))
         if self.tar_format == 'tar.gz':
             cmd = [self.tar_executable, '-czf']
@@ -379,7 +433,7 @@ class TarArchive(RemoteRepository):
             raise ValueError('invalid tar format: %s' % self.tar_format)
         cmd.append(archive_filename)
         cmd += filenames
-        returncode, stdout, stderr = self.execute_command(cmd, cwd=local_repository.local_path, ignore_errors=True)
+        returncode, stdout, stderr = self.execute_command(cmd, cwd=local_repository.data_path, ignore_errors=True)
         if returncode != 0:
             error = ValueError('unable to create archive %s' % archive_filename)
         else:
@@ -424,6 +478,12 @@ class TarArchive(RemoteRepository):
             os.remove(archive_filename)
         if error is not None:
             raise error
+
+    def restore(self, local_repository):
+        raise NotImplementedError
+
+    def get_last_backup_date(self, local_repository):
+        raise NotImplementedError
 
 
 class Duplicity(RemoteRepository):
@@ -510,11 +570,11 @@ class Duplicity(RemoteRepository):
         self.gpg_executable = gpg_executable
 
     def do_backup(self, local_repository):
-        assert isinstance(local_repository, FileRepository)
+        assert isinstance(local_repository, LocalRepository)
         cmd = []
         env = {}
-        cmd += [self.duplicity_executable, '--exclude=%s' % local_repository.PRIVATE_FOLDER, ]
-        local_path = local_repository.local_path
+        cmd += [self.duplicity_executable, ]
+        local_path = local_repository.data_path
         if not local_path.endswith(os.path.sep):
             local_path += os.path.sep
         remote_url = self.format_value(self.remote_url, local_repository)
@@ -575,7 +635,13 @@ class Duplicity(RemoteRepository):
             if self.command_display:
                 for k, v in env.items():
                     cprint('%s=%s' % (k, v), YELLOW)
-            self.execute_command(cmd_args, cwd=local_repository.local_path, env=env)
+            self.execute_command(cmd_args, cwd=local_repository.data_path, env=env)
+
+    def restore(self, local_repository):
+        raise NotImplementedError
+
+    def get_last_backup_date(self, local_repository):
+        raise NotImplementedError
 
 
 class SmartTarArchive(RemoteRepository):
@@ -593,4 +659,10 @@ class SmartTarArchive(RemoteRepository):
     ]
 
     def do_backup(self, local_repository):
-        pass
+        raise NotImplementedError
+
+    def restore(self, local_repository):
+        raise NotImplementedError
+
+    def get_last_backup_date(self, local_repository):
+        raise NotImplementedError
