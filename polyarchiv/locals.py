@@ -6,6 +6,7 @@ import datetime
 import logging
 import os
 import re
+import shutil
 import subprocess
 
 from polyarchiv.conf import Parameter, strip_split, check_directory, check_executable
@@ -164,7 +165,6 @@ class FileRepository(LocalRepository):
     ]
     LAST_BACKUP_FILE = '.last-backup'
     METADATA_FOLDER = 'metadata'
-    DATA_FOLDER = 'backups'
 
     def __init__(self, name, local_path='.', **kwargs):
         super(FileRepository, self).__init__(name=name, **kwargs)
@@ -182,7 +182,7 @@ class FileRepository(LocalRepository):
 
     @property
     def import_data_path(self):
-        path = os.path.join(self.local_path, self.DATA_FOLDER)
+        path = os.path.join(self.local_path, 'backups')
         self.ensure_dir(path)
         return path
 
@@ -283,3 +283,49 @@ class GitRepository(FileRepository):
 
     def restore(self):
         raise NotImplementedError
+
+
+def check_archive(value):
+    if value.endswith('.tar.gz'):
+        return value
+    elif value.endswith('.tar.bz2'):
+        return value
+    elif value.endswith('.tar.xz'):
+        return value
+    raise ValueError('Archive name must end by .tar.gz, .tar.bz2 or .tar.xz')
+
+
+class ArchiveRepository(FileRepository):
+
+    parameters = FileRepository.parameters + [
+        Parameter('archive_name', converter=check_archive, help_str='Name of the created archive, must end by .tar.gz, '
+                                                                    '.tar.bz2 or .tar.xz. Default to archive.tar.gz')
+    ]
+
+    def __init__(self, name, archive_name='archive.tar.gz', **kwargs):
+        super(ArchiveRepository, self).__init__(name=name, **kwargs)
+        self.archive_name = archive_name
+
+    def post_source_backup(self):
+        super(ArchiveRepository, self).post_source_backup()
+        self.ensure_dir(self.export_data_path)
+        compression = 'j'
+        if self.archive_name.endswith('.tar.gz'):
+            compression = 'z'
+        elif self.archive_name.endswith('.tar.xz'):
+            compression = 'x'
+        file_list = os.listdir(self.import_data_path)
+        if file_list:
+            self.execute_command(['tar', '-c%sf' % compression, os.path.join(self.export_data_path, self.archive_name)
+                                  ] + file_list,
+                                 cwd=self.import_data_path)
+        if self.can_execute_command(['rm', '-rf', self.import_data_path]):
+            shutil.rmtree(self.import_data_path)
+
+    @property
+    def export_data_path(self):
+        return os.path.join(self.local_path, 'archives')
+
+    def restore(self):
+        raise NotImplementedError
+

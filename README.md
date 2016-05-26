@@ -43,6 +43,7 @@ There are several kinds of local repositories:
 
   * raw files,
   * local git repository: after each backup, files that have been gathered from the different sources are added and locally commited.
+  * archive: all collected files are merged into a single .tar.(gz/bz2/xz) archive.
   
 There are also several kinds of remote repositories:
 
