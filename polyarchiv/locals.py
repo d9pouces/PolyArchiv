@@ -104,10 +104,17 @@ class LocalRepository(Repository):
         self.sources.append(source)
 
     @property
-    def data_path(self):
+    def import_data_path(self):
         """Must return a valid directory where a source can write its files.
         If the local repository is not the filesystem, any file written in this directory by a source must be stored
         to the local repository's storage.
+        """
+        raise NotImplementedError
+
+    @property
+    def export_data_path(self):
+        """Must return a valid directory, with all files to be read by remote repositories.
+        If the local repository is not the filesystem, this directory must contain all files to be exported.
         """
         raise NotImplementedError
 
@@ -164,20 +171,24 @@ class FileRepository(LocalRepository):
         self.local_path = local_path
 
     def pre_source_backup(self):
-        self.ensure_dir(self.data_path)
+        self.ensure_dir(self.import_data_path)
 
     def post_source_backup(self):
         last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
-        filename = os.path.join(self.data_path, self.LAST_BACKUP_FILE)
+        filename = os.path.join(self.import_data_path, self.LAST_BACKUP_FILE)
         if self.can_execute_command('echo \'%s\' > %s' % (last_backup_date, filename)):
             with codecs.open(filename, 'w', encoding='utf-8') as fd:
                 fd.write(last_backup_date)
 
     @property
-    def data_path(self):
+    def import_data_path(self):
         path = os.path.join(self.local_path, self.DATA_FOLDER)
         self.ensure_dir(path)
         return path
+
+    @property
+    def export_data_path(self):
+        return self.import_data_path
 
     @property
     def metadata_path(self):

@@ -91,7 +91,7 @@ class RSync(Source):
             cmd += ['--include-from', self.include[1:]]
         elif self.include:
             cmd += ['--include', self.include]
-        dirname = os.path.join(self.local_repository.data_path, self.destination_path)
+        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
         self.ensure_dir(dirname)
         source = self.source_path
         if not source.endswith(os.path.sep):
@@ -105,7 +105,7 @@ class RSync(Source):
         cmd = [self.rsync_executable, '-a', '--delete', '-S', ]
         if self.preserve_hard_links:
             cmd.append('-H')
-        dirname = os.path.join(self.local_repository.data_path, self.destination_path)
+        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
         self.ensure_dir(dirname)
         source = self.source_path
         if not source.endswith(os.path.sep):
@@ -144,7 +144,7 @@ class MySQL(Source):
         self.destination_path = destination_path
 
     def backup(self):
-        filename = os.path.join(self.local_repository.data_path, self.destination_path)
+        filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
         self.ensure_dir(filename, parent=True)
         cmd = self.get_dump_cmd_list()
         cmd = [x % self.db_options for x in cmd]
@@ -167,7 +167,7 @@ class MySQL(Source):
             raise subprocess.CalledProcessError(p.returncode, cmd[0])
 
     def restore(self):
-        filename = os.path.join(self.local_repository.data_path, self.destination_path)
+        filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
         if not os.path.isfile(filename):
             return
         cmd = self.get_dump_cmd_list()
@@ -270,7 +270,7 @@ class Ldap(Source):
         self.restore_executable = restore_executable
 
     def backup(self):
-        filename = os.path.join(self.local_repository.data_path, self.destination_path)
+        filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
         self.ensure_dir(filename, parent=True)
         cmd = [self.dump_executable, '-l', filename]
         if self.database:
@@ -278,7 +278,7 @@ class Ldap(Source):
         self.execute_command(cmd)
 
     def restore(self):
-        filename = os.path.join(self.local_repository.data_path, self.destination_path)
+        filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
         if not os.path.isfile(filename):
             return
         self.execute_command(['service' 'slapd', 'stop'])
