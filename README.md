@@ -1,10 +1,10 @@
-Polyarchiv
+PolyArchiv
 ==========
 
 
 Backup data from multiple local sources (organized in local repositories) and send them to one or more remote repositories.
 
-       local repository 1:                          /--------------------------\
+       local repository 1: /var/backups/local1      /--------------------------\
        data of www.github.com           ________\__ | remote repository 1: git |
     /------------------------\         /        /   |   data of local 1        |
     |     source 1: files    |---->---/             \--------------------------/
@@ -12,14 +12,14 @@ Backup data from multiple local sources (organized in local repositories) and se
     |     source 3: mysql    |---->---\
     \------------------------/         \________\___ /-------------------------------\
                                                 /    | remote repository 2: tar+curl |
-     local repository 2:                             |   data of local 1             | 
+     local repository 2: : /var/backups/local2       |   data of local 1             | 
      data of www.example.com            ________\___ |   data of local 2             |
     /------------------------\         /        /    \-------------------------------/
-    |     source 1: files    |---->---/             * ftp://server/backups/local1/date.tar.gz
-    |     source 2: mysql    |                      * ftp://server/backups/local2/date.tar.gz
+    |     source 1: files    |---->---/             * ftp://server/backups/local1/2016-01-01.tar.gz
+    |     source 2: mysql    |                      * ftp://server/backups/local2/2016-01-01.tar.gz
     \------------------------/
 
-     local repository 3:
+     local repository 3: : /var/backups/local3
      data of nothing.example.com
     /-----------------------------\
     |     source 1: files         |
@@ -249,8 +249,8 @@ Since the remote repository does not present either the `huge` tag or the `large
 Replacement rules
 -----------------
 
-Some repository parameters may use customisable variables.
-Check `polyarchiv plugins -v` for a complete documentation of each parameter.
+Some repository parameters can be modified at runtime using custom variables.
+Check `polyarchiv plugins -v` for a complete documentation of each customizable parameter.
 By default, only the following variables are defined:
 
   * `name`: basename of the corresponding config local repository.
@@ -275,7 +275,7 @@ Check the example below:
     $ cat /etc/polyarchiv/my-local-2.local
     [repository]
     engine=archive
-    archive_name=%(name)s-%(Y)s-%(m)-%(d)s.tar.gz
+    archive_name=%(name)s-%(Y)s-%(m)-%(d)s.tar.gz  <-- this is a customizable parameter
     [variables]
     group=MyGroup2
     name=MY-LOCAL-2
@@ -284,7 +284,7 @@ Check the example below:
     $ cat /etc/polyarchiv/my-remote.remote
     [repository]
     engine=git
-    remote_url=http://gitlab.example.org/%(group)s/%(name)s.git
+    remote_url=http://gitlab.example.org/%(group)s/%(name)s.git  <-- another one
     ; requires a `group` variable in each local repository
     ; the `name` variable always exists
     
