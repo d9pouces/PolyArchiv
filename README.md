@@ -249,16 +249,15 @@ Since the remote repository does not present either the `huge` tag or the `large
 Replacement rules
 -----------------
 
-Some parameters of remote repositories may use variables to be customized for each local repository.
+Some repository parameters may use customisable variables.
 Check `polyarchiv plugins -v` for a complete documentation of each parameter.
 By default, only the following variables are defined:
 
-  * `name`: basename of the corresponding config file.
+  * `name`: basename of the corresponding config local repository.
   * `fqdn`: local hostname, with the domain name (e.g., `vm1.test.example.org`)
   * `hostname`: local hostname (e.g., `vm1`)
   * the time of backup is also available, with a separate variable for each component: `Y`, `d` `M`, …
     Please check https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior to discover all of them.
-
 
 In the local config file, you can add a new section `[variables]`. 
 Of course, the name of the option is the name of the variable.
@@ -275,7 +274,8 @@ Check the example below:
     
     $ cat /etc/polyarchiv/my-local-2.local
     [repository]
-    engine=git
+    engine=archive
+    archive_name=%(name)s-%(Y)s-%(m)-%(d)s.tar.gz
     [variables]
     group=MyGroup2
     name=MY-LOCAL-2

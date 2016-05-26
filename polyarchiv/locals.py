@@ -155,13 +155,22 @@ class LocalRepository(Repository):
         assert isinstance(remote_repository, RemoteRepository)
         raise NotImplementedError
 
+    def format_value(self, value):
+        try:
+            formatted_value = value % self.variables
+        except KeyError as e:
+            txt = text_type(e)[len('KeyError:'):]
+            raise ValueError('Unable to format \'%s\': variable %s is missing' % (value, txt))
+        return formatted_value
+
 
 class FileRepository(LocalRepository):
     """Collect files from all sources in the folder 'local_path'.
     """
 
     parameters = LocalRepository.parameters + [
-        Parameter('local_path', converter=check_directory, help_str='absolute path where all data are locally gathered')
+        Parameter('local_path', converter=check_directory,
+                  help_str='absolute path where all data are locally gathered [*]')
     ]
     LAST_BACKUP_FILE = '.last-backup'
     METADATA_FOLDER = 'metadata'
@@ -182,8 +191,7 @@ class FileRepository(LocalRepository):
 
     @property
     def import_data_path(self):
-        path = os.path.join(self.local_path, 'backups')
-        self.ensure_dir(path)
+        path = self.format_value(os.path.join(self.local_path, 'backups'))
         return path
 
     @property
@@ -193,6 +201,7 @@ class FileRepository(LocalRepository):
     @property
     def metadata_path(self):
         path = os.path.join(self.local_path, self.METADATA_FOLDER, 'local')
+        path = self.format_value(path)
         self.ensure_dir(path)
         return path
 
@@ -202,7 +211,7 @@ class FileRepository(LocalRepository):
 
     def remote_private_path(self, remote_repository):
         path = os.path.join(self.local_path, self.METADATA_FOLDER, 'remotes', remote_repository.name)
-        return path
+        return self.format_value(path)
 
     def get_info(self):
         path = os.path.join(self.metadata_path, '%s.json' % self.name)
@@ -232,7 +241,7 @@ class FileRepository(LocalRepository):
             raise ValueError
 
     def get_repository_size(self):
-        content = subprocess.check_output(['du', '-s'], cwd=self.local_path).decode()
+        content = subprocess.check_output(['du', '-s'], cwd=self.export_data_path).decode()
         matcher = re.match('^(\d+) \.$', content.strip())
         if not matcher:
             return 0
@@ -250,35 +259,32 @@ class GitRepository(FileRepository):
     """
     parameters = FileRepository.parameters + [
         Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
-        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")'),
-        Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
+        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net") '
+                                           '[*]'),
+        Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv") [*]'),
+        Parameter('commit_message', help_str='commit message (default: "Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s") [*]'),
     ]
 
     def __init__(self, name, git_executable='git', commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
-                 **kwargs):
+                 commit_message='Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s', **kwargs):
         super(GitRepository, self).__init__(name=name, **kwargs)
         self.commit_name = commit_name
         self.commit_email = commit_email
+        self.commit_message = commit_message
         self.git_executable = git_executable
 
     def post_source_backup(self):
         super(GitRepository, self).post_source_backup()
-        path = os.path.join(self.local_path, '.gitignore')
-        if not os.path.isfile(path) and self.can_execute_command('echo \'%s/\' > %s' % (self.METADATA_FOLDER, path)):
-            with codecs.open(path, 'w', encoding='utf-8') as fd:
-                fd.write("%s/\n" % self.METADATA_FOLDER)
         git_config_path = os.path.join(self.metadata_path, '.gitconfig')
         if not os.path.isfile(git_config_path):
-            self.execute_command([self.git_executable, 'config', '--global', 'user.email', self.commit_email],
-                                 env={'HOME': self.metadata_path})
-            self.execute_command([self.git_executable, 'config', '--global', 'user.name', self.commit_name],
-                                 env={'HOME': self.metadata_path})
-        os.chdir(self.local_path)
-        self.execute_command([self.git_executable, 'init'], cwd=self.local_path)
+            self.execute_command([self.git_executable, 'config', '--global', 'user.email',
+                                  self.format_value(self.commit_email)], env={'HOME': self.metadata_path})
+            self.execute_command([self.git_executable, 'config', '--global', 'user.name',
+                                  self.format_value(self.commit_name)], env={'HOME': self.metadata_path})
+        os.chdir(self.import_data_path)
+        self.execute_command([self.git_executable, 'init'], cwd=self.import_data_path)
         self.execute_command([self.git_executable, 'add', '.'])
-        end = datetime.datetime.now()
-        # noinspection PyTypeChecker
-        self.execute_command([self.git_executable, 'commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')],
+        self.execute_command([self.git_executable, 'commit', '-am', self.format_value(self.commit_message)],
                              ignore_errors=True, env={'HOME': self.metadata_path})
 
     def restore(self):
@@ -300,7 +306,7 @@ class ArchiveRepository(FileRepository):
 
     parameters = FileRepository.parameters + [
         Parameter('archive_name', converter=check_archive, help_str='Name of the created archive, must end by .tar.gz, '
-                                                                    '.tar.bz2 or .tar.xz. Default to archive.tar.gz')
+                                                                    '.tar.bz2 or .tar.xz. Default: "archive.tar.gz"[*]')
     ]
 
     def __init__(self, name, archive_name='archive.tar.gz', **kwargs):
@@ -311,21 +317,22 @@ class ArchiveRepository(FileRepository):
         super(ArchiveRepository, self).post_source_backup()
         self.ensure_dir(self.export_data_path)
         compression = 'j'
-        if self.archive_name.endswith('.tar.gz'):
+        archive_name = self.format_value(self.archive_name)
+        if archive_name.endswith('.tar.gz'):
             compression = 'z'
-        elif self.archive_name.endswith('.tar.xz'):
+        elif archive_name.endswith('.tar.xz'):
             compression = 'x'
         file_list = os.listdir(self.import_data_path)
         if file_list:
-            self.execute_command(['tar', '-c%sf' % compression, os.path.join(self.export_data_path, self.archive_name)
-                                  ] + file_list,
-                                 cwd=self.import_data_path)
+            self.execute_command(['tar', '-c%sf' % compression, os.path.join(self.export_data_path, archive_name)
+                                  ] + file_list, cwd=self.import_data_path)
         if self.can_execute_command(['rm', '-rf', self.import_data_path]):
             shutil.rmtree(self.import_data_path)
 
     @property
     def export_data_path(self):
-        return os.path.join(self.local_path, 'archives')
+        path = os.path.join(self.local_path, 'archives')
+        return self.format_value(path)
 
     def restore(self):
         raise NotImplementedError
