@@ -296,6 +296,7 @@ def check_archive(value):
 
 
 class ArchiveRepository(FileRepository):
+    """Create an archive (.tar.gz, .tar.xz or .tar.bz2) with files collected from all sources."""
 
     parameters = FileRepository.parameters + [
         Parameter('archive_name', converter=check_archive, help_str='Name of the created archive, must end by .tar.gz, '
@@ -328,4 +329,3 @@ class ArchiveRepository(FileRepository):
 
     def restore(self):
         raise NotImplementedError
-
