@@ -1,3 +1,4 @@
 # -*- coding: utf-8 -*-
-__author__ = 'mgallet'
-__version__ = '0.7.11'
+from __future__ import unicode_literals
+__author__ = 'Matthieu Gallet'
+__version__ = '0.8.0'

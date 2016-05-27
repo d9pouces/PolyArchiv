@@ -11,12 +11,13 @@ import subprocess
 
 from polyarchiv.conf import Parameter, strip_split, check_directory, check_executable
 from polyarchiv.filelocks import Lock
+from polyarchiv.param_checks import check_archive
 from polyarchiv.repository import Repository, RepositoryInfo
 from polyarchiv.termcolor import RED
 from polyarchiv.termcolor import cprint
 from polyarchiv.utils import text_type
 
-__author__ = 'mgallet'
+__author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv')
 
 
@@ -289,16 +290,6 @@ class GitRepository(FileRepository):
 
     def restore(self):
         raise NotImplementedError
-
-
-def check_archive(value):
-    if value.endswith('.tar.gz'):
-        return value
-    elif value.endswith('.tar.bz2'):
-        return value
-    elif value.endswith('.tar.xz'):
-        return value
-    raise ValueError('Archive name must end by .tar.gz, .tar.bz2 or .tar.xz')
 
 
 class ArchiveRepository(FileRepository):

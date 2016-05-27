@@ -18,7 +18,7 @@ from polyarchiv.check import check_local_repository, check_remote_local_reposito
 from polyarchiv.conf import Parameter
 from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN, GREY, RED
 
-__author__ = 'mgallet'
+__author__ = 'Matthieu Gallet'
 
 
 def main(engines_file=None):

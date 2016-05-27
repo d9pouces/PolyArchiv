@@ -7,6 +7,7 @@ import logging
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
+from polyarchiv.param_checks import check_git_url, check_curl_url
 from polyarchiv.termcolor import YELLOW, RED
 from polyarchiv.termcolor import cprint
 
@@ -25,7 +26,7 @@ from polyarchiv.locals import LocalRepository
 from polyarchiv.repository import Repository, RepositoryInfo
 from polyarchiv.utils import text_type, ensure_dir
 
-__author__ = 'mgallet'
+__author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv.remotes')
 
 
@@ -144,19 +145,6 @@ class RemoteRepository(Repository):
         return local_repository.remote_private_path(self)
 
 
-def check_git_url(remote_url):
-    """Check if the given URL starts by a valid scheme
-
-    >>> check_git_url("http://localhost/tmp.git") == 'http://localhost/tmp.git'
-    True
-
-    """
-    parsed_url = urlparse(remote_url)
-    if parsed_url.scheme not in ('http', 'https', 'git'):
-        raise ValueError('Invalid scheme for remote URL: %s' % parsed_url.scheme)
-    return remote_url
-
-
 class GitRepository(RemoteRepository):
 
     """Add a remote to a local repository and push local modification to this remote.
@@ -175,13 +163,16 @@ class GitRepository(RemoteRepository):
                                          'https://username:password@mygitlab.example.org/username/project.git). '
                                          'The password is not required for SSH connections (you should use SSH keys).'
                                          'The remote repository must already exists. If you created it by hand, do not '
-                                         'forget to set \'git config --bool core.bare true\'. [*]'),
+                                         'forget to set \'git config --bool core.bare true\'. [*]',
+                  converter=check_git_url),
         Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")'),
         Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
+        Parameter('commit_message', help_str='commit message (default: "Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s") [*]'),
     ]
 
     def __init__(self, name, remote_url='', remote_branch='master', git_executable='git', private_key=None,
-                 keytab=None, commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net', **kwargs):
+                 keytab=None, commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
+                 commit_message='Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s', **kwargs):
         super(GitRepository, self).__init__(name, **kwargs)
         self.keytab = keytab
         self.private_key = private_key
@@ -190,6 +181,7 @@ class GitRepository(RemoteRepository):
         self.git_executable = git_executable
         self.commit_name = commit_name
         self.commit_email = commit_email
+        self.commit_message = commit_message
 
     def do_backup(self, local_repository):
         assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
@@ -205,9 +197,8 @@ class GitRepository(RemoteRepository):
         git_command = [self.git_executable, '--git-dir', git_dir, '--work-tree', worktree]
         self.execute_command(git_command + ['init'], cwd=worktree)
         self.execute_command(git_command + ['add', '.'])
-        end = datetime.datetime.now()
         # noinspection PyTypeChecker
-        self.execute_command(git_command + ['commit', '-am', end.strftime('Backup %Y/%m/%d %H:%M')],
+        self.execute_command(git_command + ['commit', '-am', self.format_value(self.commit_message, local_repository)],
                              ignore_errors=True, env={'HOME': self.private_path(local_repository)})
 
         remote_url = self.format_value(self.remote_url, local_repository)
@@ -336,19 +327,6 @@ class Rsync(RemoteRepository):
 
     def get_last_backup_date(self, local_repository):
         raise NotImplementedError
-
-
-def check_curl_url(remote_url):
-    """Check if the given URL starts by a valid scheme
-
-    >>> check_curl_url("scp://localhost/tmp") == 'scp://localhost/tmp'
-    True
-
-    """
-    parsed_url = urlparse(remote_url)
-    if parsed_url.scheme not in ('http', 'https', 'scp', 'ftp', 'ftps', 'sftp', 'smb', 'smbs', 'file'):
-        raise ValueError('Invalid scheme for remote URL: %s' % parsed_url.scheme)
-    return remote_url
 
 
 class TarArchive(RemoteRepository):

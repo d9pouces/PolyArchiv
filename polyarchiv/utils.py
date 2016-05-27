@@ -6,7 +6,7 @@ import os
 import re
 import sys
 
-__author__ = 'mgallet'
+__author__ = 'Matthieu Gallet'
 
 if sys.version_info[0] == 3:
     text_type = str

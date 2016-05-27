@@ -18,7 +18,7 @@ from polyarchiv.repository import ParameterizedObject
 from polyarchiv.termcolor import YELLOW
 from polyarchiv.termcolor import cprint
 
-__author__ = 'mgallet'
+__author__ = 'Matthieu Gallet'
 
 
 class Source(ParameterizedObject):

@@ -32,7 +32,7 @@ except ImportError:
     # noinspection PyUnresolvedReferences,PyCompatibility
     from ConfigParser import RawConfigParser, Error as ConfigError
 
-__author__ = 'mgallet'
+__author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv.runner')
 
 

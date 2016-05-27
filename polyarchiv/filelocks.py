@@ -4,7 +4,7 @@ import os
 import time
 import errno
 
-__author__ = 'mgallet'
+__author__ = 'Matthieu Gallet'
 
 
 class Lock(object):

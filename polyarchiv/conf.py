@@ -5,7 +5,7 @@ import os
 
 from polyarchiv.utils import text_type
 
-__author__ = 'mgallet'
+__author__ = 'Matthieu Gallet'
 
 
 def bool_setting(value):

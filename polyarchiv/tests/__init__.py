@@ -10,7 +10,7 @@ You should consider to install :mod:`Distribute` to run all tests with::
 """
 from __future__ import unicode_literals
 import unittest
-__author__ = 'mgallet'
+__author__ = 'Matthieu Gallet'
 
 if __name__ == '__main__':
     unittest.main()

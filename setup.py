@@ -37,7 +37,7 @@ setup(
     version=version,
     description='Multiple-source backup tool: backup files|MySQL|LDAP|PostgresSQL to git|rsync|duplicity|tar archives',
     long_description=long_description,
-    author='mgallet',
+    author='Matthieu Gallet',
     author_email='mgallet@19pouces.net',
     license='CeCILL-B',
     url='https://github.com/d9pouces/Polyarchiv',
