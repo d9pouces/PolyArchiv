@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import subprocess
+import tarfile
 
 from polyarchiv.conf import Parameter, strip_split, check_directory, check_executable
 from polyarchiv.filelocks import Lock
@@ -44,7 +45,6 @@ class LocalRepository(Repository):
         self.included_remote_tags = ['*'] if included_remote_tags is None else included_remote_tags
         self.excluded_remote_tags = excluded_remote_tags or []
         self.sources = []
-        self.variables = {}
 
     def backup(self, force=False):
         """ perform the backup and log all errors
@@ -307,16 +307,19 @@ class ArchiveRepository(FileRepository):
     def post_source_backup(self):
         super(ArchiveRepository, self).post_source_backup()
         self.ensure_dir(self.export_data_path)
-        compression = 'j'
+        comp = 'j'
         archive_name = self.format_value(self.archive_name)
         if archive_name.endswith('.tar.gz'):
-            compression = 'z'
+            comp = 'z'
         elif archive_name.endswith('.tar.xz'):
-            compression = 'x'
+            comp = 'x'
         file_list = os.listdir(self.import_data_path)
+        full_path = os.path.join(self.export_data_path, archive_name)
         if file_list:
-            self.execute_command(['tar', '-c%sf' % compression, os.path.join(self.export_data_path, archive_name)
-                                  ] + file_list, cwd=self.import_data_path)
+            self.execute_command(['tar', '-c%sf' % comp, full_path] + file_list, cwd=self.import_data_path)
+        elif self.can_execute_command(['tar', '-c%sf' % comp, full_path]):
+            mode = {'j': 'w:bz2', 'x': 'w:xz', 'z': 'w:gz'}[comp]
+            tarfile.open(name=full_path, mode=mode).close()
         if self.can_execute_command(['rm', '-rf', self.import_data_path]):
             shutil.rmtree(self.import_data_path)
 

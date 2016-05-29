@@ -198,9 +198,9 @@ Use `polyarchiv plugins` to display the full list, and `polyarchiv plugins -v` t
 Extra backup options
 --------------------
 
-  * `--verbose`: display more infos
+  * `--verbose`: display more info
   * `--force`: force the backup, even if not required (the last backup is recent enough)
-  * `--nrpe`: the output is compatible with Nagios/NRPE (so you can use it like a standard Nagios check in your sup)
+  * `--nrpe`: the output is compatible with Nagios/NRPE (so you can use it as a standard Nagios check in your sup)
   * `--show-commands`: display all operations as a plain Bash script
   * `--confirm-commands`: display all operations and ask for a manual confirmation before running them
   * `--dry`: does not actually perform operations

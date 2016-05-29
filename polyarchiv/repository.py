@@ -253,3 +253,10 @@ class Repository(ParameterizedObject):
     def __init__(self, name, check_out_of_date_backup=None, **kwargs):
         super(Repository, self).__init__(name, **kwargs)
         self.check_out_of_date_backup = check_out_of_date_backup or get_is_time_elapsed(None)
+        self.filters = []
+        # list of `polyarchiv.filters.FileFilter`
+        self.variables = {}
+        # self.variables["variable_name"] = "value"
+
+    def add_filter(self, filter_):
+        self.filters.append(filter_)

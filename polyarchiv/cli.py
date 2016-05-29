@@ -136,7 +136,7 @@ def main(engines_file=None):
         if not verbose:
             cprint('display available options for each engine with --verbose', CYAN)
 
-        available_local_engines, available_source_engines, available_remote_engines = \
+        available_local_engines, available_source_engines, available_remote_engines, available_filter_engines = \
             Runner.find_available_engines(engines_file)
         cprint('available local repository engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker

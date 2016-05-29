@@ -2,11 +2,10 @@
 import datetime
 import logging
 
-from pkg_resources import iter_entry_points
-
 from polyarchiv.locals import LocalRepository
 from polyarchiv.remotes import RemoteRepository
 from polyarchiv.repository import RepositoryInfo
+from polyarchiv.runner import Runner
 from polyarchiv.sources import Source
 from polyarchiv.termcolor import cprint, RED, YELLOW, GREEN, BOLD, CYAN
 
@@ -15,9 +14,8 @@ __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv.show')
 
 
-def show_local_repository(local_repository):
-    available_local_engines = {x.load(): x.name.lower() for x in iter_entry_points('polyarchiv.locals')}
-    available_source_engines = {x.load(): x.name.lower() for x in iter_entry_points('polyarchiv.sources')}
+def show_local_repository(local_repository, engines_file=None):
+    available_local_engines, available_source_engines, __, __ = Runner.find_available_engines(engines_file)
 
     # ##################################################################################################################
     assert isinstance(local_repository, LocalRepository)
@@ -60,8 +58,8 @@ def show_local_repository(local_repository):
         cprint('The last backup has failed. %s' % info.last_message, RED)
 
 
-def show_remote_repository(remote_repository):
-    available_remote_engines = {x.load(): x.name.lower() for x in iter_entry_points('polyarchiv.remotes')}
+def show_remote_repository(remote_repository, engines_file=None):
+    __, __, available_remote_engines, __ = Runner.find_available_engines(engines_file)
     assert isinstance(remote_repository, RemoteRepository)
     cprint('remote repository %s selected' % remote_repository.name, CYAN)
     if remote_repository.__class__ in available_remote_engines:

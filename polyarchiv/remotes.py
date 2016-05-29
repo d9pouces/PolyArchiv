@@ -55,6 +55,7 @@ class RemoteRepository(Repository):
     def format_value(self, value, local_repository):
         assert isinstance(local_repository, LocalRepository)
         variables = {}
+        variables.update(self.variables)
         variables.update(local_repository.variables)
         if local_repository.name in self.local_variables:
             variables.update(self.local_variables[local_repository.name])
