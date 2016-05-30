@@ -7,6 +7,8 @@ import logging
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
+from polyarchiv._vendor.lru_cache import lru_cache
+from polyarchiv.filters import FileFilter
 from polyarchiv.param_checks import check_git_url, check_curl_url
 from polyarchiv.termcolor import YELLOW, RED
 from polyarchiv.termcolor import cprint
@@ -141,9 +143,16 @@ class RemoteRepository(Repository):
     def restore(self, local_repository):
         raise NotImplementedError
 
+    @lru_cache()
     def private_path(self, local_repository):
         assert isinstance(local_repository, LocalRepository)
-        return local_repository.remote_private_path(self)
+        return os.path.join(local_repository.remote_private_path(self), 'remote')
+
+    @lru_cache()
+    def filter_private_path(self, local_repository, filter_):
+        assert isinstance(local_repository, LocalRepository)
+        assert isinstance(filter_, FileFilter)
+        return os.path.join(local_repository.remote_private_path(self), 'filter-%s' % filter_.name)
 
 
 class GitRepository(RemoteRepository):

@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import datetime
 import os
 import re
+import shutil
 import sys
 
 __author__ = 'Matthieu Gallet'
@@ -194,3 +195,58 @@ def get_is_time_elapsed(fmt):
         return lambda current_time, previous_time: previous_time is None or \
                                                    (current_time - previous_time).total_seconds() > 86400
     return lambda current_time, previous_time: True
+
+
+# noinspection PyPep8Naming
+class cached_property(object):
+    """
+    Decorator that converts a method with a single self argument into a
+    property cached on the instance.
+
+    Optional ``name`` argument allows you to make cached properties of other
+    methods. (e.g.  url = cached_property(get_absolute_url, name='url') )
+    """
+    def __init__(self, func, name=None):
+        self.func = func
+        self.__doc__ = getattr(func, '__doc__')
+        self.name = name or func.__name__
+
+    # noinspection PyUnusedLocal
+    def __get__(self, instance, type=None):
+        if instance is None:
+            return self
+        res = instance.__dict__[self.name] = self.func(instance)
+        return res
+
+
+def copytree(src, dst, symlinks=False):
+    """copy all files from the source to the destination using hard links if possible"""
+    if src == dst:
+        return
+    if not os.path.exists(dst):  # required to check the underlying device
+        os.makedirs(dst)
+    dst_st_dev = os.stat(dst).st_dev
+    if os.path.isdir(dst):
+        shutil.rmtree(dst)
+    elif os.path.exists(dst):
+        os.unlink(dst)
+    if os.stat(src).st_dev != dst_st_dev:
+        shutil.copytree(src, dst, symlinks=symlinks)
+        return
+    os.makedirs(dst)
+    shutil.copystat(src, dst)
+    for root, dirnames, filenames in os.walk(src):
+        for src_dirname in dirnames:
+            src_path = os.path.join(root, src_dirname)
+            dst_path = os.path.join(dst, os.path.relpath(src_path, src))
+            os.makedirs(dst_path)
+            shutil.copystat(src_path, dst_path)
+        for src_filename in filenames:
+            src_path = os.path.join(root, src_filename)
+            dst_path = os.path.join(dst, os.path.relpath(src_path, src))
+            if symlinks and os.path.islink(src_path):
+                linkto = os.readlink(src_path)
+                os.symlink(linkto, dst_path)
+            else:
+                os.link(src_path, dst_path)
+                shutil.copystat(src_path, dst_path)

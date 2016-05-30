@@ -129,7 +129,7 @@ The `[repository]` section defines options for the local repository (the engine 
     excluded_remote_tags=
     frequency=daily
     
-    [source_1]
+    [source "source_1"]
     engine=postgressql
     host=localhost
     port=5432
@@ -138,7 +138,7 @@ The `[repository]` section defines options for the local repository (the engine 
     database=testdb
     destination_path=./postgres.sql
     
-    [source_2]
+    [source "source_2"]
     engine=mysql
     host=localhost
     port=3306
@@ -147,14 +147,13 @@ The `[repository]` section defines options for the local repository (the engine 
     database=testdb
     destination_path=./mysql.sql
     
-    [source_3]
+    [source "source_3"]
     engine=rsync
     source_path=/tmp/source/files
     destination_path=./files
 
 The kind of repository (either local or remote) and of each source is defined by the `engine` option.
 You can define as many local repositories (each of them with one or more sources) as you want.
-**You cannot use `DEFAULT`, `repository` or `variables` as source name.**
 
 Remote repositories are simpler and by default only have a `[repository]` section.
 Their names must end by `.remote`.
@@ -284,11 +283,13 @@ Check the example below:
     $ cat /etc/polyarchiv/my-remote.remote
     [repository]
     engine=git
-    remote_url=http://gitlab.example.org/%(group)s/%(name)s.git  <-- another one
+    remote_url=http://%(host)s/%(group)s/%(name)s.git  <-- another one
     ; requires a `group` variable in each local repository
     ; the `name` variable always exists
+    [variables]
+    host=gitlab.example.org
     
-    [my-local-2]
+    [variables "my-local-2"]
     group=MY-GROUP-2
     ; you can override the `group` variable of `my-local-2` only in the `my-remote` remote repository.
 

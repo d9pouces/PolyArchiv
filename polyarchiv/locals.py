@@ -10,13 +10,15 @@ import shutil
 import subprocess
 import tarfile
 
+# noinspection PyProtectedMember
+from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.conf import Parameter, strip_split, check_directory, check_executable
 from polyarchiv.filelocks import Lock
 from polyarchiv.param_checks import check_archive
 from polyarchiv.repository import Repository, RepositoryInfo
 from polyarchiv.termcolor import RED
 from polyarchiv.termcolor import cprint
-from polyarchiv.utils import text_type
+from polyarchiv.utils import text_type, cached_property
 
 __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv')
@@ -114,11 +116,19 @@ class LocalRepository(Repository):
         raise NotImplementedError
 
     @property
-    def export_data_path(self):
-        """Must return a valid directory, with all files to be read by remote repositories.
-        If the local repository is not the filesystem, this directory must contain all files to be exported.
-        """
+    def private_data_path(self):
+        """where all exported data are actually stored and where the first filter are applied"""
         raise NotImplementedError
+
+    @cached_property
+    def export_data_path(self):
+        """exported data by the last filter"""
+        from polyarchiv.filters import FileFilter
+        next_path = self.private_data_path
+        for filter_ in self.filters:
+            assert isinstance(filter_, FileFilter)
+            next_path = filter_.next_path(next_path, self.filter_private_path(filter_), allow_in_place=True)
+        return next_path
 
     @property
     def metadata_path(self):
@@ -156,6 +166,11 @@ class LocalRepository(Repository):
         assert isinstance(remote_repository, RemoteRepository)
         raise NotImplementedError
 
+    def filter_private_path(self, filter_):
+        from polyarchiv.filters import FileFilter
+        assert isinstance(filter_, FileFilter)
+        raise NotImplementedError
+
     def format_value(self, value):
         try:
             formatted_value = value % self.variables
@@ -190,28 +205,35 @@ class FileRepository(LocalRepository):
             with codecs.open(filename, 'w', encoding='utf-8') as fd:
                 fd.write(last_backup_date)
 
-    @property
+    @cached_property
     def import_data_path(self):
         path = self.format_value(os.path.join(self.local_path, 'backups'))
         return path
 
-    @property
-    def export_data_path(self):
+    @cached_property
+    def private_data_path(self):
+        """where all exported data are actually stored"""
         return self.import_data_path
 
-    @property
+    @cached_property
     def metadata_path(self):
         path = os.path.join(self.local_path, self.METADATA_FOLDER, 'local')
         path = self.format_value(path)
         self.ensure_dir(path)
         return path
 
-    @property
+    @cached_property
     def lock_filepath(self):
         return os.path.join(self.metadata_path, 'lock')
 
+    @lru_cache()
     def remote_private_path(self, remote_repository):
-        path = os.path.join(self.local_path, self.METADATA_FOLDER, 'remotes', remote_repository.name)
+        path = os.path.join(self.local_path, self.METADATA_FOLDER, 'remote-%s' % remote_repository.name)
+        return self.format_value(path)
+
+    @lru_cache()
+    def filter_private_path(self, filter_):
+        path = os.path.join(self.local_path, self.METADATA_FOLDER, 'filter-%s' % filter_.name)
         return self.format_value(path)
 
     def get_info(self):
@@ -242,7 +264,7 @@ class FileRepository(LocalRepository):
             raise ValueError
 
     def get_repository_size(self):
-        content = subprocess.check_output(['du', '-s'], cwd=self.export_data_path).decode()
+        content = subprocess.check_output(['du', '-s'], cwd=self.local_path).decode()
         matcher = re.match('^(\d+) \.$', content.strip())
         if not matcher:
             return 0
@@ -306,7 +328,7 @@ class ArchiveRepository(FileRepository):
 
     def post_source_backup(self):
         super(ArchiveRepository, self).post_source_backup()
-        self.ensure_dir(self.export_data_path)
+        self.ensure_dir(self.private_data_path)
         comp = 'j'
         archive_name = self.format_value(self.archive_name)
         if archive_name.endswith('.tar.gz'):
@@ -314,7 +336,7 @@ class ArchiveRepository(FileRepository):
         elif archive_name.endswith('.tar.xz'):
             comp = 'x'
         file_list = os.listdir(self.import_data_path)
-        full_path = os.path.join(self.export_data_path, archive_name)
+        full_path = os.path.join(self.private_data_path, archive_name)
         if file_list:
             self.execute_command(['tar', '-c%sf' % comp, full_path] + file_list, cwd=self.import_data_path)
         elif self.can_execute_command(['tar', '-c%sf' % comp, full_path]):
@@ -324,7 +346,7 @@ class ArchiveRepository(FileRepository):
             shutil.rmtree(self.import_data_path)
 
     @property
-    def export_data_path(self):
+    def private_data_path(self):
         path = os.path.join(self.local_path, 'archives')
         return self.format_value(path)
 

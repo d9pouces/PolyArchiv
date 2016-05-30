@@ -53,7 +53,7 @@ class Runner(ParameterizedObject):
         super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
         self.available_local_engines, self.available_source_engines, self.available_remote_engines, \
-            self.available_filter_engines = self.find_available_engines(engines_file)
+        self.available_filter_engines = self.find_available_engines(engines_file)
         self.local_repositories = {}
         self.remote_repositories = {}
         self.local_config_files = []
@@ -68,6 +68,7 @@ class Runner(ParameterizedObject):
         if iter_entry_points:
             def import_points(name):
                 return {x.name.lower().strip(): x.load() for x in iter_entry_points(name)}
+
             available_local_engines.update(import_points('polyarchiv.locals'))
             available_remote_engines.update(import_points('polyarchiv.remotes'))
             available_source_engines.update(import_points('polyarchiv.sources'))
@@ -79,6 +80,7 @@ class Runner(ParameterizedObject):
             def import_items(name):
                 return {key.lower(): import_string(value) for key, value in parser.items(name)} \
                     if parser.has_section(name) else {}
+
             available_source_engines.update(import_items('sources'))
             available_remote_engines.update(import_items('remotes'))
             available_local_engines.update(import_items('locals'))
@@ -136,7 +138,9 @@ class Runner(ParameterizedObject):
                 raise ImportError('In file \'%s\', section \'%s\': invalid engine \'%s\'' %
                                   (config_file, section, engine))
         parameters = self._get_args_from_parser(config_file, parser, section, engine_cls)
-        assert issubclass(engine_cls, expected_cls)
+        if not issubclass(engine_cls, expected_cls):
+            raise ValueError('In file \'%s\', section \'%s\': engine \'%s\' is not a subclass of \'%s\'' %
+                             (config_file, section, engine, expected_cls.__name__))
         source = engine_cls(*args, **parameters)
         return source
 
