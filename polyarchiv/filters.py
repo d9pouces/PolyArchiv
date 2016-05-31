@@ -1,12 +1,14 @@
 # coding=utf-8
 from __future__ import unicode_literals
 
+import codecs
+import hashlib
 import os
 import shutil
 
 import subprocess
 
-from polyarchiv.conf import Parameter, check_executable
+from polyarchiv.conf import Parameter, check_executable, CheckOption
 from polyarchiv.repository import ParameterizedObject
 from polyarchiv.utils import copytree
 
@@ -64,3 +66,30 @@ class SymmetricCrypt(FileFilter):
                     if self.can_execute_command(cmd):
                         subprocess.check_call(cmd)
                         shutil.copystat(src_path, dst_path)
+
+
+class Hashsum(FileFilter):
+    parameters = FileFilter.parameters + [
+        Parameter('method', converter=CheckOption(['sha1', 'md5', 'sha256']), help_str='method: sha1, md5 or sha256'),
+        Parameter('filename', help_str='index file (default to \'hashes.txt\')'),
+    ]
+    work_in_place = True
+
+    def __init__(self, name, method='sha1', filename='hashes.txt', **kwargs):
+        super(Hashsum, self).__init__(name, **kwargs)
+        self.method = method
+        self.filename = filename
+
+    def do_backup(self, previous_path, next_path, private_path, allow_in_place=True):
+        index_path = os.path.abspath(os.path.join(next_path, self.filename))
+        with codecs.open(index_path, 'w', encoding='utf-8') as fd:
+            for root, dirnames, filenames in os.walk(next_path):
+                for filename in filenames:
+                    src_path = os.path.abspath(os.path.join(root, filename))
+                    if src_path == index_path:
+                        continue
+                    hash_obj = getattr(hashlib, self.method)()
+                    with open(src_path, 'rb') as src_fd:
+                        for data in iter(lambda: src_fd.read(16384), b''):
+                            hash_obj.update(data)
+                    fd.write("%s *%s\n" % (hash_obj.hexdigest(), os.path.relpath(src_path, next_path)))

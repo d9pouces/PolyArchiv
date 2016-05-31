@@ -295,3 +295,13 @@ Check the example below:
 
 `my-local-1` is sent to `remote_url=http://gitlab.example.org/MyGroup1/my-local-1.git`.
 `my-local-2` is sent to `remote_url=http://gitlab.example.org/MY-GROUP-2/MY-LOCAL-2.git`.
+
+File filters
+------------
+
+Currently, a local repository gather some files from its sources and expose them to all remote repositories.
+You can add some treatment on these files, before sending them to the remote repositories.
+These operation can happen after the local backup, or only before a given remote backup.
+You only have to add a `[filter "my filter name"]` section to your config file. 
+Of course, you can use several filters, there are applied in the order of apparition in the config file.
+

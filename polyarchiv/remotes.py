@@ -7,6 +7,7 @@ import logging
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
+# noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.filters import FileFilter
 from polyarchiv.param_checks import check_git_url, check_curl_url
@@ -115,6 +116,13 @@ class RemoteRepository(Repository):
     def do_backup(self, local_repository):
         raise NotImplementedError
 
+    def apply_filters(self, local_repository):
+        assert isinstance(local_repository, LocalRepository)
+        next_path = local_repository.export_data_path
+        for filter_ in self.filters:
+            next_path = filter_.backup(next_path, self.filter_private_path(local_repository, filter_), allow_in_place=False)
+        return next_path
+
     # noinspection PyMethodMayBeStatic
     def get_info(self, local_repository):
         assert isinstance(local_repository, LocalRepository)
@@ -195,7 +203,8 @@ class GitRepository(RemoteRepository):
 
     def do_backup(self, local_repository):
         assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
-        worktree = local_repository.export_data_path
+        export_data_path = self.apply_filters(local_repository)
+        worktree = export_data_path
         git_dir = self.private_path(local_repository)
         git_config_path = os.path.join(git_dir, '.gitconfig')
         if not os.path.isfile(git_config_path):
@@ -317,7 +326,8 @@ class Rsync(RemoteRepository):
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
         cmd += [self.rsync_executable, '-az', '--delete', '-S']
-        local_path = local_repository.export_data_path
+        export_data_path = self.apply_filters(local_repository)
+        local_path = export_data_path
         if not local_path.endswith(os.path.sep):
             local_path += os.path.sep
         remote_url = self.format_value(self.remote_url, local_repository)
@@ -330,7 +340,7 @@ class Rsync(RemoteRepository):
         else:
             cmd += ['-e', 'ssh']
         cmd += [local_path, remote_url]
-        self.execute_command(cmd, cwd=local_repository.export_data_path)
+        self.execute_command(cmd, cwd=export_data_path)
 
     def restore(self, local_repository):
         raise NotImplementedError
@@ -402,13 +412,14 @@ class TarArchive(RemoteRepository):
         assert isinstance(local_repository, LocalRepository)
         error = None
         excluded_files = self.excluded_files
-        filenames = {x for x in os.listdir(local_repository.export_data_path)} - excluded_files
+        export_data_path = self.apply_filters(local_repository)
+        filenames = {x for x in os.listdir(export_data_path)} - excluded_files
         filenames = [x for x in filenames]
         filenames.sort()
         # noinspection PyTypeChecker
         now_str = datetime.datetime.now().strftime(self.date_format)
         prefix = self.format_value(self.archive_prefix, local_repository)
-        archive_filename = os.path.join(local_repository.export_data_path,
+        archive_filename = os.path.join(export_data_path,
                                         '%s-%s.%s' % (prefix, now_str, self.tar_format))
         if self.tar_format == 'tar.gz':
             cmd = [self.tar_executable, '-czf']
@@ -420,7 +431,7 @@ class TarArchive(RemoteRepository):
             raise ValueError('invalid tar format: %s' % self.tar_format)
         cmd.append(archive_filename)
         cmd += filenames
-        returncode, stdout, stderr = self.execute_command(cmd, cwd=local_repository.export_data_path,
+        returncode, stdout, stderr = self.execute_command(cmd, cwd=export_data_path,
                                                           ignore_errors=True)
         if returncode != 0:
             error = ValueError('unable to create archive %s' % archive_filename)
@@ -559,7 +570,8 @@ class Duplicity(RemoteRepository):
         cmd = []
         env = {}
         cmd += [self.duplicity_executable, ]
-        local_path = local_repository.export_data_path
+        export_data_path = self.apply_filters(local_repository)
+        local_path = export_data_path
         if not local_path.endswith(os.path.sep):
             local_path += os.path.sep
         remote_url = self.format_value(self.remote_url, local_repository)
@@ -620,7 +632,7 @@ class Duplicity(RemoteRepository):
             if self.command_display:
                 for k, v in env.items():
                     cprint('%s=%s' % (k, v), YELLOW)
-            self.execute_command(cmd_args, cwd=local_repository.export_data_path, env=env)
+            self.execute_command(cmd_args, cwd=export_data_path, env=env)
 
     def restore(self, local_repository):
         raise NotImplementedError

@@ -75,6 +75,11 @@ class LocalRepository(Repository):
             for source in self.sources:
                 source.backup()
             self.post_source_backup()
+
+            next_path = self.private_data_path
+            for filter_ in self.filters:
+                next_path = filter_.backup(next_path, self.filter_private_path(filter_), allow_in_place=True)
+
             info.total_size = self.get_repository_size()
             info.success_count += 1
             info.last_state_valid = True
