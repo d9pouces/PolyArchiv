@@ -305,3 +305,13 @@ These operation can happen after the local backup, or only before a given remote
 You only have to add a `[filter "my filter name"]` section to your config file. 
 Of course, you can use several filters, there are applied in the order of apparition in the config file.
 
+    $ cat /etc/polyarchiv/my-local-1.local
+    [repository]
+    engine=git
+    [filter "hash"]
+    engine=hashes
+    method=sha1
+    [filter "encrypt"]
+    password=p@ssw0rd
+    engine=encrypt
+

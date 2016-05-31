@@ -47,6 +47,10 @@ class SymmetricCrypt(FileFilter):
 
     def do_backup(self, previous_path, next_path, private_path, allow_in_place=True):
         symlinks = True
+        if self.can_execute_command(['rm', '-rf', next_path]):
+            shutil.rmtree(next_path)
+        if self.can_execute_command(['mkdir', '-p', next_path]):
+            os.makedirs(next_path)
         for root, dirnames, filenames in os.walk(previous_path):
             for src_dirname in dirnames:
                 src_path = os.path.join(root, src_dirname)
