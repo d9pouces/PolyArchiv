@@ -85,15 +85,20 @@ class Hashsum(FileFilter):
         self.filename = filename
 
     def do_backup(self, previous_path, next_path, private_path, allow_in_place=True):
+        cmd = {'sha1': 'shasum -a 1 -b', 'md5': 'md5sum -b', 'sha256': 'shasum -a 256 -b'}[self.method]
         index_path = os.path.abspath(os.path.join(next_path, self.filename))
-        with codecs.open(index_path, 'w', encoding='utf-8') as fd:
-            for root, dirnames, filenames in os.walk(next_path):
-                for filename in filenames:
-                    src_path = os.path.abspath(os.path.join(root, filename))
-                    if src_path == index_path:
-                        continue
-                    hash_obj = getattr(hashlib, self.method)()
-                    with open(src_path, 'rb') as src_fd:
-                        for data in iter(lambda: src_fd.read(16384), b''):
-                            hash_obj.update(data)
+        fd = codecs.open(os.devnull, 'w', encoding='utf-8')
+        if self.can_execute_command(['rm', index_path]):
+            fd = codecs.open(index_path, 'w', encoding='utf-8')
+        for root, dirnames, filenames in os.walk(next_path):
+            for filename in filenames:
+                src_path = os.path.abspath(os.path.join(root, filename))
+                if src_path == index_path:
+                    continue
+                hash_obj = getattr(hashlib, self.method)()
+                with open(src_path, 'rb') as src_fd:
+                    for data in iter(lambda: src_fd.read(16384), b''):
+                        hash_obj.update(data)
+                if self.can_execute_command('%s %s >> %s' % (cmd, src_path, index_path)):
                     fd.write("%s *%s\n" % (hash_obj.hexdigest(), os.path.relpath(src_path, next_path)))
+        fd.close()
