@@ -67,7 +67,14 @@ class Runner(ParameterizedObject):
         available_filter_engines = {}
         if iter_entry_points:
             def import_points(name):
-                return {x.name.lower().strip(): x.load() for x in iter_entry_points(name)}
+                result = {}
+                for x in iter_entry_points(name):
+                    # noinspection PyBroadException
+                    try:
+                        result[x.name.lower()] = x.load()
+                    except:
+                        pass
+                return result
 
             available_local_engines.update(import_points('polyarchiv.locals'))
             available_remote_engines.update(import_points('polyarchiv.remotes'))
