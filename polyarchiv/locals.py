@@ -39,6 +39,7 @@ class LocalRepository(Repository):
                            ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_local_tags and included_remote_tags.'),
     ]
+    LAST_BACKUP_FILE = '.last-backup'
 
     def __init__(self, name, local_tags=None, included_remote_tags=None, excluded_remote_tags=None,
                  **kwargs):
@@ -143,7 +144,11 @@ class LocalRepository(Repository):
         raise NotImplementedError
 
     def post_source_backup(self):
-        raise NotImplementedError
+        last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
+        filename = os.path.join(self.import_data_path, self.LAST_BACKUP_FILE)
+        if self.can_execute_command('echo \'%s\' > %s' % (last_backup_date, filename)):
+            with codecs.open(filename, 'w', encoding='utf-8') as fd:
+                fd.write(last_backup_date)
 
     def get_repository_size(self):
         """ return the size of the repository (in bytes)
@@ -193,7 +198,6 @@ class FileRepository(LocalRepository):
         Parameter('local_path', converter=check_directory,
                   help_str='absolute path where all data are locally gathered [*]')
     ]
-    LAST_BACKUP_FILE = '.last-backup'
     METADATA_FOLDER = 'metadata'
 
     def __init__(self, name, local_path='.', **kwargs):
@@ -202,13 +206,6 @@ class FileRepository(LocalRepository):
 
     def pre_source_backup(self):
         self.ensure_dir(self.import_data_path)
-
-    def post_source_backup(self):
-        last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
-        filename = os.path.join(self.import_data_path, self.LAST_BACKUP_FILE)
-        if self.can_execute_command('echo \'%s\' > %s' % (last_backup_date, filename)):
-            with codecs.open(filename, 'w', encoding='utf-8') as fd:
-                fd.write(last_backup_date)
 
     @cached_property
     def import_data_path(self):
