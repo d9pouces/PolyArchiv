@@ -53,7 +53,7 @@ class Runner(ParameterizedObject):
         super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
         self.available_local_engines, self.available_source_engines, self.available_remote_engines, \
-        self.available_filter_engines = self.find_available_engines(engines_file)
+            self.available_filter_engines = self.find_available_engines(engines_file)
         self.local_repositories = {}
         self.remote_repositories = {}
         self.local_config_files = []
