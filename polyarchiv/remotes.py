@@ -31,9 +31,12 @@ from polyarchiv.utils import text_type, ensure_dir
 
 __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv.remotes')
+constant_time = datetime.datetime(2016, 1, 1, 0, 0, 0)
 
 
 class RemoteRepository(Repository):
+
+    constant_time_values = {x: constant_time.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'}
     parameters = Repository.parameters + [
         Parameter('remote_tags', converter=strip_split,
                   help_str='list of tags (comma-separated) associated to this remote repository'),
@@ -55,13 +58,15 @@ class RemoteRepository(Repository):
         # values specific to a local: self.local_values[local_repository.name][key] = value
         # used to override remote parameters
 
-    def format_value(self, value, local_repository):
+    def format_value(self, value, local_repository, use_constant_time=False):
         assert isinstance(local_repository, LocalRepository)
         variables = {}
         variables.update(self.variables)
         variables.update(local_repository.variables)
         if local_repository.name in self.local_variables:
             variables.update(self.local_variables[local_repository.name])
+        if use_constant_time:
+            variables.update(self.constant_time_values)
         try:
             formatted_value = value % variables
         except KeyError as e:
@@ -237,6 +242,13 @@ class GitRepository(RemoteRepository):
         self.execute_command(cmd, cwd=worktree)
 
     def get_last_backup_date(self, local_repository):
+        remote_url = self.format_value(self.remote_url, local_repository, use_constant_time=True)
+        remote_branch = self.format_value(self.remote_branch, local_repository, use_constant_time=True)
+        cmd = []
+        if self.keytab:
+            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
+        git_command = [self.git_executable]
+        cmd += git_command + ['push', remote_url, 'master:%s' % remote_branch]
         # git archive --remote=git://git.foo.com/project.git HEAD:path /to/directory filename | tar -x
         pass
 
