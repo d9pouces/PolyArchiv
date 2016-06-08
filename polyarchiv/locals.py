@@ -38,16 +38,17 @@ class LocalRepository(Repository):
                   help_str='any remote repository with one of these tags (comma-separated) will not be associated'
                            ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_local_tags and included_remote_tags.'),
+        Parameter('last_backup_file', help_str='write the last backup date to this file (default: \'./.last-backup\')'),
     ]
-    LAST_BACKUP_FILE = '.last-backup'
 
     def __init__(self, name, local_tags=None, included_remote_tags=None, excluded_remote_tags=None,
-                 **kwargs):
+                 last_backup_file='.last-backup', **kwargs):
         super(LocalRepository, self).__init__(name=name, **kwargs)
         self.local_tags = ['local'] if local_tags is None else local_tags
         self.included_remote_tags = ['*'] if included_remote_tags is None else included_remote_tags
         self.excluded_remote_tags = excluded_remote_tags or []
         self.sources = []
+        self.last_backup_file = last_backup_file
 
     def backup(self, force=False):
         """ perform the backup and log all errors
@@ -145,7 +146,7 @@ class LocalRepository(Repository):
 
     def post_source_backup(self):
         last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
-        filename = os.path.join(self.import_data_path, self.LAST_BACKUP_FILE)
+        filename = os.path.join(self.import_data_path, self.last_backup_file)
         if self.can_execute_command('echo \'%s\' > %s' % (last_backup_date, filename)):
             with codecs.open(filename, 'w', encoding='utf-8') as fd:
                 fd.write(last_backup_date)

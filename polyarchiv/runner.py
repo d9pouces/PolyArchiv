@@ -25,7 +25,7 @@ from polyarchiv.conf import Parameter
 from polyarchiv.locals import LocalRepository
 from polyarchiv.remotes import RemoteRepository
 from polyarchiv.repository import ParameterizedObject, RepositoryInfo
-from polyarchiv.termcolor import cprint, RED, GREEN
+from polyarchiv.termcolor import cprint, RED, GREEN, YELLOW
 from polyarchiv.utils import import_string, text_type
 
 try:
@@ -210,16 +210,21 @@ class Runner(ParameterizedObject):
             for section in parser.sections():
                 if section == self.repository_section or section == self.variables_section:
                     continue
+                used = False
                 source_name = self._decompose_section_name(config_file, section, self.source_section)
                 if source_name:  # section looks like [source "Database"]
                     source = self._load_engine(config_file, parser, section, [source_name, local],
                                                self.available_source_engines, Source)
                     local.add_source(source)
+                    used = True
                 filter_name = self._decompose_section_name(config_file, section, self.filter_section)
                 if filter_name:  # section looks like [filter "sha1"]
                     filter_ = self._load_engine(config_file, parser, section, [filter_name],
                                                 self.available_filter_engines, FileFilter)
                     local.add_filter(filter_)
+                    used = True
+                if not used:
+                    cprint('Unknown section \'%s\' in file \'%s\'' % (section, config_file), YELLOW)
             self.local_config_files.append(config_file)
             self.local_repositories[local_name] = local
 

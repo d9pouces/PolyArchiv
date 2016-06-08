@@ -6,6 +6,8 @@ import datetime
 import logging
 
 # noinspection PyProtectedMember
+import shutil
+
 from polyarchiv._vendor import requests
 # noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
@@ -36,7 +38,8 @@ constant_time = datetime.datetime(2016, 1, 1, 0, 0, 0)
 
 class RemoteRepository(Repository):
 
-    constant_time_values = {x: constant_time.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'}
+    constant_format_values = {x: constant_time.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'}
+    constant_format_values.update({'fqdn': 'localhost', 'hostname': 'localhost'})
     parameters = Repository.parameters + [
         Parameter('remote_tags', converter=strip_split,
                   help_str='list of tags (comma-separated) associated to this remote repository'),
@@ -58,15 +61,15 @@ class RemoteRepository(Repository):
         # values specific to a local: self.local_values[local_repository.name][key] = value
         # used to override remote parameters
 
-    def format_value(self, value, local_repository, use_constant_time=False):
+    def format_value(self, value, local_repository, use_constant_values=False):
         assert isinstance(local_repository, LocalRepository)
         variables = {}
         variables.update(self.variables)
         variables.update(local_repository.variables)
         if local_repository.name in self.local_variables:
             variables.update(self.local_variables[local_repository.name])
-        if use_constant_time:
-            variables.update(self.constant_time_values)
+        if use_constant_values:
+            variables.update(self.constant_format_values)
         try:
             formatted_value = value % variables
         except KeyError as e:
@@ -210,7 +213,7 @@ class GitRepository(RemoteRepository):
         assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
         export_data_path = self.apply_filters(local_repository)
         worktree = export_data_path
-        git_dir = self.private_path(local_repository)
+        git_dir = os.path.join(self.private_path(local_repository), 'git')
         git_config_path = os.path.join(git_dir, '.gitconfig')
         if not os.path.isfile(git_config_path):
             self.execute_command([self.git_executable, 'config', '--global', 'user.email', self.commit_email],
@@ -242,15 +245,29 @@ class GitRepository(RemoteRepository):
         self.execute_command(cmd, cwd=worktree)
 
     def get_last_backup_date(self, local_repository):
-        remote_url = self.format_value(self.remote_url, local_repository, use_constant_time=True)
-        remote_branch = self.format_value(self.remote_branch, local_repository, use_constant_time=True)
+        assert isinstance(local_repository, LocalRepository)
+        private_path = self.private_path(local_repository)
+        self.ensure_dir(private_path)
+        tmp_dir = os.path.join(private_path, 'tmp')
+        if os.path.isdir(tmp_dir) and self.can_execute_command(['rm', '-rf', tmp_dir]):
+            shutil.rmtree(tmp_dir)
+        remote_url = self.format_value(self.remote_url, local_repository, use_constant_values=True)
+        remote_branch = self.format_value(self.remote_branch, local_repository, use_constant_values=True)
         cmd = []
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
         git_command = [self.git_executable]
-        cmd += git_command + ['push', remote_url, 'master:%s' % remote_branch]
-        # git archive --remote=git://git.foo.com/project.git HEAD:path /to/directory filename | tar -x
-        pass
+        cmd += git_command + ['clone', '--depth', '1', '--branch', remote_branch, remote_url, tmp_dir]
+        self.execute_command(cmd)
+        last_backup_file = os.path.join(tmp_dir, local_repository.last_backup_file)
+        d = None
+        if os.path.isfile(last_backup_file):
+            with codecs.open(last_backup_file, 'r', encoding='utf-8') as fd:
+                try:
+                    d = RepositoryInfo.datetime_from_str(fd.read())
+                except ValueError:
+                    d = None
+        return d
 
     def check_remote_url(self, local_repository):
         return True
