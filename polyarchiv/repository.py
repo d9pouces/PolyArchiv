@@ -101,15 +101,21 @@ class ParameterizedObject(object):
         """
         if parent:
             dirname = os.path.dirname(dirname)
-        if os.path.exists(dirname) and not os.path.isdir(dirname):
-            raise ValueError('%s exists but is not a directory' % dirname)
-        elif os.path.isdir(dirname):
-            return
+        is_dir = os.path.isdir(dirname)
+        if os.path.exists(dirname) and not is_dir:
+            if self.can_execute_command(['rm', dirname]):
+                os.remove(dirname)
+            else:
+                return False
+        elif is_dir:
+            return True
         if self.can_execute_command(['mkdir', '-p', dirname]):
             try:
                 os.makedirs(dirname)
+                return True
             except OSError:
                 raise ValueError('Unable to create the %s directory' % dirname)
+        return False
 
 
 class RepositoryInfo(object):

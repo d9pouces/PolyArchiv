@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 from unittest import TestCase
 from xml.dom.minidom import parseString
 
+from polyarchiv.backends import HTTPRequestsStorageBackend
+
 PROPFIND_DATA = """<?xml version="1.0" encoding="utf-8" ?>
    <D:multistatus xmlns:D="DAV:">
      <D:response>
@@ -38,31 +40,22 @@ PROPFIND_DATA = """<?xml version="1.0" encoding="utf-8" ?>
           </D:propstat>
      </D:response>
      <D:response>
-          <D:href>http://www.foo.bar/container/front.html</D:href>
+          <D:href>http://www.foo.bar/container/collection/</D:href>
           <D:propstat>
                <D:prop xmlns:R="http://www.foo.bar/boxschema/">
                     <R:bigbox>
-                         <R:BoxType>Box type B</R:BoxType>
+                         <R:BoxType>Box type A</R:BoxType>
                     </R:bigbox>
+                    <R:author>
+                         <R:Name>Hadrian</R:Name>
+                    </R:author>
                     <D:creationdate>
-                         1997-12-01T18:27:21-08:00
+                         1997-12-01T17:42:21-08:00
                     </D:creationdate>
                     <D:displayname>
-                         Example HTML resource
+                         Example collection
                     </D:displayname>
-                    <D:getcontentlength>
-                         4525
-                    </D:getcontentlength>
-                    <D:getcontenttype>
-                         text/html
-                    </D:getcontenttype>
-                    <D:getetag>
-                         zzyzx
-                    </D:getetag>
-                    <D:getlastmodified>
-                         Monday, 12-Jan-98 09:25:56 GMT
-                    </D:getlastmodified>
-                    <D:resourcetype/>
+                    <D:resourcetype><D:collection/></D:resourcetype>
                     <D:supportedlock>
                          <D:lockentry>
                               <D:lockscope><D:exclusive/></D:lockscope>
@@ -77,12 +70,30 @@ PROPFIND_DATA = """<?xml version="1.0" encoding="utf-8" ?>
                <D:status>HTTP/1.1 200 OK</D:status>
           </D:propstat>
      </D:response>
+     <D:response>
+          <D:href>http://www.foo.bar/container/front.html</D:href>
+          <D:propstat>
+               <D:prop xmlns:R="http://www.foo.bar/boxschema/">
+                    <D:creationdate>
+                         1997-12-01T18:27:21-08:00
+                    </D:creationdate>
+                    <D:getcontentlength>
+                         4525
+                    </D:getcontentlength>
+                    <D:getlastmodified>
+                         Monday, 12-Jan-98 09:25:56 GMT
+                    </D:getlastmodified>
+                    <D:resourcetype/>
+               </D:prop>
+               <D:status>HTTP/1.1 200 OK</D:status>
+          </D:propstat>
+     </D:response>
    </D:multistatus>"""
 
 
 class WebdavTest(TestCase):
     def test_read_propfind(self):
-        data = parseString(PROPFIND_DATA)
-        for response in data.getElementsByTagName('D:response'):
-            href = response.getElementsByTagName('D:href')[0]
-            print(href.childNodes[0].data)
+        url = 'http://www.foo.bar/container/'
+        dirnames, filenames = HTTPRequestsStorageBackend.analyze_propfind(url, PROPFIND_DATA)
+        self.assertEqual(['collection'], dirnames)
+        self.assertEqual(['front.html'], filenames)
