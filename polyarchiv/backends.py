@@ -43,7 +43,7 @@ def get_backend(repository, root_url, keytab=None, private_key=None, ca_cert=Non
     :param root_url:
     :param keytab:
     :param private_key:
-    :param ca_cert: None, 'any' (no check) or cert path
+    :param ca_cert: `None`, 'any' (no check) or cert path
     :param rsync_executable:
     :param curl_executable:
     :param scp_executable:
@@ -239,15 +239,21 @@ class HTTPRequestsStorageBackend(StorageBackend):
                 src_path = os.path.join(root, src_filename)
                 self.upload_file('/' + os.path.relpath(src_path, local_dirname), src_path)
 
-    def sync_file_to_local(self, local_filename, filename='/filename'):
-        self.download_file('/' + filename, local_filename)
+    def sync_file_to_local(self, local_filename, filename='filename'):
+        if filename:
+            filename = '/' + filename
+        self.download_file(filename, local_filename)
 
     def sync_file_from_local(self, local_filename, filename='filename'):
-        self.upload_file('/' + filename, local_filename)
+        if filename:
+            filename = '/' + filename
+        self.upload_file(filename, local_filename)
 
     def delete_from(self, path=''):
-        if self.can_execute_command(self.get_curl_command('/' + path, '-X', 'DELETE')):
-            self.send('DELETE', (204, 207, 404), suffix='/' + path, headers={'Depth': 'infinity'})
+        if path:
+            path = '/' + path
+        if self.can_execute_command(self.get_curl_command(path, '-X', 'DELETE')):
+            self.send('DELETE', (204, 207, 404), suffix=path, headers={'Depth': 'infinity'})
 
     def remote_mkdir(self, suffix):
         if self.can_execute_command(self.get_curl_command(suffix, '-X', 'MKCOL')):

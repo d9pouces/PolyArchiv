@@ -374,7 +374,6 @@ class Session(SessionRedirectMixin):
         merged_cookies = merge_cookies(
             merge_cookies(RequestsCookieJar(), self.cookies), cookies)
 
-
         # Set environment's basic authentication if not explicitly set.
         auth = request.auth
         if self.trust_env and not auth and not self.auth:

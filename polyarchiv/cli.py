@@ -151,6 +151,7 @@ def main(engines_file=None):
         # noinspection PyTypeChecker
         display_classes(available_filter_engines, verbose=verbose, width=width)
         cprint('[*] this parameter can use variables. See the README (\'Replacement rules\' section)', RED)
+        cprint('[**] this parameter can only use time/host-independent variables. See the README', RED)
     else:
         cprint('unknown command \'%s\'' % command, RED)
         cprint('available commands: backup|restore|config|plugins', YELLOW)
@@ -169,7 +170,9 @@ def display_classes(plugin_category, verbose=False, width=80):
         # noinspection PyUnresolvedReferences
         for parameter in engine_cls.parameters:
             assert isinstance(parameter, Parameter)
-            if parameter.help_str:
+            if parameter.common:
+                continue
+            elif parameter.help_str:
                 txt = '%s: %s' % (parameter.option_name, parameter.help_str)
                 lines = []
                 w = width - 8

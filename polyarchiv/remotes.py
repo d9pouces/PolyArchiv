@@ -11,6 +11,7 @@ import shutil
 from polyarchiv._vendor import requests
 # noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
+from polyarchiv.backends import get_backend, StorageBackend
 from polyarchiv.filters import FileFilter
 from polyarchiv.param_checks import check_git_url, check_curl_url
 from polyarchiv.termcolor import YELLOW, RED
@@ -37,7 +38,6 @@ constant_time = datetime.datetime(2016, 1, 1, 0, 0, 0)
 
 
 class RemoteRepository(Repository):
-
     constant_format_values = {x: constant_time.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'}
     constant_format_values.update({'fqdn': 'localhost', 'hostname': 'localhost'})
     parameters = Repository.parameters + [
@@ -62,6 +62,8 @@ class RemoteRepository(Repository):
         # used to override remote parameters
 
     def format_value(self, value, local_repository, use_constant_values=False):
+        if value is None:
+            return None
         assert isinstance(local_repository, LocalRepository)
         variables = {}
         variables.update(self.variables)
@@ -83,6 +85,7 @@ class RemoteRepository(Repository):
         logger.info('remote backup %s of local repository %s' % (self.name, local_repository.name))
         info = self.get_info(local_repository)
         assert isinstance(info, RepositoryInfo)
+        assert isinstance(local_repository, LocalRepository)
         out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(),
                                                     previous_time=info.last_success)
         if not (force or out_of_date):
@@ -97,6 +100,9 @@ class RemoteRepository(Repository):
         elif force:
             logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
         lock_ = None
+        # collect only (but all) variables that are related to host and time
+        info.variables = {k: v for (k, v) in local_repository.variables if k in self.constant_format_values}
+        # these variables are required for a valid restore
         try:
             if self.can_execute_command(''):
                 lock_ = local_repository.get_lock()
@@ -124,18 +130,33 @@ class RemoteRepository(Repository):
     def do_backup(self, local_repository):
         raise NotImplementedError
 
-    def apply_filters(self, local_repository):
+    def apply_backup_filters(self, local_repository):
         assert isinstance(local_repository, LocalRepository)
         next_path = local_repository.export_data_path
         for filter_ in self.filters:
-            next_path = filter_.backup(next_path, self.filter_private_path(local_repository, filter_), allow_in_place=False)
+            assert isinstance(filter_, FileFilter)
+            next_path = filter_.backup(next_path, self.filter_private_path(local_repository, filter_),
+                                       allow_in_place=False)
+        return next_path
+
+    def apply_restore_filters(self, local_repository):
+        assert isinstance(local_repository, LocalRepository)
+        next_path = local_repository.export_data_path
+        paths = [next_path]
+        for filter_ in self.filters:
+            assert isinstance(filter_, FileFilter)
+            next_path = filter_.next_path(next_path, self.filter_private_path(local_repository, filter_),
+                                          allow_in_place=False)
+            paths.append(next_path)
+        for filter_, path in zip(reversed(self.filters), reversed(paths[:-1])):
+            assert isinstance(filter_, FileFilter)
+            pass
         return next_path
 
     # noinspection PyMethodMayBeStatic
-    def get_info(self, local_repository):
+    def get_info(self, local_repository, force_remote=False):
         assert isinstance(local_repository, LocalRepository)
         path = os.path.join(self.private_path(local_repository), '%s.json' % self.name)
-        self.ensure_dir(path, parent=True)
         if os.path.isfile(path):
             with codecs.open(path, 'r', encoding='utf-8') as fd:
                 content = fd.read()
@@ -153,10 +174,14 @@ class RemoteRepository(Repository):
         with codecs.open(path, 'w', encoding='utf-8') as fd:
             fd.write(content)
 
-    def get_last_backup_date(self, local_repository):
-        raise NotImplementedError
-
     def restore(self, local_repository):
+        info = self.get_info(local_repository, force_remote=True)
+        assert isinstance(local_repository, LocalRepository)
+        assert isinstance(info, RepositoryInfo)
+        local_repository.variables.update(info.variables)
+        self.do_restore(local_repository)
+
+    def do_restore(self, local_repository):
         raise NotImplementedError
 
     @lru_cache()
@@ -171,14 +196,85 @@ class RemoteRepository(Repository):
         return os.path.join(local_repository.remote_private_path(self), 'filter-%s' % filter_.name)
 
 
-class GitRepository(RemoteRepository):
+class CommonRemoteRepository(RemoteRepository):
+    """A RemoteRepository with meaningful implementations pour set_info/get_info"""
+    parameters = RemoteRepository.parameters + [
+        Parameter('metadata_url', required=True,
+                  help_str='send metadata (about the successful last backup) to this URL [**]'),
+        Parameter('metadata_private_key', required=True,
+                  help_str='private key associated to \'metadata_url\' [**]'),
+        Parameter('metadata_ca_cert', required=True,
+                  help_str='private certificate associated to \'metadata_url\' [**]'),
+        Parameter('metadata_keytab', required=True,
+                  help_str='keytab (for Kerberos authentication) associated to \'metadata_url\' [**]'),
+        Parameter('metadata_ssh_options', required=True,
+                  help_str='SSH options associated to \'metadata_url\' [**]'),
+    ]
 
+    def __init__(self, name, metadata_url=None, metadata_private_key=None, metadata_ca_cert=None,
+                 metadata_keytab=None, metadata_ssh_options=None, **kwargs):
+        super(CommonRemoteRepository, self).__init__(name, **kwargs)
+        self.metadata_url = metadata_url
+        self.metadata_private_key = metadata_private_key
+        self.metadata_ca_cert = metadata_ca_cert
+        self.metadata_keytab = metadata_keytab
+        self.metadata_ssh_options = metadata_ssh_options
+
+    def do_restore(self, local_repository):
+        raise NotImplementedError
+
+    def do_backup(self, local_repository):
+        raise NotImplementedError
+
+    def _get_metadata_backend(self, local_repository):
+        assert isinstance(local_repository, LocalRepository)
+        metadata_url = self.format_value(self.metadata_url, local_repository, use_constant_values=True)
+        if metadata_url.endswith('/'):
+            metadata_url += '%s.json' % local_repository.name
+        metadata_private_key = self.format_value(self.metadata_private_key, local_repository, use_constant_values=True)
+        metadata_ca_cert = self.format_value(self.metadata_ca_cert, local_repository, use_constant_values=True)
+        metadata_keytab = self.format_value(self.metadata_keytab, local_repository, use_constant_values=True)
+        metadata_ssh_options = self.format_value(self.metadata_ssh_options, local_repository, use_constant_values=True)
+        backend = get_backend(self, metadata_url, keytab=metadata_keytab, private_key=metadata_private_key,
+                              ca_cert=metadata_ca_cert, ssh_options=metadata_ssh_options, rsync_executable='rsync',
+                              curl_executable='curl', scp_executable='scp', ssh_executable='ssh')
+        assert isinstance(backend, StorageBackend)
+        return backend
+
+    @lru_cache()
+    def get_info(self, local_repository, force_remote=False):
+        assert isinstance(local_repository, LocalRepository)
+        path = os.path.join(self.private_path(local_repository), '%s.json' % self.name)
+        if not os.path.isfile(path) or force_remote:
+            self.ensure_dir(path, parent=True)
+            backend = self._get_metadata_backend(local_repository)
+            backend.sync_file_to_local(path)
+        if os.path.isfile(path) and not force_remote:
+            with codecs.open(path, 'r', encoding='utf-8') as fd:
+                content = fd.read()
+            return RepositoryInfo.from_str(content)
+        return RepositoryInfo()
+
+    def set_info(self, local_repository, info):
+        assert isinstance(local_repository, LocalRepository)
+        assert isinstance(info, RepositoryInfo)
+        path = os.path.join(self.private_path(local_repository), '%s.json' % self.name)
+        self.ensure_dir(path, parent=True)
+        content = info.to_str()
+        with codecs.open(path, 'w', encoding='utf-8') as fd:
+            fd.write(content)
+        backend = self._get_metadata_backend(local_repository)
+        backend.sync_file_from_local(path)
+
+
+class GitRepository(CommonRemoteRepository):
     """Add a remote to a local repository and push local modification to this remote.
     Can use https (with password or kerberos auth) or git+ssh remotes (with private key authentication).
     """
 
-    parameters = RemoteRepository.parameters + [
-        Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
+    parameters = CommonRemoteRepository.parameters + [
+        Parameter('git_executable', converter=check_executable, common=True,
+                  help_str='path of the git executable (default: "git")'),
         Parameter('remote_branch', help_str='name of the remote branch [*]'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
@@ -211,7 +307,7 @@ class GitRepository(RemoteRepository):
 
     def do_backup(self, local_repository):
         assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
-        export_data_path = self.apply_filters(local_repository)
+        export_data_path = self.apply_backup_filters(local_repository)
         worktree = export_data_path
         git_dir = os.path.join(self.private_path(local_repository), 'git')
         git_config_path = os.path.join(git_dir, '.gitconfig')
@@ -244,35 +340,10 @@ class GitRepository(RemoteRepository):
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
         self.execute_command(cmd, cwd=worktree)
 
-    def get_last_backup_date(self, local_repository):
-        assert isinstance(local_repository, LocalRepository)
-        private_path = self.private_path(local_repository)
-        self.ensure_dir(private_path)
-        tmp_dir = os.path.join(private_path, 'tmp')
-        if os.path.isdir(tmp_dir) and self.can_execute_command(['rm', '-rf', tmp_dir]):
-            shutil.rmtree(tmp_dir)
-        remote_url = self.format_value(self.remote_url, local_repository, use_constant_values=True)
-        remote_branch = self.format_value(self.remote_branch, local_repository, use_constant_values=True)
-        cmd = []
-        if self.keytab:
-            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
-        git_command = [self.git_executable]
-        cmd += git_command + ['clone', '--depth', '1', '--branch', remote_branch, remote_url, tmp_dir]
-        self.execute_command(cmd)
-        last_backup_file = os.path.join(tmp_dir, local_repository.last_backup_file)
-        d = None
-        if os.path.isfile(last_backup_file):
-            with codecs.open(last_backup_file, 'r', encoding='utf-8') as fd:
-                try:
-                    d = RepositoryInfo.datetime_from_str(fd.read())
-                except ValueError:
-                    d = None
-        return d
-
     def check_remote_url(self, local_repository):
         return True
 
-    def restore(self, local_repository):
+    def do_restore(self, local_repository):
         raise NotImplementedError
 
 
@@ -325,15 +396,15 @@ class GitlabRepository(GitRepository):
         # GET /projects/:id/events
         return True
 
-    def restore(self, local_repository):
+    def do_restore(self, local_repository):
         raise NotImplementedError
 
 
-class Rsync(RemoteRepository):
+class Rsync(CommonRemoteRepository):
     """Send local files to the remote repository using 'rsync'. """
 
-    parameters = RemoteRepository.parameters + [
-        Parameter('rsync_executable', converter=check_executable,
+    parameters = CommonRemoteRepository.parameters + [
+        Parameter('rsync_executable', converter=check_executable, common=True,
                   help_str='path of the rsync executable (default: "rsync")'),
         Parameter('remote_url', help_str='remote server and path (e.g. login:password@server:/foo/bar/ [*]'),
         Parameter('keytab', converter=check_file,
@@ -355,7 +426,7 @@ class Rsync(RemoteRepository):
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
         cmd += [self.rsync_executable, '-az', '--delete', '-S']
-        export_data_path = self.apply_filters(local_repository)
+        export_data_path = self.apply_backup_filters(local_repository)
         local_path = export_data_path
         if not local_path.endswith(os.path.sep):
             local_path += os.path.sep
@@ -371,21 +442,18 @@ class Rsync(RemoteRepository):
         cmd += [local_path, remote_url]
         self.execute_command(cmd, cwd=export_data_path)
 
-    def restore(self, local_repository):
-        raise NotImplementedError
-
-    def get_last_backup_date(self, local_repository):
+    def do_restore(self, local_repository):
         raise NotImplementedError
 
 
-class TarArchive(RemoteRepository):
+class TarArchive(CommonRemoteRepository):
     """Collect all files of your local repository into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
     to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
 
     """
 
     excluded_files = {'.git', '.gitignore'}
-    parameters = RemoteRepository.parameters + [
+    parameters = CommonRemoteRepository.parameters + [
         Parameter('remote_url', converter=check_curl_url,
                   help_str='destination URL (e.g.: \'ftp://example.org/path/%(name)s.tar.gz\' or '
                            '\'https://example.org/path/\'). '
@@ -411,9 +479,9 @@ class TarArchive(RemoteRepository):
                   help_str='[HTTPS|FTPS|SSH backend] absolute path of the private key file [*]'),
         Parameter('tar_format', converter=CheckOption(['tar.gz', 'tar.bz2', 'tar.xz']),
                   help_str='one of "tar.gz", "tar.bz2" (default), "tar.xz"'),
-        Parameter('tar_executable', converter=check_executable,
+        Parameter('tar_executable', converter=check_executable, common=True,
                   help_str='path of the rsync executable (default: "tar")'),
-        Parameter('curl_executable', converter=check_executable,
+        Parameter('curl_executable', converter=check_executable, common=True,
                   help_str='path of the rsync executable (default: "curl")'),
     ]
 
@@ -441,7 +509,7 @@ class TarArchive(RemoteRepository):
         assert isinstance(local_repository, LocalRepository)
         error = None
         excluded_files = self.excluded_files
-        export_data_path = self.apply_filters(local_repository)
+        export_data_path = self.apply_backup_filters(local_repository)
         filenames = {x for x in os.listdir(export_data_path)} - excluded_files
         filenames = [x for x in filenames]
         filenames.sort()
@@ -504,16 +572,13 @@ class TarArchive(RemoteRepository):
         if error is not None:
             raise error
 
-    def restore(self, local_repository):
-        raise NotImplementedError
-
-    def get_last_backup_date(self, local_repository):
+    def do_restore(self, local_repository):
         raise NotImplementedError
 
 
-class Duplicity(RemoteRepository):
+class Duplicity(CommonRemoteRepository):
     """Send local files to the remote repository using the 'duplicity' tool. """
-    parameters = RemoteRepository.parameters + [
+    parameters = CommonRemoteRepository.parameters + [
         Parameter('remote_url',
                   help_str='destination URL with the username (e.g.: ftp://user:password@example.org/path/,'
                            'https://user:password@example.org/path). Please check Duplicity\'s documentation.'
@@ -558,7 +623,7 @@ class Duplicity(RemoteRepository):
                   help_str='[HTTPS backend] certificate to use to verify the server [*]'),
         Parameter('insecure', converter=bool_setting,
                   help_str='[HTTPS backend] true|false: do not check certificate for SSL connections'),
-        Parameter('duplicity_executable', converter=check_executable,
+        Parameter('duplicity_executable', converter=check_executable, common=True,
                   help_str='path of the duplicity executable (default: \'duplicity\')'),
         Parameter('gpg_executable', converter=check_executable,
                   help_str='path of the gpg executable (default: \'gpg\')'),
@@ -599,7 +664,7 @@ class Duplicity(RemoteRepository):
         cmd = []
         env = {}
         cmd += [self.duplicity_executable, ]
-        export_data_path = self.apply_filters(local_repository)
+        export_data_path = self.apply_backup_filters(local_repository)
         local_path = export_data_path
         if not local_path.endswith(os.path.sep):
             local_path += os.path.sep
@@ -663,21 +728,18 @@ class Duplicity(RemoteRepository):
                     cprint('%s=%s' % (k, v), YELLOW)
             self.execute_command(cmd_args, cwd=export_data_path, env=env)
 
-    def restore(self, local_repository):
-        raise NotImplementedError
-
-    def get_last_backup_date(self, local_repository):
+    def do_restore(self, local_repository):
         raise NotImplementedError
 
 
-class SmartTarArchive(RemoteRepository):
+class SmartTarArchive(CommonRemoteRepository):
     """
     hourly_period
     daily_period
     weekly_period
     monthly_period
     """
-    parameters = RemoteRepository.parameters + [
+    parameters = CommonRemoteRepository.parameters + [
         Parameter('hourly_period'),
         Parameter('daily_period'),
         Parameter('weekly_period'),
@@ -687,8 +749,5 @@ class SmartTarArchive(RemoteRepository):
     def do_backup(self, local_repository):
         raise NotImplementedError
 
-    def restore(self, local_repository):
-        raise NotImplementedError
-
-    def get_last_backup_date(self, local_repository):
+    def do_restore(self, local_repository):
         raise NotImplementedError

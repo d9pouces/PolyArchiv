@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import codecs
 import hashlib
 import os
+import shlex
 import shutil
 
 import subprocess
@@ -15,6 +16,12 @@ from polyarchiv.utils import copytree
 
 class FileFilter(ParameterizedObject):
     work_in_place = True
+
+    def do_backup(self, previous_path, next_path, private_path, allow_in_place=True):
+        raise NotImplementedError
+
+    def do_restore(self, previous_path, next_path, private_path, allow_in_place=True):
+        raise NotImplementedError
 
     def backup(self, previous_path, private_path, allow_in_place=True):
         next_path = self.next_path(previous_path, private_path, allow_in_place)
@@ -29,8 +36,13 @@ class FileFilter(ParameterizedObject):
             return private_path
         return previous_path
 
-    def do_backup(self, previous_path, next_path, private_path, allow_in_place=True):
-        raise NotImplementedError
+    def restore(self, previous_path, private_path, allow_in_place=True):
+        next_path = self.next_path(previous_path, private_path, allow_in_place)
+        if self.work_in_place and not allow_in_place and \
+                self.can_execute_command(['cp', '-pPR', previous_path, next_path]):
+            copytree(next_path, previous_path)
+        self.do_backup(previous_path, next_path, private_path, allow_in_place)
+        return next_path
 
 
 class SymmetricCrypt(FileFilter):
@@ -53,23 +65,49 @@ class SymmetricCrypt(FileFilter):
             os.makedirs(next_path)
         for root, dirnames, filenames in os.walk(previous_path):
             for src_dirname in dirnames:
-                src_path = os.path.join(root, src_dirname)
-                dst_path = os.path.join(next_path, os.path.relpath(src_path, previous_path))
-                if self.can_execute_command(['mkdir', '-p', dst_path]):
-                    os.makedirs(dst_path)
-                    shutil.copystat(src_path, dst_path)
+                clear_path = os.path.join(root, src_dirname)
+                crypted_path = os.path.join(next_path, os.path.relpath(clear_path, previous_path))
+                if self.can_execute_command(['mkdir', '-p', crypted_path]):
+                    os.makedirs(crypted_path)
+                    shutil.copystat(clear_path, crypted_path)
             for src_filename in filenames:
-                src_path = os.path.join(root, src_filename)
-                dst_path = os.path.join(next_path, os.path.relpath(src_path, previous_path))
-                if symlinks and os.path.islink(src_path):
-                    linkto = os.readlink(src_path)
-                    if self.can_execute_command(['ln', '-s', linkto, dst_path]):
-                        os.symlink(linkto, dst_path)
+                clear_path = os.path.join(root, src_filename)
+                crypted_path = os.path.join(next_path, os.path.relpath(clear_path, previous_path))
+                if symlinks and os.path.islink(clear_path):
+                    linkto = os.readlink(clear_path)
+                    if self.can_execute_command(['ln', '-s', linkto, crypted_path]):
+                        os.symlink(linkto, crypted_path)
                 else:
-                    cmd = ['gpg', '--passphrase', self.password, '-o', dst_path, '-c', src_path]
+                    cmd = ['gpg', '--passphrase', self.password, '-o', crypted_path, '-c', clear_path]
                     if self.can_execute_command(cmd):
                         subprocess.check_call(cmd)
-                        shutil.copystat(src_path, dst_path)
+                        shutil.copystat(clear_path, crypted_path)
+
+    def do_restore(self, previous_path, next_path, private_path, allow_in_place=True):
+        symlinks = True
+        if self.can_execute_command(['rm', '-rf', previous_path]):
+            shutil.rmtree(next_path)
+        if self.can_execute_command(['mkdir', '-p', previous_path]):
+            os.makedirs(next_path)
+        for root, dirnames, filenames in os.walk(next_path):
+            for src_dirname in dirnames:
+                crypted_path = os.path.join(root, src_dirname)
+                clear_path = os.path.join(previous_path, os.path.relpath(crypted_path, next_path))
+                if self.can_execute_command(['mkdir', '-p', clear_path]):
+                    os.makedirs(clear_path)
+                    shutil.copystat(crypted_path, clear_path)
+            for src_filename in filenames:
+                crypted_path = os.path.join(root, src_filename)
+                clear_path = os.path.join(previous_path, os.path.relpath(crypted_path, next_path))
+                if symlinks and os.path.islink(crypted_path):
+                    linkto = os.readlink(crypted_path)
+                    if self.can_execute_command(['ln', '-s', linkto, clear_path]):
+                        os.symlink(linkto, clear_path)
+                else:
+                    cmd = ['gpg', '--passphrase', self.password, '-o', clear_path, '--decrypt', crypted_path]
+                    if self.can_execute_command(cmd):
+                        subprocess.check_call(cmd)
+                        shutil.copystat(crypted_path, clear_path)
 
 
 class Hashsum(FileFilter):
@@ -83,6 +121,12 @@ class Hashsum(FileFilter):
         super(Hashsum, self).__init__(name, **kwargs)
         self.method = method
         self.filename = filename
+
+    def do_restore(self, previous_path, next_path, private_path, allow_in_place=True):
+        cmd_str = {'sha1': 'shasum -a 1 -c', 'md5': 'md5sum -c', 'sha256': 'shasum -a 256 -c'}[self.method]
+        index_path = os.path.abspath(os.path.join(next_path, self.filename))
+        cmd = shlex.split(cmd_str) + [index_path]
+        self.execute_command(cmd, cwd=next_path)
 
     def do_backup(self, previous_path, next_path, private_path, allow_in_place=True):
         cmd = {'sha1': 'shasum -a 1 -b', 'md5': 'md5sum -b', 'sha256': 'shasum -a 256 -b'}[self.method]
