@@ -4,10 +4,10 @@ from __future__ import unicode_literals
 import codecs
 import datetime
 import logging
-
-# noinspection PyProtectedMember
 import shutil
 
+
+# noinspection PyProtectedMember
 from polyarchiv._vendor import requests
 # noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache

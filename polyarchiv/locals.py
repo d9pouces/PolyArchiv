@@ -38,17 +38,18 @@ class LocalRepository(Repository):
                   help_str='any remote repository with one of these tags (comma-separated) will not be associated'
                            ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_local_tags and included_remote_tags.'),
-        Parameter('last_backup_file', help_str='write the last backup date to this file (default: \'./.last-backup\')'),
+        # Parameter('last_backup_file', help_str='write the backup date to this file (default: \'./.last-backup\')'),
     ]
 
     def __init__(self, name, local_tags=None, included_remote_tags=None, excluded_remote_tags=None,
-                 last_backup_file='.last-backup', **kwargs):
+                 # last_backup_file='.last-backup',
+                 **kwargs):
         super(LocalRepository, self).__init__(name=name, **kwargs)
         self.local_tags = ['local'] if local_tags is None else local_tags
         self.included_remote_tags = ['*'] if included_remote_tags is None else included_remote_tags
         self.excluded_remote_tags = excluded_remote_tags or []
         self.sources = []
-        self.last_backup_file = last_backup_file
+        # self.last_backup_file = last_backup_file
 
     def backup(self, force=False):
         """ perform the backup and log all errors
@@ -105,7 +106,18 @@ class LocalRepository(Repository):
         return info.last_state_valid
 
     def restore(self):
-        raise NotImplementedError
+        next_path = self.private_data_path
+        filter_data = []
+        for filter_ in self.filters:
+            filter_data.append((filter_, next_path))
+            next_path = filter_.next_path(next_path, self.filter_private_path(filter_), allow_in_place=True)
+        for filter_, next_path in reversed(filter_data):
+            filter_.restore(next_path, self.filter_private_path(filter_), allow_in_place=True)
+
+        self.pre_source_restore()
+        for source in self.sources:
+            source.restore()
+        self.post_source_restore()
 
     def add_source(self, source):
         """
@@ -142,14 +154,21 @@ class LocalRepository(Repository):
         raise NotImplementedError
 
     def pre_source_backup(self):
-        raise NotImplementedError
+        pass
 
     def post_source_backup(self):
-        last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
-        filename = os.path.join(self.import_data_path, self.last_backup_file)
-        if self.can_execute_command('echo \'%s\' > %s' % (last_backup_date, filename)):
-            with codecs.open(filename, 'w', encoding='utf-8') as fd:
-                fd.write(last_backup_date)
+        pass
+        # last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
+        # filename = os.path.join(self.import_data_path, self.last_backup_file)
+        # if self.can_execute_command('echo \'%s\' > %s' % (last_backup_date, filename)):
+        #     with codecs.open(filename, 'w', encoding='utf-8') as fd:
+        #         fd.write(last_backup_date)
+
+    def pre_source_restore(self):
+        pass
+
+    def post_source_restore(self):
+        pass
 
     def get_repository_size(self):
         """ return the size of the repository (in bytes)
@@ -276,8 +295,11 @@ class FileRepository(LocalRepository):
     def release_lock(self, lock_):
         lock_.release()
 
-    def restore(self):
-        raise NotImplementedError
+    def pre_source_restore(self):
+        pass
+
+    def post_source_restore(self):
+        pass
 
 
 class GitRepository(FileRepository):
@@ -313,8 +335,12 @@ class GitRepository(FileRepository):
         self.execute_command([self.git_executable, 'commit', '-am', self.format_value(self.commit_message)],
                              ignore_errors=True, env={'HOME': self.metadata_path})
 
-    def restore(self):
-        raise NotImplementedError
+    def pre_source_restore(self):
+        os.chdir(self.import_data_path)
+        self.execute_command([self.git_executable, 'reset', '--hard'], cwd=self.import_data_path,
+                             env={'HOME': self.metadata_path})
+        self.execute_command([self.git_executable, 'clean', '-f'], cwd=self.import_data_path,
+                             env={'HOME': self.metadata_path})
 
 
 class ArchiveRepository(FileRepository):
@@ -353,5 +379,11 @@ class ArchiveRepository(FileRepository):
         path = os.path.join(self.local_path, 'archives')
         return self.format_value(path)
 
-    def restore(self):
-        raise NotImplementedError
+    def pre_source_restore(self):
+        archive_name = self.format_value(self.archive_name)
+        full_path = os.path.join(self.private_data_path, archive_name)
+        path = self.import_data_path
+        if (os.path.isdir(path) and os.listdir(path)) and self.can_execute_command(['rm', '-rf', path]):
+            shutil.rmtree(path)
+        self.ensure_dir(path)
+        self.execute_command(['tar', '-C', path, '-xf', full_path])
