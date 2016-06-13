@@ -39,7 +39,7 @@ class FileFilter(ParameterizedObject):
     def restore(self, previous_path, private_path, allow_in_place=True):
         next_path = self.next_path(previous_path, private_path, allow_in_place)
         if self.work_in_place and not allow_in_place and \
-                self.can_execute_command(['cp', '-pPR', previous_path, next_path]):
+                self.can_execute_command(['cp', '-pPR', next_path, previous_path]):
             copytree(next_path, previous_path)
         self.do_restore(previous_path, next_path, private_path, allow_in_place)
         return next_path
