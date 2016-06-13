@@ -41,7 +41,7 @@ class FileFilter(ParameterizedObject):
         if self.work_in_place and not allow_in_place and \
                 self.can_execute_command(['cp', '-pPR', previous_path, next_path]):
             copytree(next_path, previous_path)
-        self.do_backup(previous_path, next_path, private_path, allow_in_place)
+        self.do_restore(previous_path, next_path, private_path, allow_in_place)
         return next_path
 
 
@@ -59,10 +59,11 @@ class SymmetricCrypt(FileFilter):
 
     def do_backup(self, previous_path, next_path, private_path, allow_in_place=True):
         symlinks = True
-        if self.can_execute_command(['rm', '-rf', next_path]):
-            shutil.rmtree(next_path)
-        if self.can_execute_command(['mkdir', '-p', next_path]):
-            os.makedirs(next_path)
+        if os.listdir(next_path):
+            if self.can_execute_command(['rm', '-rf', next_path]):
+                shutil.rmtree(next_path)
+            if self.can_execute_command(['mkdir', '-p', next_path]):
+                os.makedirs(next_path)
         for root, dirnames, filenames in os.walk(previous_path):
             for src_dirname in dirnames:
                 clear_path = os.path.join(root, src_dirname)
@@ -85,10 +86,11 @@ class SymmetricCrypt(FileFilter):
 
     def do_restore(self, previous_path, next_path, private_path, allow_in_place=True):
         symlinks = True
-        if self.can_execute_command(['rm', '-rf', previous_path]):
-            shutil.rmtree(next_path)
-        if self.can_execute_command(['mkdir', '-p', previous_path]):
-            os.makedirs(next_path)
+        if os.listdir(previous_path):
+            if self.can_execute_command(['rm', '-rf', previous_path]):
+                shutil.rmtree(previous_path)
+            if self.can_execute_command(['mkdir', '-p', previous_path]):
+                os.makedirs(previous_path)
         for root, dirnames, filenames in os.walk(next_path):
             for src_dirname in dirnames:
                 crypted_path = os.path.join(root, src_dirname)
@@ -105,8 +107,8 @@ class SymmetricCrypt(FileFilter):
                         os.symlink(linkto, clear_path)
                 else:
                     cmd = ['gpg', '--passphrase', self.password, '-o', clear_path, '--decrypt', crypted_path]
-                    if self.can_execute_command(cmd):
-                        subprocess.check_call(cmd)
+                    return_code, __, __ = self.execute_command(cmd)
+                    if return_code == 0 and os.path.isfile(clear_path):
                         shutil.copystat(crypted_path, clear_path)
 
 
