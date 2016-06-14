@@ -421,55 +421,43 @@ class GitlabRepository(GitRepository):
         return True
 
 
-class Rsync(CommonRemoteRepository):
-    """Send local files to the remote repository using 'rsync'. """
-
+class Synchronize(CommonRemoteRepository):
     parameters = CommonRemoteRepository.parameters + [
-        Parameter('rsync_executable', converter=check_executable, common=True,
-                  help_str='path of the rsync executable (default: "rsync")'),
-        Parameter('remote_url', help_str='remote server and path (e.g. login:password@server:/foo/bar/ [*]'),
+        Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must be a folder name [*]'),
+        Parameter('private_key', required=True, help_str='private key or certificate associated to \'remote_url\' [*]'),
+        Parameter('ca_cert', required=True, help_str='CA certificate associated to \'remote_url\'. '
+                                                     'Set to "any" for not checking certificates [*]'),
+        Parameter('keytab', required=True, help_str='keytab (for Kerberos) associated to \'remote_url\' [*]'),
+        Parameter('ssh_options', required=True, help_str='SSH options associated to \'url\' [*]'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
-        Parameter('private_key', converter=check_file,
-                  help_str='absolute path of the private key file (for SSH key authentication) [*]'),
     ]
 
-    def __init__(self, name, rsync_executable='rsync', remote_url='', keytab=None, private_key=None, **kwargs):
-        super(Rsync, self).__init__(name, **kwargs)
-        self.rsync_executable = rsync_executable
+    def __init__(self, name, remote_url='', keytab=None, private_key=None, ca_cert=None, ssh_options=None, **kwargs):
+        super(Synchronize, self).__init__(name, **kwargs)
         self.remote_url = remote_url
         self.keytab = keytab
         self.private_key = private_key
-
-    def _prepare_rsync_command(self, local_repository, export_data_path):
-        assert isinstance(local_repository, LocalRepository)
-        cmd = []
-        if self.keytab:
-            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
-        cmd += [self.rsync_executable, '-az', '--delete', '-S']
-        local_path = export_data_path
-        if not local_path.endswith(os.path.sep):
-            local_path += os.path.sep
-        remote_url = self.format_value(self.remote_url, local_repository)
-        if not remote_url.endswith('/'):
-            remote_url += '/'
-        private_key = self.private_key
-        if private_key:
-            private_key = self.format_value(private_key, local_repository)
-            cmd += ['-e', 'ssh -i %s' % private_key]
-        else:
-            cmd += ['-e', 'ssh']
-        return cmd, local_path, remote_url
+        self.ca_cert = ca_cert
+        self.ssh_options = ssh_options
 
     def do_backup(self, local_repository, export_data_path):
-        cmd, local_path, remote_url = self._prepare_rsync_command(local_repository, export_data_path)
-        cmd += [local_path, remote_url]
-        self.execute_command(cmd, cwd=export_data_path)
+        backend = self._get_backend(local_repository)
+        backend.sync_dir_from_local(export_data_path)
+
+    def _get_backend(self, local_repository):
+        remote_url = self.format_value(self.remote_url, local_repository)
+        keytab = self.format_value(self.keytab, local_repository)
+        private_key = self.format_value(self.private_key, local_repository)
+        ca_cert = self.format_value(self.ca_cert, local_repository)
+        ssh_options = self.format_value(self.ssh_options, local_repository)
+        backend = get_backend(local_repository, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
+                              ssh_options=ssh_options)
+        return backend
 
     def do_restore(self, local_repository, export_data_path):
-        cmd, local_path, remote_url = self._prepare_rsync_command(local_repository, export_data_path)
-        cmd += [remote_url, local_path]
-        self.execute_command(cmd, cwd=export_data_path)
+        backend = self._get_backend(local_repository)
+        backend.sync_dir_to_local(export_data_path)
 
 
 class TarArchive(CommonRemoteRepository):
@@ -480,298 +468,181 @@ class TarArchive(CommonRemoteRepository):
 
     excluded_files = {'.git', '.gitignore'}
     parameters = CommonRemoteRepository.parameters + [
-        Parameter('remote_url', converter=check_curl_url,
-                  help_str='destination URL (e.g.: \'ftp://example.org/path/%(name)s.tar.gz\' or '
-                           '\'https://example.org/path/\'). '
-                           '\'file://\' URLs are handled by a \'cp\' command, other ones'
-                           ' are handled by \'curl\' command. Most of protocols known by cURL can be used:'
-                           ' ftp(s), http(s) with WebDAV, scp, sftp, smb, smbs. You can specify user and password'
-                           ' in URL: \'scheme://user:password@host/path\'. [*]'),
-        Parameter('user', help_str='username (if not set in the URL) [*]'),
-        Parameter('password', help_str='password (if not set in the URL) [*]'),
-        Parameter('archive_prefix', help_str='prefix of the archive names (default: "%(name)s"). '
-                                             'Only used if the remote URL finishes by \'/\' [*]'),
-        Parameter('proxy',
-                  help_str='use this proxy for connections (e.g. username:password@proxy.example.org:8080) [*]'),
-        Parameter('insecure', converter=bool_setting, help_str='true|false: do not check certificates'),
-        Parameter('cert', converter=check_file,
-                  help_str='[HTTPS|FTPS backend] certificate to provide to the server [*]'),
-        Parameter('cacert', converter=check_file, help_str='[HTTPS|FTPS backend] CA certificate authenticating'
-                                                           ' the server [*]'),
-        Parameter('date_format', help_str='date format for the generated archives (default: "%Y-%m-%d_%H-%M")'),
+        Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must end by ".tar.gz", '
+                                                        '"tar.bz2", "tar.xz" [*]'),
+        Parameter('private_key', required=True, help_str='private key or certificate associated to \'remote_url\' [*]'),
+        Parameter('ca_cert', required=True, help_str='CA certificate associated to \'remote_url\'. '
+                                                     'Set to "any" for not checking certificates [*]'),
+        Parameter('keytab', required=True, help_str='keytab (for Kerberos) associated to \'remote_url\' [*]'),
+        Parameter('ssh_options', required=True, help_str='SSH options associated to \'url\' [*]'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
-        Parameter('private_key', converter=check_file,
-                  help_str='[HTTPS|FTPS|SSH backend] absolute path of the private key file [*]'),
-        Parameter('tar_format', converter=CheckOption(['tar.gz', 'tar.bz2', 'tar.xz']),
-                  help_str='one of "tar.gz", "tar.bz2" (default), "tar.xz"'),
         Parameter('tar_executable', converter=check_executable, common=True,
                   help_str='path of the rsync executable (default: "tar")'),
         Parameter('curl_executable', converter=check_executable, common=True,
                   help_str='path of the rsync executable (default: "curl")'),
     ]
 
-    def __init__(self, name, tar_executable='tar', curl_executable='curl', remote_url='', user='', password='',
-                 insecure=False, cacert=None, cert=None, archive_prefix='%(name)s',
-                 keytab=None, private_key=None, tar_format='tar.bz2', date_format='%Y-%m-%d_%H-%M', proxy=None,
-                 **kwargs):
+    def __init__(self, name, tar_executable='tar', curl_executable='curl', remote_url='', keytab=None, private_key=None,
+                 ca_cert=None, ssh_options=None, **kwargs):
         super(TarArchive, self).__init__(name, **kwargs)
-        self.date_format = date_format
-        self.archive_prefix = archive_prefix
-        self.tar_format = tar_format
-        self.curl_executable = curl_executable
         self.tar_executable = tar_executable
+        self.curl_executable = curl_executable
         self.remote_url = remote_url
-        self.user = user
-        self.password = password
         self.keytab = keytab
         self.private_key = private_key
-        self.proxy = proxy
-        self.insecure = insecure
-        self.cacert = cacert
-        self.cert = cert
+        self.ca_cert = ca_cert
+        self.ssh_options = ssh_options
+
+    def _get_backend(self, local_repository):
+        remote_url = self.format_value(self.remote_url, local_repository)
+        keytab = self.format_value(self.keytab, local_repository)
+        private_key = self.format_value(self.private_key, local_repository)
+        ca_cert = self.format_value(self.ca_cert, local_repository)
+        ssh_options = self.format_value(self.ssh_options, local_repository)
+        backend = get_backend(local_repository, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
+                              ssh_options=ssh_options)
+        return backend
 
     def do_backup(self, local_repository, export_data_path):
         assert isinstance(local_repository, LocalRepository)
-        error = None
-        excluded_files = self.excluded_files
-        filenames = {x for x in os.listdir(export_data_path)} - excluded_files
-        filenames = [x for x in filenames]
-        filenames.sort()
-        # noinspection PyTypeChecker
-        now_str = datetime.datetime.now().strftime(self.date_format)
-        prefix = self.format_value(self.archive_prefix, local_repository)
-        archive_filename = os.path.join(export_data_path,
-                                        '%s-%s.%s' % (prefix, now_str, self.tar_format))
-        if self.tar_format == 'tar.gz':
-            cmd = [self.tar_executable, '-czf']
-        elif self.tar_format == 'tar.bz2':
-            cmd = [self.tar_executable, '-cjf']
-        elif self.tar_format == 'tar.xz':
-            cmd = [self.tar_executable, '-cJf']
+        backend = self._get_backend(local_repository)
+        remote_url = self.format_value(self.remote_url, local_repository)
+        archive_filename = os.path.join(self.private_path(local_repository), 'archive')
+        if remote_url.endswith('tar.gz'):
+            archive_filename += '.tar.gz'
+            cmd = [self.tar_executable, '-czf', archive_filename]
+        elif remote_url.endswith('tar.bz2'):
+            archive_filename += '.tar.bz2'
+            cmd = [self.tar_executable, '-cjf', archive_filename]
+        elif remote_url.endswith('tar.xz'):
+            archive_filename += '.tar.xz'
+            cmd = [self.tar_executable, '-cJf', archive_filename]
         else:
-            raise ValueError('invalid tar format: %s' % self.tar_format)
-        cmd.append(archive_filename)
+            raise ValueError('invalid tar format: %s' % remote_url)
+        filenames = os.listdir(export_data_path)
+        filenames.sort()
         cmd += filenames
-        returncode, stdout, stderr = self.execute_command(cmd, cwd=export_data_path,
-                                                          ignore_errors=True)
+        returncode, stdout, stderr = self.execute_command(cmd, cwd=export_data_path, ignore_errors=True)
+        error = None
         if returncode != 0:
             error = ValueError('unable to create archive %s' % archive_filename)
         else:
-            cmd = []
-            if self.keytab:
-                cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
-            remote_url = self.format_value(self.remote_url, local_repository)
-            # noinspection PyTypeChecker
-            if remote_url.startswith('file://'):
-                ensure_dir(remote_url[7:], parent=False)
-                cmd += ['cp', archive_filename, remote_url[7:]]
-            else:
-
-                cmd += [self.curl_executable, '--anyauth']
-                if self.insecure:
-                    cmd += ['-k']
-                if self.cacert:
-                    cmd += ['--cacert', self.format_value(self.cacert, local_repository)]
-                if self.cert:
-                    cmd += ['--cert', self.format_value(self.cert, local_repository)]
-                parsed_url = urlparse(remote_url)
-                if not parsed_url.username and not parsed_url.password and self.user and self.password:
-                    cmd += ['-u', '%s:%s' % (self.format_value(self.user, local_repository),
-                                             self.format_value(self.password, local_repository))]
-                if self.private_key:
-                    cmd += ['--key', self.format_value(self.private_key, local_repository)]
-                if self.proxy:
-                    cmd += ['-x', self.format_value(self.proxy, local_repository), '--proxy-anyauth']
-                cmd += ['-T', archive_filename]
-                # noinspection PyTypeChecker
-                if remote_url.startswith('ftps'):
-                    cmd += ['--ftp-ssl', 'ftp' + remote_url[4:]]
-                else:
-                    cmd += [remote_url]
-            returncode, stdout, stderr = self.execute_command(cmd)
-            if returncode != 0:
-                error = ValueError('unable to create archive %s' % archive_filename)
+            try:
+                backend.sync_file_from_local(archive_filename)
+            except Exception as e:
+                error = e
         if os.path.isfile(archive_filename) and self.can_execute_command(['rm', archive_filename]):
             os.remove(archive_filename)
         if error is not None:
             raise error
 
     def do_restore(self, local_repository, export_data_path):
-        raise NotImplementedError
-
-
-class Duplicity(CommonRemoteRepository):
-    """Send local files to the remote repository using the 'duplicity' tool. """
-    parameters = CommonRemoteRepository.parameters + [
-        Parameter('remote_url',
-                  help_str='destination URL with the username (e.g.: ftp://user:password@example.org/path/,'
-                           'https://user:password@example.org/path). Please check Duplicity\'s documentation.'
-                           'Password can be separately set with the \'password\' option. [*]'),
-        Parameter('encrypt_key_id', help_str='[GPG] encrypt with this public key instead of symmetric encryption. [*]'),
-        Parameter('sign_key_id', help_str='[GPG] All backup files will be signed with keyid key. [*]'),
-        Parameter('encrypt_passphrase', help_str='[GPG] This passphrase is passed to GnuPG. [*]'),
-        Parameter('sign_passphrase', help_str='[GPG] This passphrase is passed to GnuPG for the sign_key. [*]'),
-        Parameter('no_encryption', converter=bool_setting, help_str='true|false: do not use GnuPG to encrypt '
-                                                                    'remote files.'),
-        Parameter('private_key', converter=check_file, help_str='[SSH backend] The private SSH key (filename) [*]'),
-        Parameter('password', help_str='upload password [*]'),
-
-        Parameter('full_if_older_than',
-                  help_str='Perform a full backup if an incremental backup is requested, but the latest full backup in '
-                           'the collection is older than the given time.'),
-        Parameter('max_block_size', help_str='determines the number of the blocks examined for changes during the '
-                                             'diff process.'),
-        Parameter('no_compression', converter=bool_setting, help_str='true|false: do not use GZip to compress remote '
-                                                                     'files.'),
-        Parameter('volsize', help_str='Change the volume size to number Mb. Default is 25Mb.'),
-        Parameter('always_full', converter=bool_setting,
-                  help_str='true|false: perform a full backup. A new backup chain is started even if signatures are '
-                           'available for an incremental backup.'),
-        Parameter('always_verify', converter=bool_setting,
-                  help_str='true|false: always perform a verify check after a backup: restore backup contents '
-                           'temporarily file by file and compare against the local path\'s contents. Can take a lot of '
-                           'time!'),
-
-        Parameter('gpg_encrypt_secret_keyring',
-                  help_str='[GPG] This option can only be used with encrypt_key, and changes the path to the secret '
-                           'keyring for the encrypt key to filename. Default to \'~/.gnupg/secring.gpg\' [*]'),
-        Parameter('gpg_options', converter=check_executable,
-                  help_str='[GPG] Allows you to pass options to gpg encryption.  The options list should be of the '
-                           'form "--opt1 --opt2=parm"'),
-        Parameter('rsync_options', help_str='[RSYNC backend] Options for rsync. The options list should be of the '
-                                            'form "opt1=parm1 opt2=parm2"'),
-        Parameter('ssh_options',
-                  help_str='[SSH backend] Options for SSH. The options list should be of '
-                           'the form "-oOpt1=\'parm1\' -oOpt2=\'parm2\'".'),
-        Parameter('cacert', converter=check_file,
-                  help_str='[HTTPS backend] certificate to use to verify the server [*]'),
-        Parameter('insecure', converter=bool_setting,
-                  help_str='[HTTPS backend] true|false: do not check certificate for SSL connections'),
-        Parameter('duplicity_executable', converter=check_executable, common=True,
-                  help_str='path of the duplicity executable (default: \'duplicity\')'),
-        Parameter('gpg_executable', converter=check_executable,
-                  help_str='path of the gpg executable (default: \'gpg\')'),
-    ]
-
-    def __init__(self, name, remote_url='', encrypt_key_id=None, sign_key_id=None, encrypt_passphrase=None,
-                 sign_passphrase=None, no_encryption=False, private_key=None, password=None,
-                 full_if_older_than=None, max_block_size=None, no_compression=False, volsize=None,
-                 always_full=False, always_verify=False, gpg_encrypt_secret_keyring=None, gpg_options=None,
-                 rsync_options=None, ssh_options=None, cacert=None, insecure=False,
-                 duplicity_executable='duplicity', gpg_executable=None, **kwargs):
-        super(Duplicity, self).__init__(name, **kwargs)
-        self.remote_url = remote_url
-        self.encrypt_key_id = encrypt_key_id
-        self.sign_key_id = sign_key_id
-        self.encrypt_passphrase = encrypt_passphrase
-        self.sign_passphrase = sign_passphrase
-        self.no_encryption = no_encryption
-        self.private_key = private_key
-        self.password = password
-        self.full_if_older_than = full_if_older_than
-        self.max_block_size = max_block_size
-        self.no_compression = no_compression
-        self.volsize = volsize
-        self.always_full = always_full
-        self.always_verify = always_verify
-        self.gpg_encrypt_secret_keyring = gpg_encrypt_secret_keyring
-        self.gpg_options = gpg_options
-        self.rsync_options = rsync_options
-        self.ssh_options = ssh_options
-        self.cacert = cacert
-        self.insecure = insecure
-        self.duplicity_executable = duplicity_executable
-        self.gpg_executable = gpg_executable
-
-    def do_backup(self, local_repository, export_data_path):
         assert isinstance(local_repository, LocalRepository)
-        cmd = []
-        env = {}
-        cmd += [self.duplicity_executable, ]
-        local_path = export_data_path
-        if not local_path.endswith(os.path.sep):
-            local_path += os.path.sep
+        backend = self._get_backend(local_repository)
         remote_url = self.format_value(self.remote_url, local_repository)
-        if not remote_url.endswith(os.path.sep):
-            remote_url += os.path.sep
-        if self.encrypt_key_id:
-            cmd += ['--encrypt-key', self.format_value(self.encrypt_key_id, local_repository)]
-        if self.sign_key_id:
-            cmd += ['--sign-key', self.format_value(self.sign_key_id, local_repository)]
-        if self.encrypt_passphrase:
-            env['PASSPHRASE'] = self.format_value(self.encrypt_passphrase, local_repository)
-        if self.sign_passphrase:
-            env['SIGN_PASSPHRASE'] = self.format_value(self.sign_passphrase, local_repository)
-        if self.no_encryption:
-            cmd += ['--no-encryption']
-        if self.ssh_options and self.private_key:
-            private_key = self.format_value(self.private_key, local_repository)
-            cmd += ['--ssh-options', '%s -oIdentityFile=%s' % (self.ssh_options, private_key)]
-        elif self.private_key:
-            private_key = self.format_value(self.private_key, local_repository)
-            cmd += ['--ssh-options', '-oIdentityFile=%s' % private_key]
-        elif self.ssh_options:
-            cmd += ['--ssh-options', self.ssh_options]
-        if self.password:
-            env['FTP_PASSWORD'] = self.format_value(self.password, local_repository)
-        if self.full_if_older_than:
-            cmd += ['--full-if-older-than', self.full_if_older_than]
-        if self.max_block_size:
-            cmd += ['--max-blocksize', self.max_block_size]
-        if self.no_compression:
-            cmd += ['--no-compression']
-        if self.volsize:
-            cmd += ['--volsize', self.volsize]
-        if self.gpg_encrypt_secret_keyring:
-            keyring = self.format_value(self.gpg_encrypt_secret_keyring, local_repository)
-            cmd += ['--encrypt-secret-keyring filename', keyring]
-        if self.gpg_options:
-            cmd += ['--gpg-options', self.gpg_options]
-        if self.rsync_options:
-            cmd += ['--rsync-options', self.rsync_options]
-        if self.cacert:
-            cmd += ['--ssl-cacert-file', self.format_value(self.cacert, local_repository)]
-        if self.insecure:
-            cmd += ['--ssl-no-check-certificate']
-        if self.gpg_executable:
-            cmd += ['--gpg-binary', self.gpg_executable]
-
-        for i in (0, 1):
-            # only required for the optional 'verify' pass
-            cmd_args = [x for x in cmd]
-            if i == 0 and self.always_full:
-                cmd_args += ['full']
-            elif i == 1 and not self.always_verify:
-                continue
-            elif i == 1:
-                cmd_args += ['verify']
-            cmd_args += [local_path, remote_url]
-            if self.command_display:
-                for k, v in env.items():
-                    cprint('%s=%s' % (k, v), YELLOW)
-            self.execute_command(cmd_args, cwd=export_data_path, env=env)
-
-    def do_restore(self, local_repository, export_data_path):
-        raise NotImplementedError
+        archive_filename = os.path.join(self.private_path(local_repository), 'archive')
+        if remote_url.endswith('tar.gz'):
+            archive_filename += '.tar.gz'
+        elif remote_url.endswith('tar.bz2'):
+            archive_filename += '.tar.bz2'
+        elif remote_url.endswith('tar.xz'):
+            archive_filename += '.tar.xz'
+        else:
+            raise ValueError('invalid tar format: %s' % remote_url)
+        backend.sync_file_to_local(archive_filename)
+        self.execute_command([self.tar_executable, '-xf', archive_filename], cwd=export_data_path)
 
 
 class SmartTarArchive(CommonRemoteRepository):
+    """Collect all files of your local repository into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
+    to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
+
     """
-    hourly_period
-    daily_period
-    weekly_period
-    monthly_period
-    """
+
+    excluded_files = {'.git', '.gitignore'}
     parameters = CommonRemoteRepository.parameters + [
-        Parameter('hourly_period'),
-        Parameter('daily_period'),
-        Parameter('weekly_period'),
-        Parameter('monthly_period'),
+        Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must end by ".tar.gz", '
+                                                        '"tar.bz2", "tar.xz" [*]'),
+        Parameter('private_key', required=True, help_str='private key or certificate associated to \'remote_url\' [*]'),
+        Parameter('ca_cert', required=True, help_str='CA certificate associated to \'remote_url\'. '
+                                                     'Set to "any" for not checking certificates [*]'),
+        Parameter('keytab', required=True, help_str='keytab (for Kerberos) associated to \'remote_url\' [*]'),
+        Parameter('ssh_options', required=True, help_str='SSH options associated to \'url\' [*]'),
+        Parameter('keytab', converter=check_file,
+                  help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
+        Parameter('tar_executable', converter=check_executable, common=True,
+                  help_str='path of the rsync executable (default: "tar")'),
+        Parameter('curl_executable', converter=check_executable, common=True,
+                  help_str='path of the rsync executable (default: "curl")'),
     ]
 
+    def __init__(self, name, tar_executable='tar', curl_executable='curl', remote_url='', keytab=None, private_key=None,
+                 ca_cert=None, ssh_options=None, **kwargs):
+        super(SmartTarArchive, self).__init__(name, **kwargs)
+        self.tar_executable = tar_executable
+        self.curl_executable = curl_executable
+        self.remote_url = remote_url
+        self.keytab = keytab
+        self.private_key = private_key
+        self.ca_cert = ca_cert
+        self.ssh_options = ssh_options
+
+    def _get_backend(self, local_repository):
+        remote_url = self.format_value(self.remote_url, local_repository)
+        keytab = self.format_value(self.keytab, local_repository)
+        private_key = self.format_value(self.private_key, local_repository)
+        ca_cert = self.format_value(self.ca_cert, local_repository)
+        ssh_options = self.format_value(self.ssh_options, local_repository)
+        backend = get_backend(local_repository, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
+                              ssh_options=ssh_options)
+        return backend
+
     def do_backup(self, local_repository, export_data_path):
-        raise NotImplementedError
+        assert isinstance(local_repository, LocalRepository)
+        backend = self._get_backend(local_repository)
+        remote_url = self.format_value(self.remote_url, local_repository)
+        archive_filename = os.path.join(self.private_path(local_repository), 'archive')
+        if remote_url.endswith('tar.gz'):
+            archive_filename += '.tar.gz'
+            cmd = [self.tar_executable, '-czf', archive_filename]
+        elif remote_url.endswith('tar.bz2'):
+            archive_filename += '.tar.bz2'
+            cmd = [self.tar_executable, '-cjf', archive_filename]
+        elif remote_url.endswith('tar.xz'):
+            archive_filename += '.tar.xz'
+            cmd = [self.tar_executable, '-cJf', archive_filename]
+        else:
+            raise ValueError('invalid tar format: %s' % remote_url)
+        filenames = os.listdir(export_data_path)
+        filenames.sort()
+        cmd += filenames
+        returncode, stdout, stderr = self.execute_command(cmd, cwd=export_data_path, ignore_errors=True)
+        error = None
+        if returncode != 0:
+            error = ValueError('unable to create archive %s' % archive_filename)
+        else:
+            try:
+                backend.sync_file_from_local(archive_filename)
+            except Exception as e:
+                error = e
+        if os.path.isfile(archive_filename) and self.can_execute_command(['rm', archive_filename]):
+            os.remove(archive_filename)
+        if error is not None:
+            raise error
 
     def do_restore(self, local_repository, export_data_path):
-        raise NotImplementedError
+        assert isinstance(local_repository, LocalRepository)
+        backend = self._get_backend(local_repository)
+        remote_url = self.format_value(self.remote_url, local_repository)
+        archive_filename = os.path.join(self.private_path(local_repository), 'archive')
+        if remote_url.endswith('tar.gz'):
+            archive_filename += '.tar.gz'
+        elif remote_url.endswith('tar.bz2'):
+            archive_filename += '.tar.bz2'
+        elif remote_url.endswith('tar.xz'):
+            archive_filename += '.tar.xz'
+        else:
+            raise ValueError('invalid tar format: %s' % remote_url)
+        backend.sync_file_to_local(archive_filename)
+        self.execute_command([self.tar_executable, '-xf', archive_filename], cwd=export_data_path)

@@ -158,11 +158,6 @@ class LocalRepository(Repository):
 
     def post_source_backup(self):
         pass
-        # last_backup_date = RepositoryInfo.datetime_to_str(datetime.datetime.now())
-        # filename = os.path.join(self.import_data_path, self.last_backup_file)
-        # if self.can_execute_command('echo \'%s\' > %s' % (last_backup_date, filename)):
-        #     with codecs.open(filename, 'w', encoding='utf-8') as fd:
-        #         fd.write(last_backup_date)
 
     def pre_source_restore(self):
         pass
