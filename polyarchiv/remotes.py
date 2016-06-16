@@ -5,7 +5,7 @@ import codecs
 import datetime
 import logging
 import shutil
-
+from collections import OrderedDict
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
@@ -13,8 +13,8 @@ from polyarchiv._vendor import requests
 from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.backends import get_backend, StorageBackend
 from polyarchiv.filters import FileFilter
-from polyarchiv.param_checks import check_git_url, check_curl_url
-from polyarchiv.termcolor import YELLOW, RED
+from polyarchiv.param_checks import check_git_url
+from polyarchiv.termcolor import RED
 from polyarchiv.termcolor import cprint
 
 try:
@@ -27,10 +27,10 @@ except ImportError:
     from urllib import urlencode, quote_plus
 import os
 
-from polyarchiv.conf import Parameter, strip_split, check_executable, check_file, CheckOption, bool_setting
+from polyarchiv.conf import Parameter, strip_split, check_executable, check_file
 from polyarchiv.locals import LocalRepository
 from polyarchiv.repository import Repository, RepositoryInfo
-from polyarchiv.utils import text_type, ensure_dir
+from polyarchiv.utils import text_type
 
 __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv.remotes')
@@ -104,10 +104,10 @@ class RemoteRepository(Repository):
         info.variables = {k: v for (k, v) in local_repository.variables if k in self.constant_format_values}
         # these variables are required for a valid restore
         try:
-            if self.can_execute_command(''):
+            if self.can_execute_command('# get lock'):
                 lock_ = local_repository.get_lock()
             export_data_path = self.apply_backup_filters(local_repository)
-            self.do_backup(local_repository, export_data_path)
+            self.do_backup(local_repository, export_data_path, info)
             info.success_count += 1
             info.last_state_valid = True
             info.last_success = datetime.datetime.now()
@@ -120,7 +120,7 @@ class RemoteRepository(Repository):
             info.last_message = text_type(e)
         if lock_ is not None:
             try:
-                if self.can_execute_command(''):
+                if self.can_execute_command('# release lock'):
                     local_repository.release_lock(lock_)
             except Exception as e:
                 cprint('unable to release lock. %s' % text_type(e), RED)
@@ -128,7 +128,12 @@ class RemoteRepository(Repository):
             self.set_info(local_repository, info)
         return info.last_state_valid
 
-    def do_backup(self, local_repository, export_data_path):
+    def do_backup(self, local_repository, export_data_path, info):
+        """send backup data from the local repository
+        :param local_repository: the local repository
+        :param export_data_path: where all data are stored (path)
+        :param info: RepositoryInfo object. its attribute `data` can be freely updated
+        """
         raise NotImplementedError
 
     def apply_backup_filters(self, local_repository):
@@ -230,7 +235,7 @@ class CommonRemoteRepository(RemoteRepository):
     def do_restore(self, local_repository, export_data_path):
         raise NotImplementedError
 
-    def do_backup(self, local_repository, export_data_path):
+    def do_backup(self, local_repository, export_data_path, info):
         raise NotImplementedError
 
     def _get_metadata_backend(self, local_repository):
@@ -312,7 +317,7 @@ class GitRepository(CommonRemoteRepository):
         self.commit_email = commit_email
         self.commit_message = commit_message
 
-    def do_backup(self, local_repository, export_data_path):
+    def do_backup(self, local_repository, export_data_path, info):
         assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
         worktree = export_data_path
         git_dir = os.path.join(self.private_path(local_repository), 'git')
@@ -441,7 +446,7 @@ class Synchronize(CommonRemoteRepository):
         self.ca_cert = ca_cert
         self.ssh_options = ssh_options
 
-    def do_backup(self, local_repository, export_data_path):
+    def do_backup(self, local_repository, export_data_path, info):
         backend = self._get_backend(local_repository)
         backend.sync_dir_from_local(export_data_path)
 
@@ -468,8 +473,9 @@ class TarArchive(CommonRemoteRepository):
 
     excluded_files = {'.git', '.gitignore'}
     parameters = CommonRemoteRepository.parameters + [
-        Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must end by ".tar.gz", '
-                                                        '"tar.bz2", "tar.xz" [*]'),
+        Parameter('remote_url', required=True, help_str='synchronize data to this URL, like '
+                                                        '\'ssh://user@hostname/folder/archive.tar.gz\'. '
+                                                        'Must end by ".tar.gz", "tar.bz2", "tar.xz" [*]'),
         Parameter('private_key', required=True, help_str='private key or certificate associated to \'remote_url\' [*]'),
         Parameter('ca_cert', required=True, help_str='CA certificate associated to \'remote_url\'. '
                                                      'Set to "any" for not checking certificates [*]'),
@@ -504,11 +510,11 @@ class TarArchive(CommonRemoteRepository):
                               ssh_options=ssh_options)
         return backend
 
-    def do_backup(self, local_repository, export_data_path):
+    def do_backup(self, local_repository, export_data_path, info):
         assert isinstance(local_repository, LocalRepository)
         backend = self._get_backend(local_repository)
         remote_url = self.format_value(self.remote_url, local_repository)
-        archive_filename = os.path.join(self.private_path(local_repository), 'archive')
+        archive_filename = self.archive_name_prefix(local_repository)
         if remote_url.endswith('tar.gz'):
             archive_filename += '.tar.gz'
             cmd = [self.tar_executable, '-czf', archive_filename]
@@ -537,11 +543,14 @@ class TarArchive(CommonRemoteRepository):
         if error is not None:
             raise error
 
+    def archive_name_prefix(self, local_repository):
+        return os.path.join(self.private_path(local_repository), 'archive')
+
     def do_restore(self, local_repository, export_data_path):
         assert isinstance(local_repository, LocalRepository)
         backend = self._get_backend(local_repository)
         remote_url = self.format_value(self.remote_url, local_repository)
-        archive_filename = os.path.join(self.private_path(local_repository), 'archive')
+        archive_filename = self.archive_name_prefix(local_repository)
         if remote_url.endswith('tar.gz'):
             archive_filename += '.tar.gz'
         elif remote_url.endswith('tar.bz2'):
@@ -554,95 +563,122 @@ class TarArchive(CommonRemoteRepository):
         self.execute_command([self.tar_executable, '-xf', archive_filename], cwd=export_data_path)
 
 
-class SmartTarArchive(CommonRemoteRepository):
+class SmartTarArchive(TarArchive):
     """Collect all files of your local repository into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
     to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
 
+    Also tracks previous archives to only keep a given number of hourly/daily/weekly/yearly backups,
+    deleting unneeded ones.
+
     """
 
-    excluded_files = {'.git', '.gitignore'}
-    parameters = CommonRemoteRepository.parameters + [
-        Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must end by ".tar.gz", '
-                                                        '"tar.bz2", "tar.xz" [*]'),
-        Parameter('private_key', required=True, help_str='private key or certificate associated to \'remote_url\' [*]'),
-        Parameter('ca_cert', required=True, help_str='CA certificate associated to \'remote_url\'. '
-                                                     'Set to "any" for not checking certificates [*]'),
-        Parameter('keytab', required=True, help_str='keytab (for Kerberos) associated to \'remote_url\' [*]'),
-        Parameter('ssh_options', required=True, help_str='SSH options associated to \'url\' [*]'),
-        Parameter('keytab', converter=check_file,
-                  help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
-        Parameter('tar_executable', converter=check_executable, common=True,
-                  help_str='path of the rsync executable (default: "tar")'),
-        Parameter('curl_executable', converter=check_executable, common=True,
-                  help_str='path of the rsync executable (default: "curl")'),
+    parameters = TarArchive.parameters + [
+        Parameter('hourly_count', converter=int, default_str_value='0',
+                  help_str='Number of hourly backups to keep (default to 0)'),
+        Parameter('daily_count', converter=int, default_str_value='30',
+                  help_str='Number of daily backups to keep (default to 30)'),
+        Parameter('weekly_count', converter=int, default_str_value='100', help_str='Number of weekly backups to keep '
+                                                                                   '(default to 100)'),
+        Parameter('yearly_count', converter=int, default_str_value='200',
+                  help_str='Number of yearly backups to keep (fefault to 20)'),
     ]
+    for index, parameter in enumerate(parameters):
+        if parameter.arg_name == 'remote_url':
+            parameters[index] = Parameter('remote_url', required=True,
+                                          help_str='synchronize data to this URL (SHOULD DEPEND ON THE DATE AND TIME): '
+                                                   '\'file:///var/backup/archive-%(Y)s-%(m)s-%(d)s_%(H)s-%(M)s.tar.gz\''
+                                                   'Must end by ".tar.gz", "tar.bz2", "tar.xz" [*]'),
+            break
 
-    def __init__(self, name, tar_executable='tar', curl_executable='curl', remote_url='', keytab=None, private_key=None,
-                 ca_cert=None, ssh_options=None, **kwargs):
-        super(SmartTarArchive, self).__init__(name, **kwargs)
-        self.tar_executable = tar_executable
-        self.curl_executable = curl_executable
-        self.remote_url = remote_url
-        self.keytab = keytab
-        self.private_key = private_key
-        self.ca_cert = ca_cert
-        self.ssh_options = ssh_options
+    def __init__(self, name, hourly_count=1, daily_count=30, weekly_count=10, yearly_count=20, **kwargs):
+        super(TarArchive, self).__init__(name, **kwargs)
+        self.hourly_count = hourly_count
+        self.daily_count = daily_count
+        self.weekly_count = weekly_count
+        self.yearly_count = yearly_count
 
-    def _get_backend(self, local_repository):
-        remote_url = self.format_value(self.remote_url, local_repository)
-        keytab = self.format_value(self.keytab, local_repository)
-        private_key = self.format_value(self.private_key, local_repository)
-        ca_cert = self.format_value(self.ca_cert, local_repository)
-        ssh_options = self.format_value(self.ssh_options, local_repository)
-        backend = get_backend(local_repository, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
-                              ssh_options=ssh_options)
-        return backend
+    def do_backup(self, local_repository, export_data_path, info):
+        super(SmartTarArchive, self).do_backup(local_repository, export_data_path, info)
+        if info.data is None:
+            info.data = []
+            # info.data must be a list of dict (old values)
+        info.data.append(info.variables)
+        if self.can_execute_command('# register this remote state'):
+            info.last_state_valid = True
+            info.last_success = datetime.datetime.now()
+            self.set_info(local_repository, info)
+        # ok, there we have to check which old backup must be removed
+        values = []
+        time_to_values = {}
+        for value_dict in info.data:
+            d = datetime.datetime(year=int(value_dict['Y']), month=int(value_dict['m']), day=int(value_dict['d']),
+                                  hour=int(value_dict['H']), minute=int(value_dict['M']), second=int(value_dict['S']))
+            values.append(d)
+            time_to_values[d] = value_dict
+        values.sort(reverse=True)
+        times = OrderedDict()
+        for d in values:
+            times[d] = False
+        now = datetime.datetime.now()
+        if self.hourly_count:
+            times = self.set_accepted_times(datetime.timedelta(hours=1), times,
+                                            not_before_time=now - datetime.timedelta(hours=self.hourly_count))
+        if self.daily_count:
+            times = self.set_accepted_times(datetime.timedelta(days=1), times,
+                                            not_before_time=now - datetime.timedelta(days=self.daily_count))
+        if self.weekly_count:
+            times = self.set_accepted_times(datetime.timedelta(days=7), times,
+                                            not_before_time=now - datetime.timedelta(days=self.weekly_count * 7))
+        if self.yearly_count:
+            times = self.set_accepted_times(datetime.timedelta(days=365), times,
+                                            not_before_time=now - datetime.timedelta(days=self.yearly_count * 365))
+        to_remove_values = [d for (d, v) in times.items() if not v]
+        to_keep_values = [d for (d, v) in times.items() if v]
+        info.data = [time_to_values[d] for d in reversed(to_keep_values)]
+        for data in to_remove_values:
+            local_repository.variables = time_to_values[data]
+            backend = self._get_backend(local_repository)
+            backend.delete_from()
 
-    def do_backup(self, local_repository, export_data_path):
-        assert isinstance(local_repository, LocalRepository)
-        backend = self._get_backend(local_repository)
-        remote_url = self.format_value(self.remote_url, local_repository)
-        archive_filename = os.path.join(self.private_path(local_repository), 'archive')
-        if remote_url.endswith('tar.gz'):
-            archive_filename += '.tar.gz'
-            cmd = [self.tar_executable, '-czf', archive_filename]
-        elif remote_url.endswith('tar.bz2'):
-            archive_filename += '.tar.bz2'
-            cmd = [self.tar_executable, '-cjf', archive_filename]
-        elif remote_url.endswith('tar.xz'):
-            archive_filename += '.tar.xz'
-            cmd = [self.tar_executable, '-cJf', archive_filename]
-        else:
-            raise ValueError('invalid tar format: %s' % remote_url)
-        filenames = os.listdir(export_data_path)
-        filenames.sort()
-        cmd += filenames
-        returncode, stdout, stderr = self.execute_command(cmd, cwd=export_data_path, ignore_errors=True)
-        error = None
-        if returncode != 0:
-            error = ValueError('unable to create archive %s' % archive_filename)
-        else:
-            try:
-                backend.sync_file_from_local(archive_filename)
-            except Exception as e:
-                error = e
-        if os.path.isfile(archive_filename) and self.can_execute_command(['rm', archive_filename]):
-            os.remove(archive_filename)
-        if error is not None:
-            raise error
+    @staticmethod
+    def set_accepted_times(min_accept_interval, ordered_times, not_before_time=None, not_after_time=None):
+        """ 'require at least one `True` value in `ordered_times` each `min_accept_interval` until `max_checked_time`.
+        :param min_accept_interval: at least one True value is required in this interval
+        :param ordered_times: is an OrderedDict with datetime keys and boolean values.
+        :param not_before_time: any key smaller than it is ignored
+        :param not_after_time: any key greater than it is ignored
 
-    def do_restore(self, local_repository, export_data_path):
-        assert isinstance(local_repository, LocalRepository)
-        backend = self._get_backend(local_repository)
-        remote_url = self.format_value(self.remote_url, local_repository)
-        archive_filename = os.path.join(self.private_path(local_repository), 'archive')
-        if remote_url.endswith('tar.gz'):
-            archive_filename += '.tar.gz'
-        elif remote_url.endswith('tar.bz2'):
-            archive_filename += '.tar.bz2'
-        elif remote_url.endswith('tar.xz'):
-            archive_filename += '.tar.xz'
-        else:
-            raise ValueError('invalid tar format: %s' % remote_url)
-        backend.sync_file_to_local(archive_filename)
-        self.execute_command([self.tar_executable, '-xf', archive_filename], cwd=export_data_path)
+        >>> times = OrderedDict()
+        >>> times[0] = False
+        >>> times[3] = False
+        >>> times[4] = False
+        >>> times[5] = False
+        >>> times[7] = False
+        >>> times[8] = False
+        >>> times[9] = False
+        >>> result = SmartTarArchive.set_accepted_times(3, times, not_after_time=14)
+        >>> print(result)
+        OrderedDict([(0, True), (3, True), (4, False), (5, False), (7, True), (8, False), (9, False)])
+
+         """
+        assert isinstance(ordered_times, OrderedDict)
+        previous_time = None
+        result = OrderedDict()
+        for current_time, state in ordered_times.items():
+            if not_before_time is not None and current_time < not_before_time:
+                result[current_time] = state
+            elif not_after_time is not None and current_time > not_after_time:
+                result[current_time] = state
+            elif previous_time is None:
+                result[current_time] = True
+            elif abs(previous_time - current_time) >= min_accept_interval:
+                result[current_time] = True
+            else:
+                result[current_time] = state
+            if result[current_time]:
+                previous_time = current_time
+        return result
+
+    def archive_name_prefix(self, local_repository):
+        archive_name = self.format_value('archive-%(Y)s-%(m)s-%(d)s_%(H)s-%(M)s', local_repository)
+        return os.path.join(self.private_path(local_repository), archive_name)

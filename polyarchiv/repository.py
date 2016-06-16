@@ -120,7 +120,7 @@ class ParameterizedObject(object):
 
 class RepositoryInfo(object):
     def __init__(self, last_state_valid=None, last_success=None, last_fail=None, success_count=0, fail_count=0,
-                 total_size=0, last_message='', config_hash=None, variables=None):
+                 total_size=0, last_message='', config_hash=None, variables=None, data=None):
         self.last_state_valid = last_state_valid  # None, True, False
         self.last_success = last_success  # expected to be filled by datetime.datetime.now()
         self.last_fail = last_fail  # expected to be filled by datetime.datetime.now()
@@ -130,6 +130,7 @@ class RepositoryInfo(object):
         self.last_message = last_message  # should be "ok" for a success, or an informative message on error
         self.config_hash = config_hash  # md5 hash of the config file
         self.variables = variables or {}  # variables["key"] = "value"
+        self.data = data  # extra data, without any spec (its use depends of each kind of repository)
 
     @property
     def last(self):
@@ -152,6 +153,7 @@ class RepositoryInfo(object):
         result['last_fail'] = self.datetime_to_str(self.last_fail)
         result['config_hash'] = self.config_hash
         result['variables'] = self.variables
+        result['data'] = self.data
         return result
 
     @classmethod
@@ -171,8 +173,8 @@ class RepositoryInfo(object):
             kwargs['last_success'] = cls.datetime_from_str(data['last_success'])
         if data.get('config_hash'):
             kwargs['config_hash'] = data['config_hash']
-        if data.get('variables'):
-            kwargs['variables'] = data['variables']
+        kwargs['variables'] = data.get('variables')
+        kwargs['data'] = data.get('data')
         return RepositoryInfo(**kwargs)
 
     @staticmethod

@@ -245,6 +245,24 @@ and add the "large" tag to the local configuration:
     
 Since the remote repository does not present either the `huge` tag or the `large` tag, it will not be applied.
 
+URLs
+----
+
+Excepting git URLs, valid URLs must look like one of these examples:
+  * `file:///foo/bar/baz` for direct file operation,
+  * `ssh://username@hostname/boo/bar/baz`, but `keytab` or `private_key` must be set,
+  * `http(s)://username:password@hostname/foo/bar/baz.git`, you can set `ca_cert` to the private root certificate or to `"any"` for accepting self-signed certificates. 
+  * `http(s)://:@hostname/foo/bar/baz.git` and `private_key` for certificate auth
+
+Of course, `http` URLs require a WEBDAV-compliant server.
+
+
+URLs for git remotes must look like:
+  * `git@hostname/foo/bar/baz.git` and `private_key` must be set
+  * `http(s)://username:password@hostname/foo/bar/baz.git`
+  * `http(s)://:@hostname/foo/bar/baz.git` and `keytab` is set
+  
+
 Replacement rules
 -----------------
 
