@@ -638,7 +638,7 @@ class SmartTarArchive(TarArchive):
         for data in to_remove_values:
             local_repository.variables = time_to_values[data]
             backend = self._get_backend(local_repository)
-            backend.delete_from()
+            backend.delete_on_distant()
 
     @staticmethod
     def set_accepted_times(min_accept_interval, ordered_times, not_before_time=None, not_after_time=None):

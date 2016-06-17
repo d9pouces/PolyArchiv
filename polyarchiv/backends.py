@@ -114,7 +114,7 @@ class StorageBackend(object):
     def sync_file_from_local(self, local_filename, filename='filename'):
         raise NotImplementedError
 
-    def delete_from(self, path='/'):
+    def delete_on_distant(self, path=''):
         raise NotImplementedError
 
 
@@ -154,7 +154,7 @@ class FileStorageBackend(StorageBackend):
         if self.can_execute_command(['cp', '-p', dst_path, local_filename]):
             shutil.copy2(dst_path, local_filename)
 
-    def delete_from(self, path=''):
+    def delete_on_distant(self, path=''):
         dst_path = os.path.join(self.dst_path, path) if path else self.dst_path
         if os.path.isdir(dst_path) and self.can_execute_command(['rm', '-rf', dst_path]):
             shutil.rmtree(dst_path)
@@ -184,13 +184,59 @@ class HTTPRequestsStorageBackend(StorageBackend):
         self.curl_command = curl_command
         self.keytab = keytab
 
+    def sync_dir_to_local(self, local_dirname):
+        for root, dirnames, filenames in self.walk('/'):
+            current_local_dir = os.path.join(local_dirname, root[1:])
+            paths_to_remove = []
+            if self.ensure_dir(current_local_dir):
+                paths_to_remove = [x for x in (set(os.listdir(current_local_dir)) - set(dirnames) - set(filenames))]
+                paths_to_remove = [os.path.join(current_local_dir, x) for x in paths_to_remove]
+                paths_to_remove.sort()
+            if paths_to_remove and self.can_execute_command(['rm', '-rf'] + paths_to_remove):
+                for path in paths_to_remove:
+                    if os.path.isdir(path):
+                        shutil.rmtree(path)
+                    else:
+                        os.remove(path)
+            # no need to create directories (they will be the next roots)
+            for filename in filenames:
+                self.download_file(root + filename, os.path.join(local_dirname, root[1:], filename))
+
+    def sync_dir_from_local(self, local_dirname):
+        self.delete_on_distant('')
+        self.remote_mkdirs('/')
+        for root, dirnames, filenames in os.walk(local_dirname):
+            for src_dirname in dirnames:
+                src_path = os.path.join(root, src_dirname)
+                self.remote_mkdir('/' + os.path.relpath(src_path, local_dirname))
+            for src_filename in filenames:
+                src_path = os.path.join(root, src_filename)
+                self.upload_file('/' + os.path.relpath(src_path, local_dirname), src_path)
+
+    def sync_file_to_local(self, local_filename, filename='filename'):
+        if filename:
+            filename = '/' + filename
+        self.download_file(filename, local_filename)
+
+    def sync_file_from_local(self, local_filename, filename='filename'):
+        if filename:
+            filename = '/' + filename
+        self.remote_mkdirs(filename)
+        self.upload_file(filename, local_filename)
+
+    def delete_on_distant(self, path=''):
+        if path:
+            path = '/' + path
+        url = self.get_url(path)
+        if self.can_execute_command(self.get_curl_command(url, '-X', 'DELETE')):
+            self.send('DELETE', (204, 207, 404), url=url, headers={'Depth': 'infinity'})
+
     def get_url(self, suffix='/'):
         if suffix:
             return '%s%s%s' % (self.root_url, suffix, self.query)
         return self.root_url + self.query
 
-    def get_curl_command(self, suffix, *extra_args):
-        url = self.get_url(suffix)
+    def get_curl_command(self, url, *extra_args):
         command = [self.curl_command] + list(extra_args)
         if not self.session.verify:
             command += ['-k']
@@ -212,63 +258,43 @@ class HTTPRequestsStorageBackend(StorageBackend):
             raise IOError('Unable to perform %s %s (%s)' % (method, url, response.status_code))
         return response
 
-    def sync_dir_to_local(self, local_dirname):
-        for root, dirnames, filenames in self.walk('/'):
-            current_local_dir = os.path.join(local_dirname, root[1:])
-            paths_to_remove = []
-            if self.ensure_dir(current_local_dir):
-                paths_to_remove = [x for x in (set(os.listdir(current_local_dir)) - set(dirnames) - set(filenames))]
-                paths_to_remove = [os.path.join(current_local_dir, x) for x in paths_to_remove]
-                paths_to_remove.sort()
-            if paths_to_remove and self.can_execute_command(['rm', '-rf'] + paths_to_remove):
-                for path in paths_to_remove:
-                    if os.path.isdir(path):
-                        shutil.rmtree(path)
-                    else:
-                        os.remove(path)
-            for filename in filenames:
-                self.download_file(root + filename, os.path.join(local_dirname, root[1:], filename))
-
-    def sync_dir_from_local(self, local_dirname):
-        self.delete_from('/')
-        for root, dirnames, filenames in os.walk(local_dirname):
-            for src_dirname in dirnames:
-                src_path = os.path.join(root, src_dirname)
-                self.remote_mkdir('/' + os.path.relpath(src_path, local_dirname))
-            for src_filename in filenames:
-                src_path = os.path.join(root, src_filename)
-                self.upload_file('/' + os.path.relpath(src_path, local_dirname), src_path)
-
-    def sync_file_to_local(self, local_filename, filename='filename'):
-        if filename:
-            filename = '/' + filename
-        self.download_file(filename, local_filename)
-
-    def sync_file_from_local(self, local_filename, filename='filename'):
-        if filename:
-            filename = '/' + filename
-        self.upload_file(filename, local_filename)
-
-    def delete_from(self, path=''):
-        if path:
-            path = '/' + path
-        if self.can_execute_command(self.get_curl_command(path, '-X', 'DELETE')):
-            self.send('DELETE', (204, 207, 404), suffix=path, headers={'Depth': 'infinity'})
-
     def remote_mkdir(self, suffix):
-        if self.can_execute_command(self.get_curl_command(suffix, '-X', 'MKCOL')):
-            self.send('MKCOL', 204, suffix=suffix)
+        url = self.get_url(suffix)
+        if self.can_execute_command(self.get_curl_command(url, '-X', 'MKCOL')):
+            self.send('MKCOL', 204, url=url)
+
+    def remote_mkdirs(self, suffix):
+        url = self.get_url(suffix=suffix)
+        parsed_url = urlparse(url)
+        prefix = '%s://%s' % (parsed_url.scheme, parsed_url.netloc)
+        suffix = ''
+        if parsed_url.query:
+            suffix += '?%s' % parsed_url.query
+        if parsed_url.fragment:
+            suffix += '#%s' % parsed_url.fragment
+        path = ''
+        path_components = [x for x in filter(lambda y: y, parsed_url.path.split('/'))]
+        if not url.endswith('/') and path_components:
+            del path_components[-1]
+        for path_component in path_components:
+            path += '/' + path_component
+            url = '%s%s%s' % (prefix, path, suffix)
+            if self.can_execute_command(self.get_curl_command(url, '-X', 'MKCOL')):
+                self.send('MKCOL', (201, 204, 400, 401, 403), url=url)
 
     def upload_file(self, suffix, local_path):
-        if self.can_execute_command(self.get_curl_command(suffix, '-X', 'PUT', '-T', local_path)):
+        url = self.get_url(suffix)
+        if self.can_execute_command(self.get_curl_command(url, '-X', 'PUT', '-T', local_path)):
             with open(local_path, 'rb') as fd:
-                self.send('PUT', (200, 201, 204), suffix=suffix, data=fd)
+                self.send('PUT', (200, 201, 204), url=url, data=fd)
 
     def download_file(self, suffix, local_path):
         if os.path.isdir(local_path) and self.can_execute_command(['rm', '-rf'] + local_path):
             shutil.rmtree(local_path)
-        if self.can_execute_command(self.get_curl_command(suffix, '-O', local_path)):
-            response = self.send('GET', 200, suffix=suffix, stream=True)
+        self.ensure_dir(local_path, parent=True)
+        url = self.get_url(suffix)
+        if self.can_execute_command(self.get_curl_command(url, '-O', local_path)):
+            response = self.send('GET', 200, url=url, stream=True)
             with open(local_path, 'wb') as fd:
                 for chunk in response.iter_content(DOWNLOAD_CHUNK_SIZE_BYTES):
                     fd.write(chunk)
@@ -357,7 +383,7 @@ class HTTPCurlStorageBackend(HTTPRequestsStorageBackend):
                 self.download_file(root + filename, os.path.join(local_dirname, root[1:], filename))
 
     def sync_dir_from_local(self, local_dirname):
-        self.delete_from('/')
+        self.delete_on_distant('/')
         for root, dirnames, filenames in os.walk(local_dirname):
             for src_dirname in dirnames:
                 src_path = os.path.join(root, src_dirname)
@@ -372,7 +398,7 @@ class HTTPCurlStorageBackend(HTTPRequestsStorageBackend):
     def sync_file_from_local(self, local_filename, filename='filename'):
         self.upload_file('/' + filename, local_filename)
 
-    def delete_from(self, path=''):
+    def delete_on_distant(self, path=''):
         if self.can_execute_command(self.get_curl_command(path, '-X', 'DELETE')):
             self.send('DELETE', (204, 207, 404), suffix=path, headers={'Depth': 'infinity'})
 
@@ -492,7 +518,7 @@ class SShStorageBackend(FileStorageBackend):
 
     def sync_file_to_local(self, local_filename, filename='filename'):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
-        self.ensure_dir(dst_path, parent=True)
+        self.ensure_dir(local_filename, parent=True)
         cmd = self._get_ssh_command(executable=self.scp_executable)
         cmd += ['-p', '%s:%s' % (self.hostname, self.dst_path), local_filename]
         self.execute_command(cmd)
@@ -504,7 +530,7 @@ class SShStorageBackend(FileStorageBackend):
         cmd += ['-p', local_filename, '%s:%s' % (self.hostname, self.dst_path)]
         self.execute_command(cmd)
 
-    def delete_from(self, path=''):
+    def delete_on_distant(self, path=''):
         dst_path = os.path.join(self.dst_path, path) if path else self.dst_path
         cmd = self._get_ssh_command()
         cmd += [self.hostname, 'rm', '-rf', dst_path]
