@@ -108,10 +108,10 @@ class StorageBackend(object):
     def sync_dir_from_local(self, local_dirname):
         raise NotImplementedError
 
-    def sync_file_to_local(self, local_filename, filename='filename'):
+    def sync_file_to_local(self, local_filename, filename=''):
         raise NotImplementedError
 
-    def sync_file_from_local(self, local_filename, filename='filename'):
+    def sync_file_from_local(self, local_filename, filename=''):
         raise NotImplementedError
 
     def delete_on_distant(self, path=''):
@@ -139,20 +139,30 @@ class FileStorageBackend(StorageBackend):
                force_dirname(local_dirname)]
         self.execute_command(cmd)
 
-    def sync_file_to_local(self, local_filename, filename='filename'):
+    def sync_file_to_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
-        self.ensure_dir(dst_path, parent=True)
-        if self.can_execute_command(['cp', '-p', local_filename, dst_path]):
-            shutil.copy2(local_filename, dst_path)
+        self.ensure_dir(local_filename, parent=True)
+        if os.path.exists(local_filename) and self.can_execute_command(['rm', '-rf', local_filename]):
+            if os.path.isdir(local_filename):
+                shutil.rmtree(local_filename)
+            else:
+                os.remove(local_filename)
+        if self.can_execute_command(['cp', '-p', dst_path, local_filename]) and local_filename != dst_path:
+            shutil.copy2(dst_path, local_filename)
 
-    def sync_file_from_local(self, local_filename, filename='filename'):
+    def sync_file_from_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
         if local_filename is None:
             with open(dst_path, 'rb') as fd:
                 return fd.read()
-        self.ensure_dir(local_filename, parent=True)
-        if self.can_execute_command(['cp', '-p', dst_path, local_filename]):
-            shutil.copy2(dst_path, local_filename)
+        self.ensure_dir(dst_path, parent=True)
+        if os.path.exists(dst_path) and self.can_execute_command(['rm', '-rf', dst_path]):
+            if os.path.isdir(dst_path):
+                shutil.rmtree(dst_path)
+            else:
+                os.remove(dst_path)
+        if self.can_execute_command(['cp', '-p', local_filename, dst_path]) and local_filename != dst_path:
+            shutil.copy2(local_filename, dst_path)
 
     def delete_on_distant(self, path=''):
         dst_path = os.path.join(self.dst_path, path) if path else self.dst_path
@@ -213,12 +223,12 @@ class HTTPRequestsStorageBackend(StorageBackend):
                 src_path = os.path.join(root, src_filename)
                 self.upload_file('/' + os.path.relpath(src_path, local_dirname), src_path)
 
-    def sync_file_to_local(self, local_filename, filename='filename'):
+    def sync_file_to_local(self, local_filename, filename=''):
         if filename:
             filename = '/' + filename
         self.download_file(filename, local_filename)
 
-    def sync_file_from_local(self, local_filename, filename='filename'):
+    def sync_file_from_local(self, local_filename, filename=''):
         if filename:
             filename = '/' + filename
         self.remote_mkdirs(filename)
@@ -488,6 +498,23 @@ class SShStorageBackend(FileStorageBackend):
             cmd += list(shlex.split(self.ssh_options))
         return cmd
 
+    def _get_scp_command(self, use_keytab=True, executable=None):
+        cmd = []
+        if use_keytab and self.keytab:
+            cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
+        if executable is None:
+            executable = self.scp_executable
+        cmd += [executable]
+        if self.private_key:
+            cmd += ['-i', self.private_key]
+        if self.username:
+            cmd += ['-l', self.username]
+        if self.port:
+            cmd += ['-P', str(self.port)]
+        if self.ssh_options:
+            cmd += list(shlex.split(self.ssh_options))
+        return cmd
+
     def _get_rsync_command(self):
         cmd = []
         if self.keytab:
@@ -516,14 +543,19 @@ class SShStorageBackend(FileStorageBackend):
                 force_dirname(local_dirname)]
         self.execute_command(cmd)
 
-    def sync_file_to_local(self, local_filename, filename='filename'):
+    def sync_file_to_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
+        parent_path = os.path.dirname(dst_path)
+        cmd = self._get_ssh_command()
+        cmd += [self.hostname, 'mkdir', '-p', parent_path]
+        self.execute_command(cmd)
+
         self.ensure_dir(local_filename, parent=True)
-        cmd = self._get_ssh_command(executable=self.scp_executable)
+        cmd = self._get_scp_command(executable=self.scp_executable)
         cmd += ['-p', '%s:%s' % (self.hostname, self.dst_path), local_filename]
         self.execute_command(cmd)
 
-    def sync_file_from_local(self, local_filename, filename='filename'):
+    def sync_file_from_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
         self.ensure_dir(dst_path, parent=True)
         cmd = self._get_ssh_command(executable=self.scp_executable)
