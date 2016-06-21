@@ -7,6 +7,7 @@ import errno
 __author__ = 'Matthieu Gallet'
 
 
+# noinspection PyPep8Naming
 class Lock(object):
     """Lock interprocess basé sur des fichiers
 

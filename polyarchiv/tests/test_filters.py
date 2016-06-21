@@ -1,12 +1,12 @@
 # coding=utf-8
 from __future__ import unicode_literals
 
-import codecs
 import filecmp
-import os
 import shutil
 import tempfile
 from unittest import TestCase
+
+import os
 
 from polyarchiv.filters import SymmetricCrypt, Hashsum
 
