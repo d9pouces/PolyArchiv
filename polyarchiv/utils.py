@@ -211,7 +211,7 @@ class cached_property(object):
         self.__doc__ = getattr(func, '__doc__')
         self.name = name or func.__name__
 
-    # noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal,PyShadowingBuiltins
     def __get__(self, instance, type=None):
         if instance is None:
             return self

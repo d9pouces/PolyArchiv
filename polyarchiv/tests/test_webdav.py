@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 
 from unittest import TestCase
-from xml.dom.minidom import parseString
 
 from polyarchiv.backends import HTTPRequestsStorageBackend
 
