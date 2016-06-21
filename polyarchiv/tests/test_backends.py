@@ -16,6 +16,10 @@ class TestBackend(TestCase):
     partial_dir_url = None
     complete_file_url = None
     partial_file_url = None
+    complete_dir_path = None
+    partial_dir_path = None
+    complete_file_path = None
+    partial_file_path = None
 
     def setUp(self):
         self.original_dir_path = tempfile.mkdtemp()
@@ -43,11 +47,14 @@ class TestBackend(TestCase):
         backend = get_backend(self.repository, self.complete_file_url)
         backend.sync_file_from_local(__file__)
         backend.sync_file_to_local(self.copy_file_pth)
+        backend.delete_on_distant()
         with open(__file__, 'rb') as fd:
             orig = fd.read()
         with open(self.copy_file_pth, 'rb') as fd:
             copy = fd.read()
         self.assertEqual(orig, copy)
+        if self.complete_file_path:
+            self.assertFalse(os.path.isfile(self.complete_file_path))
 
     def test_sync_dir(self):
         if self.complete_dir_url is None:
@@ -62,3 +69,9 @@ class TestBackend(TestCase):
 
 class TestFileBackend(TestBackend):
     complete_file_url = 'file:///home/vagrant/backends/files/test.py'
+    complete_file_path = '/home/vagrant/backends/files/test.py'
+
+
+class TestSSHBackend(TestBackend):
+    complete_file_url = 'ssh://localhost/home/vagrant/backends/ssh/test.py'
+    complete_file_path = '/home/vagrant/backends/ssh/test.py'

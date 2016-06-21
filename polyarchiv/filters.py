@@ -81,7 +81,7 @@ class SymmetricCrypt(FileFilter):
                 else:
                     cmd = ['gpg', '--passphrase', self.password, '-o', crypted_path, '-c', clear_path]
                     if self.can_execute_command(cmd):
-                        subprocess.check_call(cmd)
+                        subprocess.check_call(cmd, stderr=self.stderr, stdout=self.stdout)
                         shutil.copystat(clear_path, crypted_path)
 
     def do_restore(self, previous_path, next_path, private_path, allow_in_place=True):

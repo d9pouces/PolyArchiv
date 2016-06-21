@@ -558,7 +558,7 @@ class SShStorageBackend(FileStorageBackend):
     def sync_file_from_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
         self.ensure_dir(dst_path, parent=True)
-        cmd = self._get_ssh_command(executable=self.scp_executable)
+        cmd = self._get_scp_command(executable=self.scp_executable)
         cmd += ['-p', local_filename, '%s:%s' % (self.hostname, self.dst_path)]
         self.execute_command(cmd)
 
