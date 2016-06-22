@@ -70,13 +70,13 @@ ServerName 127.0.1.1
 Listen 0.0.0.0:9012
 PidFile /tmp/httpd.pid
 <IfModule mpm_event_module>
-	StartServers			 2
-	MinSpareThreads		 25
-	MaxSpareThreads		 75
-	ThreadLimit			 64
-	ThreadsPerChild		 25
-	MaxRequestWorkers	  150
-	MaxConnectionsPerChild   0
+StartServers			 2
+MinSpareThreads		 25
+MaxSpareThreads		 75
+ThreadLimit			 64
+ThreadsPerChild		 25
+MaxRequestWorkers	  150
+MaxConnectionsPerChild   0
 </IfModule>
 User vagrant
 Group vagrant
@@ -84,13 +84,15 @@ Group vagrant
 DocumentRoot "/var/www/remotes"
 ErrorLog "/var/www/error.log"
 LogLevel warn
- <Location />
-  DAV On
-  AuthType Basic
-  AuthName "webdav"
-  AuthUserFile /var/www/passwd
-  Require valid-user
- </Location>
+<Location />
+DAV On
+AuthType Basic
+AuthName "webdav"
+AuthUserFile /var/www/passwd
+<Limit GET PUT POST DELETE PROPFIND PROPPATCH MKCOL COPY MOVE LOCK UNLOCK>
+Require valid-user
+</Limit>
+</Location>
 EOF
 sudo mkdir -p /var/www/backends /var/www/remotes
 sudo chown -R vagrant:vagrant /var/www

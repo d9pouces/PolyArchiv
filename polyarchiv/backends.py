@@ -271,7 +271,7 @@ class HTTPRequestsStorageBackend(StorageBackend):
     def remote_mkdir(self, suffix):
         url = self.get_url(suffix)
         if self.can_execute_command(self.get_curl_command(url, '-X', 'MKCOL')):
-            self.send('MKCOL', 204, url=url)
+            self.send('MKCOL', (201, 204, 400, 401, 403, 405), url=url)
 
     def remote_mkdirs(self, suffix):
         url = self.get_url(suffix=suffix)
@@ -290,7 +290,7 @@ class HTTPRequestsStorageBackend(StorageBackend):
             path += '/' + path_component
             url = '%s%s%s' % (prefix, path, suffix)
             if self.can_execute_command(self.get_curl_command(url, '-X', 'MKCOL')):
-                self.send('MKCOL', (201, 204, 400, 401, 403), url=url)
+                self.send('MKCOL', (201, 204, 400, 401, 403, 405), url=url)
 
     def upload_file(self, suffix, local_path):
         url = self.get_url(suffix)
@@ -414,7 +414,7 @@ class HTTPCurlStorageBackend(HTTPRequestsStorageBackend):
 
     def remote_mkdir(self, suffix):
         if self.can_execute_command(self.get_curl_command(suffix, '-X', 'MKCOL')):
-            self.send('MKCOL', 204, suffix=suffix)
+            self.send('MKCOL', (201, 204, 400, 401, 403, 405), suffix=suffix)
 
     def upload_file(self, suffix, local_path):
         if self.can_execute_command(self.get_curl_command(suffix, '-X', 'PUT', '-T', local_path)):

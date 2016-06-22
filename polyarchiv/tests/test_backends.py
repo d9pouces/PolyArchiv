@@ -23,7 +23,7 @@ class TestBackend(TestCase):
 
     def setUp(self):
         self.original_dir_path = tempfile.mkdtemp()
-        self.private_path = tempfile.mkdtemp()
+        self.empty_dir_path = tempfile.mkdtemp()
         self.copy_dir_path = tempfile.mkdtemp()
         with tempfile.NamedTemporaryFile() as fd:
             self.copy_file_pth = fd.name
@@ -54,24 +54,43 @@ class TestBackend(TestCase):
             copy = fd.read()
         self.assertEqual(orig, copy)
         if self.complete_file_path:
-            self.assertFalse(os.path.isfile(self.complete_file_path))
+            self.assertFalse(os.path.exists(self.complete_file_path))
 
     def test_sync_dir(self):
         if self.complete_dir_url is None:
             return
-        pass
+        backend = get_backend(self.repository, self.complete_dir_url)
+        backend.sync_dir_from_local(self.original_dir_path)
+        backend.sync_dir_to_local(self.copy_dir_path)
+        self.assertEqualPaths(self.original_dir_path, self.copy_dir_path)
+        backend.delete_on_distant()
+        if self.complete_dir_path:
+            self.assertFalse(os.path.exists(self.complete_dir_path))
 
     def tearDown(self):
-        for x in (self.original_dir_path, self.private_path, self.copy_dir_path):
+        for x in (self.original_dir_path, self.empty_dir_path, self.copy_dir_path):
             if os.path.isdir(x):
                 shutil.rmtree(x)
+        if os.path.isfile(self.copy_file_pth):
+            os.remove(self.copy_file_pth)
 
 
 class TestFileBackend(TestBackend):
     complete_file_url = 'file:///home/vagrant/backends/files/test.py'
     complete_file_path = '/home/vagrant/backends/files/test.py'
+    complete_dir_url = 'file:///home/vagrant/backends/files'
+    complete_dir_path = '/home/vagrant/backends/files/'
 
 
 class TestSSHBackend(TestBackend):
     complete_file_url = 'ssh://localhost/home/vagrant/backends/ssh/test.py'
     complete_file_path = '/home/vagrant/backends/ssh/test.py'
+    complete_dir_url = 'ssh://localhost/home/vagrant/backends/ssh'
+    complete_dir_path = '/home/vagrant/backends/ssh/'
+
+
+class TestWebdavBackend(TestBackend):
+    complete_file_url = 'http://testuser:toto@localhost:9012/webdav/file/test.py'
+    complete_file_path = '/var/www/remotes/webdav/file/test.py'
+    complete_dir_url = 'http://testuser:toto@localhost:9012/webdav/dir/'
+    complete_dir_path = '/var/www/remotes/webdav/dir'
