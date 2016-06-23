@@ -17,6 +17,9 @@ echo "ALTER USER test WITH ENCRYPTED PASSWORD 'testtest'" | sudo -u postgres psq
 echo "ALTER ROLE test CREATEDB" | sudo -u postgres psql -d postgres
 echo "CREATE DATABASE testdb OWNER test" | sudo -u postgres psql -d postgres
 echo "GRANT ALL PRIVILEGES ON DATABASE testdb TO test" | sudo -u postgres psql -d postgres
+echo "DROP DATABASE restoredb" | sudo -u postgres psql -d postgres
+echo "CREATE DATABASE restoredb OWNER test" | sudo -u postgres psql -d postgres
+echo "GRANT ALL PRIVILEGES ON DATABASE restoredb TO test" | sudo -u postgres psql -d postgres
 cat /vagrant/tests/world_postgresql.sql | sudo -u postgres psql -d testdb
 echo "ALTER TABLE city OWNER TO test" | sudo -u postgres psql -d testdb
 echo "ALTER TABLE country OWNER TO test" | sudo -u postgres psql -d testdb
@@ -26,8 +29,11 @@ echo "ALTER TABLE countrylanguage OWNER TO test" | sudo -u postgres psql -d test
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server mysql-client
 echo "CREATE USER 'test'@'localhost' IDENTIFIED BY 'testtest'" | sudo mysql
 echo "GRANT ALL PRIVILEGES ON testdb.* TO 'test'@'localhost'" | sudo mysql
+echo "GRANT ALL PRIVILEGES ON restoredb.* TO 'test'@'localhost'" | sudo mysql
 echo "FLUSH PRIVILEGES" | sudo mysql
+echo "DROP DATABASE restoredb" | sudo mysql
 echo "CREATE DATABASE testdb" | sudo mysql
+echo "CREATE DATABASE restoredb" | sudo mysql
 cat /vagrant/tests/world_mysql.sql  | sudo mysql testdb
 
 # create a OpenLDAP database and fill it with some data

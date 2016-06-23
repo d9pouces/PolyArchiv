@@ -170,12 +170,12 @@ class MySQL(Source):
         filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
         if not os.path.isfile(filename):
             return
-        cmd = self.get_dump_cmd_list()
+        cmd = self.get_restore_cmd_list()
         cmd = [x % self.db_options for x in cmd]
         env = os.environ.copy()
         env.update(self.get_env())
         if self.command_display:
-            for k, v in self.get_env():
+            for k, v in self.get_env().items():
                 cprint('%s=%s' % (k, v), YELLOW)
         # noinspection PyTypeChecker
         with open(filename, 'rb') as fd:
@@ -213,6 +213,17 @@ class MySQL(Source):
     def get_env(self):
         """Extra environment variables to be passed to shell execution"""
         return {}
+    #
+    # def drop_database(self):
+    #     """ :return:
+    #     :rtype: :class:`list` of :class:`str`
+    #     """
+    #     cmd = self.get_restore_cmd_list()
+    #     cmd = [x % self.db_options for x in cmd[:-1]]
+    #     env = os.environ.copy()
+    #     env.update(self.get_env())
+    #     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, env=env)
+    #     p.communicate('DROP DATABASE %(NAME)s' % self.db_options)
 
 
 class PostgresSQL(MySQL):
@@ -224,8 +235,10 @@ class PostgresSQL(MySQL):
                   help_str='path of the psql executable (default: "psql")'),
     ]
 
-    def __init__(self, name, local_repository, port='5432', dump_executable='pg_dump', **kwargs):
-        super(PostgresSQL, self).__init__(name, local_repository, port=port, dump_executable=dump_executable, **kwargs)
+    def __init__(self, name, local_repository, port='5432', dump_executable='pg_dump', restore_executable='psql',
+                 **kwargs):
+        super(PostgresSQL, self).__init__(name, local_repository, port=port, dump_executable=dump_executable,
+                                          restore_executable=restore_executable, **kwargs)
 
     def get_dump_cmd_list(self):
         command = [self.dump_executable, '--username=%(USER)s']
