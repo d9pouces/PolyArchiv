@@ -213,17 +213,6 @@ class MySQL(Source):
     def get_env(self):
         """Extra environment variables to be passed to shell execution"""
         return {}
-    #
-    # def drop_database(self):
-    #     """ :return:
-    #     :rtype: :class:`list` of :class:`str`
-    #     """
-    #     cmd = self.get_restore_cmd_list()
-    #     cmd = [x % self.db_options for x in cmd[:-1]]
-    #     env = os.environ.copy()
-    #     env.update(self.get_env())
-    #     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, env=env)
-    #     p.communicate('DROP DATABASE %(NAME)s' % self.db_options)
 
 
 class PostgresSQL(MySQL):
@@ -297,3 +286,50 @@ class Ldap(Source):
         self.execute_command(['service' 'slapd', 'stop'])
         self.execute_command([self.restore_executable, '-l', filename, ])
         self.execute_command(['service' 'slapd', 'start'])
+
+
+class Dovecot(Source):
+    """Dump a OpenLDAP database using slapcat to a filename in the local repository.
+    Must be run on the LDAP server."""
+    parameters = Source.parameters + [
+        Parameter('destination_path', help_str='dirname of the dump (not an absolute path)'),
+        Parameter('mailbox', help_str='only sync this mailbox name'),
+        Parameter('socket', help_str='The option\'s argument is either an absolute path to a local UNIX domain socket,'
+                                     ' or a hostname and port (hostname:port), in order to connect a remote host via a'
+                                     ' TCP socket.'),
+        Parameter('user_mask', help_str='only sync this user ("*" and "?" wildcards can be used).'),
+        Parameter('dump_executable', converter=check_executable,
+                  help_str='path of the slapcat executable (default: "doveadm")'),
+    ]
+
+    def __init__(self, name, local_repository, destination_path='docevot', dump_executable='doveadm',
+                 mailbox=None, user_mask=None, socket=None, **kwargs):
+        super(Dovecot, self).__init__(name, local_repository, **kwargs)
+        self.socket = socket
+        self.destination_path = destination_path
+        self.dump_executable = dump_executable
+        self.mailbox = mailbox
+        self.user_mask = user_mask
+
+    def backup(self):
+        self.perform_action(restore=False)
+
+    def restore(self):
+        self.perform_action(restore=True)
+
+    def perform_action(self, restore):
+        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        self.ensure_dir(dirname)
+        cmd = [self.dump_executable, 'backup', ]
+        if restore:
+            cmd += ['-R']
+        if self.mailbox:
+            cmd += ['-m', self.mailbox, ]
+        if self.socket:
+            cmd += ['-S', self.socket]
+        if self.user_mask is None:
+            cmd += ['-A']
+        else:
+            cmd += ['-u', self.user_mask]
+        cmd += [dirname]
+        self.execute_command(cmd)

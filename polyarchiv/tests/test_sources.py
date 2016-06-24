@@ -79,12 +79,9 @@ class TestSources(TestCase):
     @staticmethod
     def get_sql_content(dst_path):
         with codecs.open(dst_path, 'r', encoding='latin1') as fd:
-            dst_content = ''
-            for line in fd:
-                if '-- Dumped ' in line or 'test' in line:
-                    continue
-                dst_content += '%s\n' % line
-        return dst_content
+            lines = [line for line in fd if '-- Dumped ' not in line and 'test' not in line and line.strip()]
+        lines.sort()
+        return '\n'.join(lines)
 
     def tearDown(self):
         for x in (self.local_repository_path, self.copy_path, self.original_path):
