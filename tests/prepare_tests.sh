@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 sudo apt-get install -y git python-pip tree vim python-nose
 mkdir -p $HOME/.ssh
-ssh-keygen -N "" -f $HOME/.ssh/id_rsa
+#ssh-keygen -N "" -f $HOME/.ssh/id_rsa
 cp $HOME/.ssh/id_rsa.pub $HOME/.ssh/authorized_keys
 echo "StrictHostKeyChecking no" > $HOME/.ssh/config
 

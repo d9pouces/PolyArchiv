@@ -9,9 +9,16 @@
 """
 from __future__ import unicode_literals
 
+import io
 import os
+import re
 import subprocess
 
+import pwd
+
+import grp
+
+from polyarchiv._vendor.ldif3 import LDIFParser
 from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable
 from polyarchiv.locals import LocalRepository
 from polyarchiv.repository import ParameterizedObject
@@ -153,18 +160,11 @@ class MySQL(Source):
         if self.command_display:
             for k, v in self.get_env().items():
                 cprint('%s=%s' % (k, v), YELLOW)
-        open('/tmp/test.txt', 'a').write(' '.join(cmd) + '\n')
-        if self.can_execute_command(cmd + ['>', filename]):
-            # noinspection PyTypeChecker
-            with open(filename, 'wb') as fd:
-                p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
-                p.communicate()
-        else:  # perform the dump direct to the garbage (dry-run mode)
-            # noinspection PyTypeChecker
-            with open(os.devnull, 'wb') as fd:
-                p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
-                p.communicate()
-        open('/tmp/test.txt', 'a').write(' '.join(cmd) + ' OK\n')
+        if not self.can_execute_command(cmd + ['>', filename]):
+            filename = os.devnull  # run the dump even in dry mode
+        with open(filename, 'wb') as fd:
+            p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
+            p.communicate()
         if p.returncode != 0:
             raise subprocess.CalledProcessError(p.returncode, cmd[0])
 
@@ -259,35 +259,78 @@ class Ldap(Source):
     Must be run on the LDAP server."""
     parameters = Source.parameters + [
         Parameter('destination_path', help_str='filename of the dump (not an absolute path)'),
+        Parameter('use_sudo', help_str='use sudo to perform the dump (yes/no)', converter=bool_setting),
+        Parameter('data_directory', help_str='your LDAP base (if you want to restrict the dump)'),
+        Parameter('ldap_base', help_str='your LDAP base dn (if you want to restrict the dump)'),
+        Parameter('database', help_str='database number (default: 1)', converter=int),
         Parameter('dump_executable', converter=check_executable,
                   help_str='path of the slapcat executable (default: "slapcat")'),
         Parameter('restore_executable', converter=check_executable,
                   help_str='path of the slapadd executable (default: "slapadd")'),
     ]
 
-    def __init__(self, name, local_repository, destination_path='ldap.ldif', database=None, dump_executable='slapcat',
-                 restore_executable='slapadd', **kwargs):
+    def __init__(self, name, local_repository, destination_path='ldap.ldif', dump_executable='slapcat',
+                 use_sudo=False, restore_executable='slapadd', database=1, ldap_base=None, **kwargs):
         super(Ldap, self).__init__(name, local_repository, **kwargs)
         self.destination_path = destination_path
-        self.database = database
         self.dump_executable = dump_executable
         self.restore_executable = restore_executable
+        self.use_sudo = use_sudo
+        self.ldap_base = ldap_base
+        self.database = database
 
     def backup(self):
         filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
         self.ensure_dir(filename, parent=True)
-        cmd = [self.dump_executable, '-l', filename]
-        if self.database:
-            cmd += ['-n', self.database]
+        cmd = []
+        if self.use_sudo:
+            cmd += ['sudo']
+        cmd += [self.dump_executable]
+        if self.ldap_base:
+            cmd += ['-b', self.ldap_base]
+        cmd += ['-n', str(self.database)]
         self.execute_command(cmd)
+        if not self.can_execute_command(cmd + ['>', filename]):
+            filename = os.devnull  # run the dump even in dry mode
+        with open(filename, 'wb') as fd:
+            p = subprocess.Popen(cmd, stdout=fd, stderr=self.stderr)
+            p.communicate()
 
     def restore(self):
         filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
         if not os.path.isfile(filename):
             return
-        self.execute_command(['service' 'slapd', 'stop'])
-        self.execute_command([self.restore_executable, '-l', filename, ])
-        self.execute_command(['service' 'slapd', 'start'])
+        prefix = []
+        if self.use_sudo:
+            prefix += ['sudo']
+        # identify the database folder
+        p = subprocess.Popen(prefix + [self.dump_executable, '-n', '0'], stdout=subprocess.PIPE, stderr=self.stderr)
+        stdout, __ = p.communicate()
+        database_folder = self.get_database_folder(io.BytesIO(stdout), str(self.database))
+        if database_folder is None:
+            raise IOError('Unable to find database folder for database %s' % self.database)
+        stat_info = os.stat(database_folder)
+        uid = stat_info.st_uid
+        gid = stat_info.st_gid
+        user = pwd.getpwuid(uid)[0]
+        group = grp.getgrgid(gid)[0]
+
+        self.execute_command(prefix + ['service', 'slapd', 'stop'])
+        self.execute_command(prefix + ['rm', '-rf', database_folder])
+        self.execute_command(prefix + ['mkdir', '-p', database_folder])
+        self.execute_command(prefix + [self.restore_executable, '-l', filename, ])
+        self.execute_command(prefix + ['chown', '-R', '%s:%s' % (user, group), database_folder])
+        self.execute_command(prefix + ['service', 'slapd', 'start'])
+
+    @staticmethod
+    def get_database_folder(ldif_config, database_number):
+        parser = LDIFParser(ldif_config)
+        regexp = re.compile('^olcDatabase=\{%s\}(.*),cn=config$' % database_number)
+        for dn, entry in parser.parse():
+            if not regexp.match(dn):
+                continue
+            return entry.get('olcDbDirectory', [None])[0]
+        return None
 
 
 class Dovecot(Source):

@@ -1,0 +1,80 @@
+dn: dc=nodomain
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: nodomain
+dc: nodomain
+structuralObjectClass: organization
+entryUUID: 2e51c804-cea0-1035-985a-b524ec3bbfe4
+creatorsName: cn=admin,dc=nodomain
+createTimestamp: 20160624214140Z
+entryCSN: 20160624214140.786401Z#000000#000#000000
+modifiersName: cn=admin,dc=nodomain
+modifyTimestamp: 20160624214140Z
+
+dn: cn=admin,dc=nodomain
+objectClass: simpleSecurityObject
+objectClass: organizationalRole
+cn: admin
+description: LDAP administrator
+userPassword:: e1NTSEF9TktNRk9jb1poc0F5dUdBMzBEZjNVMUV3ditZcVVNL2c=
+structuralObjectClass: organizationalRole
+entryUUID: 2e527ad8-cea0-1035-985b-b524ec3bbfe4
+creatorsName: cn=admin,dc=nodomain
+createTimestamp: 20160624214140Z
+entryCSN: 20160624214140.791121Z#000000#000#000000
+modifiersName: cn=admin,dc=nodomain
+modifyTimestamp: 20160624214140Z
+
+dn: dc=example,dc=nodomain
+dc: example
+description: My wonderful company as much text as you want to placein this l
+ ine up to 32K continuation data for the line above musthave <CR> or <CR><LF
+ > i.e. ENTER workson both Windows and *nix system - new line MUST begin wit
+ h ONE SPACE
+objectClass: dcObject
+objectClass: organization
+o: Example, Inc.
+structuralObjectClass: organization
+entryUUID: 31c5bd38-cea0-1035-9f2d-3189426909c5
+creatorsName: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+createTimestamp: 20160624214146Z
+entryCSN: 20160624214146.579569Z#000000#000#000000
+modifiersName: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+modifyTimestamp: 20160624214146Z
+
+dn: ou=people,dc=example,dc=nodomain
+ou: people
+description: All people in organisation
+objectClass: organizationalUnit
+structuralObjectClass: organizationalUnit
+entryUUID: 31c6bef4-cea0-1035-9f2e-3189426909c5
+creatorsName: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+createTimestamp: 20160624214146Z
+entryCSN: 20160624214146.586248Z#000000#000#000000
+modifiersName: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+modifyTimestamp: 20160624214146Z
+
+dn: cn=Robert Smith,ou=people,dc=example,dc=nodomain
+objectClass: inetOrgPerson
+cn: Robert Smith
+cn: Robert J Smith
+cn: bob  smith
+sn: smith
+uid: rjsmith
+userPassword:: ckpzbWl0SA==
+carLicense: HISCAR 123
+homePhone: 555-111-2222
+mail: r.smith@example.com
+mail: rsmith@example.com
+mail: bob.smith@example.com
+description: swell guy
+ou: Human Resources
+structuralObjectClass: inetOrgPerson
+entryUUID: 31c73f1e-cea0-1035-9f2f-3189426909c5
+creatorsName: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+createTimestamp: 20160624214146Z
+entryCSN: 20160624214146.589531Z#000000#000#000000
+modifiersName: gidNumber=0+uidNumber=0,cn=peercred,cn=external,cn=auth
+modifyTimestamp: 20160624214146Z
+
