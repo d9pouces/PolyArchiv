@@ -153,16 +153,18 @@ class MySQL(Source):
         if self.command_display:
             for k, v in self.get_env().items():
                 cprint('%s=%s' % (k, v), YELLOW)
+        open('/tmp/test.txt', 'a').write(' '.join(cmd) + '\n')
         if self.can_execute_command(cmd + ['>', filename]):
             # noinspection PyTypeChecker
             with open(filename, 'wb') as fd:
                 p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
                 p.communicate()
-        else:
+        else:  # perform the dump direct to the garbage (dry-run mode)
             # noinspection PyTypeChecker
             with open(os.devnull, 'wb') as fd:
                 p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
                 p.communicate()
+        open('/tmp/test.txt', 'a').write(' '.join(cmd) + ' OK\n')
         if p.returncode != 0:
             raise subprocess.CalledProcessError(p.returncode, cmd[0])
 

@@ -7,10 +7,11 @@ import logging.config
 import os
 import shutil
 import tempfile
+from difflib import context_diff
 from unittest import TestCase
 
 from polyarchiv.locals import FileRepository
-from polyarchiv.sources import RSync, PostgresSQL
+from polyarchiv.sources import RSync, PostgresSQL, MySQL
 
 __author__ = 'Matthieu Gallet'
 
@@ -58,28 +59,59 @@ class TestSources(TestCase):
         self.assertEqualPaths(self.original_path, self.copy_path)
 
     def test_postgresql(self):
+        filename = 'postgresql.sql'
         source = PostgresSQL('postgresql', self.local_repository,
-                             destination_path='postgresql.sql', database='testdb',
+                             destination_path=filename, database='testdb',
                              host='localhost', port='5432', user='test', password='testtest')
         source.backup()
-        dst_path = os.path.join(self.local_repository.export_data_path, 'postgresql.sql')
+        dst_path = os.path.join(self.local_repository.export_data_path, filename)
         src_path = '%s/samples/postgresql.sql' % os.path.dirname(__file__)
         dst_content = self.get_sql_content(dst_path)
         src_content = self.get_sql_content(src_path)
         self.assertEqual(dst_content, src_content)
         source = PostgresSQL('postgresql', self.local_repository,
-                             destination_path='postgresql.sql', database='restoredb',
+                             destination_path=filename, database='restoredb',
                              host='localhost', port='5432', user='test', password='testtest')
         source.restore()
         source.backup()
-        dst_path = os.path.join(self.local_repository.export_data_path, 'postgresql.sql')
+        dst_path = os.path.join(self.local_repository.export_data_path, filename)
         dst_content = self.get_sql_content(dst_path)
         self.assertEqual(dst_content, src_content)
 
+    def test_mysql(self):
+        filename = 'mysql.sql'
+        source = MySQL('mysql', self.local_repository,
+                       destination_path=filename, database='testdb',
+                       host='localhost', port='3306', user='test', password='testtest')
+        source.backup()
+        dst_path = os.path.join(self.local_repository.export_data_path, filename)
+        src_path = '%s/samples/mysql.sql' % os.path.dirname(__file__)
+        dst_content = self.get_sql_content(dst_path)
+        src_content = self.get_sql_content(src_path)
+        self.assertEqual(dst_content, src_content)
+        source = MySQL('mysql', self.local_repository,
+                       destination_path=filename, database='restoredb',
+                       host='localhost', port='3306', user='test', password='testtest')
+        source.restore()
+        source.backup()
+        dst_path = os.path.join(self.local_repository.export_data_path, filename)
+        dst_content = self.get_sql_content(dst_path)
+        self.assertEqual(dst_content, src_content)
+
+    def test_ldap(self):
+        pass
+
+    def test_dovecot(self):
+        pass
+
     @staticmethod
     def get_sql_content(dst_path):
+        def valid(x):
+            if 'Server version' in x or 'Dump' in x or 'Database' in x or 'MySQL dump ' in x:
+                return False
+            return True
         with codecs.open(dst_path, 'r', encoding='latin1') as fd:
-            lines = [line for line in fd if '-- Dumped ' not in line and 'test' not in line and line.strip()]
+            lines = [line for line in fd if valid(line.strip())]
         lines.sort()
         return '\n'.join(lines)
 
@@ -88,18 +120,18 @@ class TestSources(TestCase):
             if os.path.isdir(x):
                 shutil.rmtree(x)
 
-    # def test_postgresql(self):
-    #     runner = Runner([self.dirpath])
-    #     local_repository = runner.local_repositories['app1']
-    #     assert isinstance(local_repository, LocalRepository)
-    #     postgres = local_repository.sources[0]
-    #     assert isinstance(postgres, PostgresSQL)
-    #     postgres.backup()
-    #
-    # def test_mysql(self):
-    #     runner = Runner([self.dirpath])
-    #     local_repository = runner.local_repositories['app1']
-    #     assert isinstance(local_repository, LocalRepository)
-    #     mysql = local_repository.sources[1]
-    #     assert isinstance(mysql, MySQL)
-    #     mysql.backup()
+                # def test_postgresql(self):
+                #     runner = Runner([self.dirpath])
+                #     local_repository = runner.local_repositories['app1']
+                #     assert isinstance(local_repository, LocalRepository)
+                #     postgres = local_repository.sources[0]
+                #     assert isinstance(postgres, PostgresSQL)
+                #     postgres.backup()
+                #
+                # def test_mysql(self):
+                #     runner = Runner([self.dirpath])
+                #     local_repository = runner.local_repositories['app1']
+                #     assert isinstance(local_repository, LocalRepository)
+                #     mysql = local_repository.sources[1]
+                #     assert isinstance(mysql, MySQL)
+                #     mysql.backup()
