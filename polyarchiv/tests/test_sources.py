@@ -2,18 +2,14 @@
 from __future__ import unicode_literals
 
 import codecs
-import filecmp
 import io
 import logging.config
 import os
 import shutil
-import tempfile
-from difflib import context_diff
-from unittest import TestCase
 
-from polyarchiv._vendor.ldif3 import LDIFParser
 from polyarchiv.locals import FileRepository
 from polyarchiv.sources import RSync, PostgresSQL, MySQL, Ldap
+from polyarchiv.tests.test_base import FileTestCase
 
 __author__ = 'Matthieu Gallet'
 
@@ -24,42 +20,28 @@ log = {'version': 1, 'disable_existing_loggers': True,
 logging.config.dictConfig(log)
 
 
-class TestSources(TestCase):
+class TestSources(FileTestCase):
     dirpath = os.path.join(os.path.dirname(__file__), 'tests')
 
     def setUp(self):
-        self.original_path = tempfile.mkdtemp()
-        self.copy_path = tempfile.mkdtemp()
-        self.local_repository_path = tempfile.mkdtemp()
+        super(TestSources, self).setUp()
         self.local_repository = FileRepository('test_repo', local_path=self.local_repository_path, command_display=True,
                                                command_keep_output=True)
-        os.makedirs(os.path.join(self.original_path, 'folder'))
-        shutil.copy2(__file__, os.path.join(self.original_path, 'test.py'))
-        shutil.copy2(__file__, os.path.join(self.original_path, 'folder', 'sub_test.py'))
-
-    def assertEmpty(self, x):
-        self.assertEqual(0, len(x))
-
-    def assertEqualPaths(self, x, y):
-        dircmp = filecmp.dircmp(x, y)
-        self.assertEmpty(dircmp.left_only)
-        self.assertEmpty(dircmp.right_only)
-        self.assertEmpty(dircmp.diff_files)
 
     def test_rsync(self):
         source = RSync('rsync', self.local_repository, destination_path='rsync',
-                       source_path=self.original_path)
+                       source_path=self.original_dir_path)
         source.backup()
-        self.assertEqualPaths(self.original_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
-        shutil.copy2(__file__, os.path.join(self.original_path, 'test2.py'))
-        os.remove(os.path.join(self.original_path, 'test.py'))
+        self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
+        shutil.copy2(__file__, os.path.join(self.original_dir_path, 'test2.py'))
+        os.remove(os.path.join(self.original_dir_path, 'test.py'))
         source.backup()
-        self.assertEqualPaths(self.original_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
+        self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
 
         source = RSync('rsync', self.local_repository, destination_path='rsync',
-                       source_path=self.copy_path)
+                       source_path=self.copy_dir_path)
         source.restore()
-        self.assertEqualPaths(self.original_path, self.copy_path)
+        self.assertEqualPaths(self.original_dir_path, self.copy_dir_path)
 
     def test_postgresql(self):
         filename = 'postgresql.sql'
@@ -149,24 +131,3 @@ class TestSources(TestCase):
         with codecs.open(dst_path, 'r', encoding='latin1') as fd:
             lines = [line for line in fd if valid(line.strip())]
         return '\n'.join(lines)
-
-    def tearDown(self):
-        for x in (self.local_repository_path, self.copy_path, self.original_path):
-            if os.path.isdir(x):
-                shutil.rmtree(x)
-
-                # def test_postgresql(self):
-                #     runner = Runner([self.dirpath])
-                #     local_repository = runner.local_repositories['app1']
-                #     assert isinstance(local_repository, LocalRepository)
-                #     postgres = local_repository.sources[0]
-                #     assert isinstance(postgres, PostgresSQL)
-                #     postgres.backup()
-                #
-                # def test_mysql(self):
-                #     runner = Runner([self.dirpath])
-                #     local_repository = runner.local_repositories['app1']
-                #     assert isinstance(local_repository, LocalRepository)
-                #     mysql = local_repository.sources[1]
-                #     assert isinstance(mysql, MySQL)
-                #     mysql.backup()
