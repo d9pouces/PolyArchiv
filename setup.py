@@ -5,6 +5,7 @@
 import codecs
 import os.path
 import re
+import sys
 from setuptools import setup
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
@@ -17,6 +18,8 @@ version = None
 for line in codecs.open(os.path.join('polyarchiv', '__init__.py'), 'r', encoding='utf-8'):
     matcher = re.match(r"""^__version__\s*=\s*['"](.*)['"]\s*$""", line)
     version = version or matcher and matcher.group(1)
+
+print(version)
 
 with codecs.open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as fd:
     long_description = fd.read()
@@ -32,6 +35,8 @@ if os.path.isfile(os.path.join(__file__, '..', 'engines.ini')):
     if parser.has_section('locals'):
         locals_ = ['%s = %s' % (key, value) for key, value in parser.items('locals')]
 
+command_suffix = '3' if sys.version_info[0] == 3 else ''
+
 setup(
     name='polyarchiv',
     version=version,
@@ -41,7 +46,7 @@ setup(
     author_email='mgallet@19pouces.net',
     license='CeCILL-B',
     url='https://github.com/d9pouces/Polyarchiv',
-    entry_points={'console_scripts': ['polyarchiv = polyarchiv.cli:main'],
+    entry_points={'console_scripts': ['polyarchiv%s = polyarchiv.cli:main' % command_suffix],
                   'polyarchiv.sources': sources, 'polyarchiv.remotes': remotes, 'polyarchiv.locals': locals_, },
     packages=['polyarchiv', ],
     include_package_data=True,
