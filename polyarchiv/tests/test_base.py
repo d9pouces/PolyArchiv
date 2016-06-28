@@ -12,10 +12,10 @@ class FileTestCase(TestCase):
     dirpath = os.path.join(os.path.dirname(__file__), 'tests')
 
     def setUp(self):
-        self.original_dir_path = tempfile.mkdtemp()
-        self.copy_dir_path = tempfile.mkdtemp()
-        self.empty_dir_path = tempfile.mkdtemp()
-        self.local_repository_path = tempfile.mkdtemp()
+        self.original_dir_path = tempfile.mkdtemp(prefix='original-dir')
+        self.copy_dir_path = tempfile.mkdtemp(prefix='copy-dir')
+        self.empty_dir_path = tempfile.mkdtemp(prefix='empty-dir')
+        self.local_repository_path = tempfile.mkdtemp(prefix='local-repository')
         with tempfile.NamedTemporaryFile() as fd:
             self.copy_file_pth = fd.name
         with tempfile.NamedTemporaryFile() as fd:
