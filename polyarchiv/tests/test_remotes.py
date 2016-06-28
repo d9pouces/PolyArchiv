@@ -5,8 +5,10 @@ import os
 import shutil
 import tempfile
 
+import subprocess
+
 from polyarchiv.locals import FileRepository
-from polyarchiv.remotes import Synchronize, RemoteRepository
+from polyarchiv.remotes import Synchronize, RemoteRepository, GitRepository
 from polyarchiv.sources import RSync
 from polyarchiv.tests.test_base import FileTestCase
 
@@ -57,3 +59,11 @@ class SynchronizeRemoteTestCase(RemoteTestCase):
         return Synchronize('remote', remote_url='file://%s' % self.remote_storage_dir,
                            metadata_url='file://%s/metadata.json' % self.metadata_storage_dir,
                            command_display=True, command_keep_output=False)
+
+
+class GitRemoteTestCase(RemoteTestCase):
+    def get_remote_repository(self):
+        subprocess.check_call(['git', 'init', '--bare', '%s/project.git' % self.remote_storage_dir])
+        return GitRepository('remote', remote_url='file://%s/project.git' % self.remote_storage_dir,
+                             metadata_url='file://%s/metadata.json' % self.metadata_storage_dir,
+                             command_display=True, command_keep_output=False)

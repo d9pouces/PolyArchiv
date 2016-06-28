@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pipes
+import shutil
 import subprocess
 
 from polyarchiv.conf import Parameter, check_executable
@@ -116,6 +117,16 @@ class ParameterizedObject(object):
             except OSError:
                 raise ValueError('Unable to create the %s directory' % dirname)
         return False
+
+    def ensure_absent(self, path):
+        if not os.path.exists(path):
+            return
+        if not self.can_execute_command(['rm', '-rf', path]):
+            return
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
 
 
 class RepositoryInfo(object):

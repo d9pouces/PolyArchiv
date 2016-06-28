@@ -102,6 +102,9 @@ class StorageBackend(object):
     def ensure_dir(self, dirname, parent=False):
         return self.repository.ensure_dir(dirname, parent=parent)
 
+    def ensure_absent(self, path):
+        return self.repository.ensure_absent(path)
+
     def sync_dir_to_local(self, local_dirname):
         raise NotImplementedError
 
@@ -142,11 +145,7 @@ class FileStorageBackend(StorageBackend):
     def sync_file_to_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
         self.ensure_dir(local_filename, parent=True)
-        if os.path.exists(local_filename) and self.can_execute_command(['rm', '-rf', local_filename]):
-            if os.path.isdir(local_filename):
-                shutil.rmtree(local_filename)
-            else:
-                os.remove(local_filename)
+        self.ensure_absent(local_filename)
         if self.can_execute_command(['cp', '-p', dst_path, local_filename]) and local_filename != dst_path:
             shutil.copy2(dst_path, local_filename)
 
@@ -156,20 +155,13 @@ class FileStorageBackend(StorageBackend):
             with open(dst_path, 'rb') as fd:
                 return fd.read()
         self.ensure_dir(dst_path, parent=True)
-        if os.path.exists(dst_path) and self.can_execute_command(['rm', '-rf', dst_path]):
-            if os.path.isdir(dst_path):
-                shutil.rmtree(dst_path)
-            else:
-                os.remove(dst_path)
+        self.ensure_absent(dst_path)
         if self.can_execute_command(['cp', '-p', local_filename, dst_path]) and local_filename != dst_path:
             shutil.copy2(local_filename, dst_path)
 
     def delete_on_distant(self, path=''):
         dst_path = os.path.join(self.dst_path, path) if path else self.dst_path
-        if os.path.isdir(dst_path) and self.can_execute_command(['rm', '-rf', dst_path]):
-            shutil.rmtree(dst_path)
-        elif os.path.isfile(dst_path) and self.can_execute_command(['rm', '-f', dst_path]):
-            os.remove(dst_path)
+        self.ensure_absent(dst_path)
 
 
 class HTTPRequestsStorageBackend(StorageBackend):

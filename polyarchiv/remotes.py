@@ -8,6 +8,8 @@ import shutil
 from collections import OrderedDict
 
 # noinspection PyProtectedMember
+import sys
+
 from polyarchiv._vendor import requests
 # noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
@@ -297,7 +299,7 @@ class GitRepository(CommonRemoteRepository):
         Parameter('private_key', converter=check_file,
                   help_str='absolute path of the private key file (for SSH key authentication) [*]'),
         Parameter('remote_url', help_str='URL of the remote server, including username and password (e.g.: '
-                                         'git@mygitlab.example.org/project.git or '
+                                         'git@mygitlab.example.org/project.git, file:///foo/bar/project.git or '
                                          'https://username:password@mygitlab.example.org/username/project.git). '
                                          'The password is not required for SSH connections (you should use SSH keys).'
                                          'The remote repository must already exists. If you created it by hand, do not '
@@ -326,14 +328,14 @@ class GitRepository(CommonRemoteRepository):
         worktree = export_data_path
         git_dir = os.path.join(self.private_path(local_repository), 'git')
         git_config_path = os.path.join(git_dir, '.gitconfig')
+        os.chdir(worktree)
+        git_command = [self.git_executable, '--git-dir', git_dir, '--work-tree', worktree]
+        self.execute_command(git_command + ['init'], cwd=worktree)
         if not os.path.isfile(git_config_path):
             self.execute_command([self.git_executable, 'config', '--global', 'user.email', self.commit_email],
                                  env={'HOME': git_dir})
             self.execute_command([self.git_executable, 'config', '--global', 'user.name', self.commit_name],
                                  env={'HOME': git_dir})
-        os.chdir(worktree)
-        git_command = [self.git_executable, '--git-dir', git_dir, '--work-tree', worktree]
-        self.execute_command(git_command + ['init'], cwd=worktree)
         self.execute_command(git_command + ['add', '.'])
         # noinspection PyTypeChecker
         self.execute_command(git_command + ['commit', '-am', self.format_value(self.commit_message, local_repository)],
@@ -360,16 +362,10 @@ class GitRepository(CommonRemoteRepository):
         assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
         worktree = export_data_path
         git_dir = os.path.join(self.private_path(local_repository), 'git')
-        for path in (worktree, git_dir):
-            if os.path.exists(path) and self.can_execute_command(['rm', '-rf', path]):
-                if os.path.isdir(path):
-                    shutil.rmtree(path)
-                else:
-                    os.remove(path)
-        self.execute_command([self.git_executable, 'config', '--global', 'user.email', self.commit_email],
-                             env={'HOME': git_dir})
-        self.execute_command([self.git_executable, 'config', '--global', 'user.name', self.commit_name],
-                             env={'HOME': git_dir})
+        self.ensure_dir(git_dir, parent=True)
+        self.ensure_absent(git_dir)
+        self.ensure_dir(worktree, parent=True)
+        self.ensure_absent(worktree)
         remote_url = self.format_value(self.remote_url, local_repository)
         cmd = [self.git_executable, 'clone', '--separate-git-dir', git_dir, remote_url, worktree]
         if self.keytab:
@@ -377,7 +373,8 @@ class GitRepository(CommonRemoteRepository):
         if self.private_key and not remote_url.startswith('http'):
             private_key = self.format_value(self.private_key, local_repository)
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
-        self.execute_command(cmd, cwd=worktree)
+        self.execute_command(cmd, cwd=os.path.dirname(worktree),
+                             stdout=sys.stdout, stderr=sys.stderr)
 
 
 class GitlabRepository(GitRepository):
@@ -542,8 +539,7 @@ class TarArchive(CommonRemoteRepository):
                 backend.sync_file_from_local(archive_filename)
             except Exception as e:
                 error = e
-        if os.path.isfile(archive_filename) and self.can_execute_command(['rm', archive_filename]):
-            os.remove(archive_filename)
+        self.ensure_absent(archive_filename)
         if error is not None:
             raise error
 
