@@ -113,20 +113,20 @@ pushd $HOME/remotes/remote-git/local1.git
 git init
 git config --bool core.bare true
 popd
-#curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash
-#sudo apt-get install -y gitlab-ce
-#sudo gitlab-ctl reconfigure
-#cat << EOF | sudo gitlab-rails console production
-#user = User.where(id:1).first
-#user.password = 'secret_pass'
-#user.password_confirmation = 'secret_pass'
-#user.authentication_token = '4utHentic4ti0n_token'
-#user.password_automatically_set = false
-#user.save!
-#EOF
-## add the public key to gitlab
-#URL=`cat ~/.ssh/id_rsa.pub | python -c 'from urllib import urlencode; import sys; print("http://vagrant/api/v3/user/keys?" + urlencode({"title": "default", "key": sys.stdin.read().decode()}))'`
-#curl -X POST -H 'PRIVATE-TOKEN:4utHentic4ti0n_token' ${URL}
+curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash
+sudo apt-get install -y gitlab-ce
+sudo gitlab-ctl reconfigure
+cat << EOF | sudo gitlab-rails console production
+user = User.where(id:1).first
+user.password = 'secret_pass'
+user.password_confirmation = 'secret_pass'
+user.authentication_token = '4utHentic4ti0n_token'
+user.password_automatically_set = false
+user.save!
+EOF
+# add the public key to gitlab
+URL=`cat ~/.ssh/id_rsa.pub | python -c 'from urllib import urlencode; import sys; print("http://vagrant/api/v3/user/keys?" + urlencode({"title": "default", "key": sys.stdin.read().decode()}))'`
+curl -X POST -H 'PRIVATE-TOKEN:4utHentic4ti0n_token' ${URL}
 #-----------------------------------------------------------------------------------------------------------------------
 # prepare remote folder (rsync over ssh)
 #-----------------------------------------------------------------------------------------------------------------------
