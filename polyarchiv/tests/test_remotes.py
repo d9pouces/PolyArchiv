@@ -5,7 +5,7 @@ import os
 import shutil
 import tempfile
 
-from polyarchiv.locals import FileRepository, LocalRepository
+from polyarchiv.locals import FileRepository
 from polyarchiv.remotes import Synchronize, RemoteRepository
 from polyarchiv.sources import RSync
 from polyarchiv.tests.test_base import FileTestCase
@@ -14,8 +14,8 @@ from polyarchiv.tests.test_base import FileTestCase
 class RemoteTestCase(FileTestCase):
     def setUp(self):
         super(RemoteTestCase, self).setUp()
-        self.remote_storage_dir = tempfile.mkdtemp()
-        self.metadata_storage_dir = tempfile.mkdtemp()
+        self.remote_storage_dir = tempfile.mkdtemp(prefix='remote-storage')
+        self.metadata_storage_dir = tempfile.mkdtemp(prefix='remote-metadata')
         self.temp_data.append(self.remote_storage_dir)
         self.temp_data.append(self.metadata_storage_dir)
 

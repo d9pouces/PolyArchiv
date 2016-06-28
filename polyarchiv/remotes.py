@@ -101,7 +101,7 @@ class RemoteRepository(Repository):
             logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
         lock_ = None
         # collect only (but all) variables that are related to host and time
-        info.variables = {k: v for (k, v) in local_repository.variables if k in self.constant_format_values}
+        info.variables = {k: v for (k, v) in local_repository.variables.items() if k in self.constant_format_values}
         # these variables are required for a valid restore
         try:
             if self.can_execute_command('# get lock'):
@@ -260,7 +260,11 @@ class CommonRemoteRepository(RemoteRepository):
         if not os.path.isfile(path) or force_remote:
             self.ensure_dir(path, parent=True)
             backend = self._get_metadata_backend(local_repository)
-            backend.sync_file_to_local(path)
+            # noinspection PyBroadException
+            try:
+                backend.sync_file_to_local(path)
+            except:  # happens on the first sync (no remote data available)
+                pass
         if os.path.isfile(path) and not force_remote:
             with codecs.open(path, 'r', encoding='utf-8') as fd:
                 content = fd.read()
