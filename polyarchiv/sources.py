@@ -18,6 +18,7 @@ import pwd
 
 import grp
 
+# noinspection PyProtectedMember
 from polyarchiv._vendor.ldif3 import LDIFParser
 from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable
 from polyarchiv.locals import LocalRepository
