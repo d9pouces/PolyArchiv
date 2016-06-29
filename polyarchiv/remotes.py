@@ -560,7 +560,8 @@ class TarArchive(CommonRemoteRepository):
         else:
             raise ValueError('invalid tar format: %s' % remote_url)
         backend.sync_file_to_local(archive_filename)
-        self.execute_command([self.tar_executable, '-xf', archive_filename], cwd=export_data_path)
+        self.ensure_dir(export_data_path)
+        self.execute_command([self.tar_executable, '-C', export_data_path, '-xf', archive_filename])
 
 
 class SmartTarArchive(TarArchive):
@@ -591,7 +592,7 @@ class SmartTarArchive(TarArchive):
             break
 
     def __init__(self, name, hourly_count=1, daily_count=30, weekly_count=10, yearly_count=20, **kwargs):
-        super(TarArchive, self).__init__(name, **kwargs)
+        super(SmartTarArchive, self).__init__(name, **kwargs)
         self.hourly_count = hourly_count
         self.daily_count = daily_count
         self.weekly_count = weekly_count
