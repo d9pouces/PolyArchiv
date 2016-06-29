@@ -46,6 +46,9 @@ class FileFilter(ParameterizedObject):
 
 
 class SymmetricCrypt(FileFilter):
+    """Encrypt all files with symmetric encryption and a password (using GPG).
+     The only required parameter is the password.
+    """
     parameters = FileFilter.parameters + [
         Parameter('gpg_executable', converter=check_executable, help_str='path of the gpg executable (default: "gpg")'),
         Parameter('password', help_str='password to encrypt data'),
@@ -113,6 +116,7 @@ class SymmetricCrypt(FileFilter):
 
 
 class Hashsum(FileFilter):
+    """Add a new file (default: 'hashes.txt') with the hash of all backuped files."""
     parameters = FileFilter.parameters + [
         Parameter('method', converter=CheckOption(['sha1', 'md5', 'sha256']), help_str='method: sha1, md5 or sha256'),
         Parameter('filename', help_str='index file (default to \'hashes.txt\')'),

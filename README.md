@@ -4,29 +4,29 @@ PolyArchiv
 
 Backup data from multiple local sources (organized in local repositories) and send them to one or more remote repositories.
 
-       local repository 1: /var/backups/local1      /--------------------------\
-       data of www.github.com           ________\__ | remote repository 1: git |
-    /------------------------\         /        /   |   data of local 1        |
-    |     source 1: files    |---->---/             \--------------------------/
-    |     source 2: mysql    |                      * http://mygit/backups/local1.git
-    |     source 3: mysql    |---->---\
-    \------------------------/         \________\___ /-------------------------------\
-                                                /    | remote repository 2: tar+curl |
-     local repository 2: : /var/backups/local2       |   data of local 1             | 
-     data of www.example.com            ________\___ |   data of local 2             |
-    /------------------------\         /        /    \-------------------------------/
-    |     source 1: files    |---->---/             * ftp://server/backups/local1/2016-01-01.tar.gz
-    |     source 2: mysql    |                      * ftp://server/backups/local2/2016-01-01.tar.gz
-    \------------------------/
-
+       local repository 1: /var/backups/local1          /--------------------------\
+       data of www.github.com               ________\__ | remote repository 1: git |
+    /------------------------\             /        /   |   data of local 1        |
+    |     source 1: files    |---->-------/             \--------------------------/
+    |     source 2: mysql    |                          * http://mygit/backups/local1.git
+    |     source 3: mysql    |---->-------\
+    \------------------------/             \________\___ /-------------------------------\
+                                                    /    | remote repository 2: tar+curl |
+     local repository 2: : /var/backups/local2           |   data of local 1             | 
+     data of www.example.com                ________\___ |   data of local 2             |
+    /------------------------\             /        /    \-------------------------------/
+    |     source 1: files    |---->-------/             * ftp://server/backups/local1/2016-01-01.tar.gz
+    |     source 2: mysql    |                          * ftp://server/backups/local2/2016-01-01.tar.gz
+    \------------------------/          
+                                        
      local repository 3: : /var/backups/local3
-     data of nothing.example.com
-    /-----------------------------\
-    |     source 1: files         |
+     data of nothing.example.com        
+    /-----------------------------\     
+    |     source 1: files         |     
     |     source 2: postgresql    |  (local backup only)
-    |     source 3: mysql         |
-    \-----------------------------/
-    
+    |     source 3: mysql         |     
+    \-----------------------------/     
+                                    
     
 Configuration is based on simple `.ini` files: 
     
@@ -254,13 +254,13 @@ Excepting git URLs, valid URLs must look like one of these examples:
   * `http(s)://username:password@hostname/foo/bar/baz.git`, you can set `ca_cert` to the private root certificate or to `"any"` for accepting self-signed certificates. 
   * `http(s)://:@hostname/foo/bar/baz.git` and `private_key` for certificate auth
 
-Of course, `http` URLs require a WEBDAV-compliant server.
-
+Of course, `http`-like URLs require a WebDAV-compliant server (you can use Apache or Nginx).
 
 URLs for git remotes must look like:
-  * `git@hostname/foo/bar/baz.git` and `private_key` must be set
+  * `file:///foo/bar/baz.git`,
+  * `git@hostname/foo/bar/baz.git` (and `private_key` must be set),
   * `http(s)://username:password@hostname/foo/bar/baz.git`
-  * `http(s)://:@hostname/foo/bar/baz.git` and `keytab` is set
+  * `http(s)://:@hostname/foo/bar/baz.git` (but `keytab` must be set, not the `:@` in the URL!)
   
 
 Replacement rules
@@ -320,6 +320,21 @@ File filters
 Currently, a local repository gather some files from its sources and expose them to all remote repositories.
 You can add some treatment on these files, before sending them to the remote repositories.
 These operation can happen after the local backup, or only before a given remote backup.
+Imagine you want to encrypt your backup files, and you have two remote and two local repositories.
+
+### First case
+
+You must apply the encryption filter to all local repositories you wan to protect. 
+Original data are still available on the disk but not used by remote repositories. 
+
+### Second case
+
+All local repositories that are processed by the remote repositories are encrypted.
+However, if you use several remote repositories, the encryption process is performed several times.
+Moreover, clear-text data are still available on the disk.
+
+### Applying filters
+
 You only have to add a `[filter "my filter name"]` section to your config file. 
 Of course, you can use several filters, there are applied in the order of apparition in the config file.
 
