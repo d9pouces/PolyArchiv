@@ -587,7 +587,7 @@ class SmartTarArchive(TarArchive):
             parameters[index] = Parameter('remote_url', required=True,
                                           help_str='synchronize data to this URL (SHOULD DEPEND ON THE DATE AND TIME): '
                                                    '\'file:///var/backup/archive-%(Y)s-%(m)s-%(d)s_%(H)s-%(M)s.tar.gz\''
-                                                   'Must end by ".tar.gz", "tar.bz2", "tar.xz" [*]'),
+                                                   'Must end by ".tar.gz", "tar.bz2", "tar.xz" [*]')
             break
 
     def __init__(self, name, hourly_count=1, daily_count=30, weekly_count=10, yearly_count=20, **kwargs):
