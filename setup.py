@@ -6,7 +6,8 @@ import codecs
 import os.path
 import re
 import sys
-from setuptools import setup
+from setuptools import setup, find_packages
+
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
     from configparser import RawConfigParser, Error as ConfigError
@@ -24,17 +25,20 @@ print(version)
 with codecs.open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as fd:
     long_description = fd.read()
 
-sources, remotes, locals_ = [], [], []
-if os.path.isfile(os.path.join(__file__, '..', 'engines.ini')):
+sources, remotes, locals_, filters = [], [], [], []
+engines_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'engines.ini')
+print(engines_file)
+if os.path.isfile(engines_file):
     parser = RawConfigParser()
-    parser.read([os.path.join(__file__, '..', 'engines.ini')])
+    parser.read([engines_file])
     if parser.has_section('sources'):
         sources = ['%s = %s' % (key, value) for key, value in parser.items('sources')]
     if parser.has_section('remotes'):
         remotes = ['%s = %s' % (key, value) for key, value in parser.items('remotes')]
     if parser.has_section('locals'):
         locals_ = ['%s = %s' % (key, value) for key, value in parser.items('locals')]
-
+    if parser.has_section('filters'):
+        filters = ['%s = %s' % (key, value) for key, value in parser.items('filters')]
 command_suffix = '3' if sys.version_info[0] == 3 else ''
 
 setup(
@@ -47,8 +51,9 @@ setup(
     license='CeCILL-B',
     url='https://github.com/d9pouces/Polyarchiv',
     entry_points={'console_scripts': ['polyarchiv%s = polyarchiv.cli:main' % command_suffix],
-                  'polyarchiv.sources': sources, 'polyarchiv.remotes': remotes, 'polyarchiv.locals': locals_, },
-    packages=['polyarchiv', ],
+                  'polyarchiv.sources': sources, 'polyarchiv.remotes': remotes, 'polyarchiv.locals': locals_,
+                  'polyarchiv.filters': filters, },
+    packages=[x for x in find_packages() if 'tests' not in x],
     include_package_data=True,
     zip_safe=False,
     install_requires=['setuptools>=1.0', ],
