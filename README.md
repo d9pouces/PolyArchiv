@@ -54,11 +54,13 @@ There are also several kinds of remote repositories:
   * smart_archive: creates an archive, pushes it to a remote location. Deletes some previous archives 
     (say, one per day during six days, then one per week during three weeks, then one per month during 12 months) 
 
-These remote repositories are optional and you can of course use only local backups.
+These remote repositories are optional and you can of course use only local backups. All parameters (especially the remote location) can depend on the date and time, and on the hostname.
 
 Each repository (either local or remote) is associated to a backup frequency. 
 If a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
 
+Finally, all remote repositories must store some metadata at a predictable (independant of the time and hostname) remote location (HTTP/SSH/file).
+These metadata are required for restore operations.
 
 Installation
 ------------
@@ -107,7 +109,7 @@ Backup all data sources. If you set a frequency, repositories that are not out-o
 
 Restore the last version of your local repository
 
-    $ polyarchiv backup [-C /my/config/dir] [--force]
+    $ polyarchiv restore [-C /my/config/dir] [--force]
 
 #### build packages 
 
