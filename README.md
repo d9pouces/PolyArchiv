@@ -74,7 +74,14 @@ You can also install it from the source:
     $ cd PolyArchiv
     $ python setup.py install 
     
-If you do not want to globally install it, you can use the `--user` option.
+    
+Finally, you can use PolyArchiv without installation:
+
+    $ git clone https://github.com/d9pouces/PolyArchiv.git
+    $ cd PolyArchiv
+    $ python run.py 
+
+PolyArchiv is compatible with Python 2.7+ and Python 3.3+.
 
 Several commands are available:
  
@@ -364,3 +371,32 @@ Of course, you can use several filters, there are applied in the order of appari
     password=p@ssw0rd
     engine=encrypt
 
+Adding your engines
+-------------------
+
+PolyArchiv is designed to be extensible. You can add your own engines for all kinds of engines:
+
+  * remote repositories (must inherit from `polyarchiv.remotes.RemoteRepository`),
+  * local repositories (must inherit from `polyarchiv.locals.LocalRepository`),
+  * filters (must inherit from `polyarchiv.sources.Source`),
+  * sources (must inherit from `polyarchiv.filters.FileFilter`).
+  
+To use them, they must be installed in the current PYTHONPATH.
+You can either directly use the dotted path in the configuration files:
+
+    $ cat /etc/polyarchiv/my-local.local
+    [repository]
+    engine=mypackage.myengines.MyLocalRepository
+    local_path=/tmp/local
+
+    [source "source_1"]
+    engine=mypackage.myengines.MySource
+
+You can also register them as new setuptools entry points:
+
+  * `polyarchiv.sources`,
+  * `polyarchiv.remotes`,
+  * `polyarchiv.locals`,
+  * `polyarchiv.filters`. 
+
+The key is the alias used in config files, the value is the dotted path.
