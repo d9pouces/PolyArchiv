@@ -27,16 +27,16 @@ Backup data from multiple local sources (organized in local repositories) and se
     |     source 3: mysql         |     
     \-----------------------------/     
                                     
-    
-Configuration is based on simple `.ini` files: 
+Configuration is based on standard `.ini` files, each file corresponding to one repository: 
     
   * `my-local-repo.local` defines a local repository named `my-local-repo`,
   * `my-remote-repo.remote` defines a remote repository named `my-remote-repo`.
-  
-Each local repository defines one or more data sources, all of them being defined in the `my-local-repo.local` file:
+
+Each local repository defines a base folder and one or more data sources, all of them being defined in the `my-local-repo.local` file:
 
   * directory with files,
   * MySQL or PostgreSQL database to dump,
+  * Dovecot mails,
   * OpenLDAP database to dump.
 
 There are several kinds of local repositories:
@@ -47,12 +47,14 @@ There are several kinds of local repositories:
   
 There are also several kinds of remote repositories:
 
-  * gitrepository (requires a local git repository): after the backup, local commits are pushed to this remote git repository,
-  * rsync: after the backup, all files are synchronized to the remote repository,
-  * tararchive: after the backup, all files are archived in a single .tar.gz archive and sent to the remote repo (via ftp, scp, http, smb, or a basic cp),
-  * duplicity: after the backup, all files are encrypted and sent to the remote repository.
+  * git: the local backup is pushed to this remote git repository, 
+  * gitlab: almost identical to the previous one, but able to automatically create the remote repository,
+  * synchronize: uses rsync to copy all files to a remote location,
+  * archive: creates an archive (.tar.gz/bz2/xz) and pushes it to a remote location, 
+  * smart_archive: creates an archive, pushes it to a remote location. Deletes some previous archives 
+    (say, one per day during six days, then one per week during three weeks, then one per month during 12 months) 
 
-These remote repositories are optional and you can use only local backups.
+These remote repositories are optional and you can of course use only local backups.
 
 Each repository (either local or remote) is associated to a backup frequency. 
 If a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
@@ -61,7 +63,8 @@ If a given repository has a daily backup frequency but you execute Polyarchiv tw
 Installation
 ------------
 
-The simplest way is to use `pip`:
+PolyArchiv uses Python, with no extra dependency.
+The simplest way is to use `pip`, if it is installed on your system:
 
     $ pip install polyarchiv
     
@@ -73,23 +76,36 @@ You can also install it from the source:
     
 If you do not want to globally install it, you can use the `--user` option.
 
-Some commands are available:
-display the current configuration, local and remote repositories, sources and backup status
-
-    $ polyarchiv config [-C /my/config/dir] [--verbose]
-
-backup data. If you set a frequency, repositories that are not out-of-date are not run (unless you specified `--force`)
-
-    $ polyarchiv backup [-C /my/config/dir] [--force]
+Several commands are available:
  
-display all available engines (and their options if you specified `--verbose`)
+#### available engines
+
+Display all available engines, for remote or local repositories, filters and sources (and their options if you specified `--verbose`)
 
     $ polyarchiv plugins [--verbose]
 
-You can also generate a Debian/Ubuntu package with: 
+#### displaying configuration
 
-    sudo apt-get install python-stdeb
-    python setup.py --command-packages=stdeb.command  bdist_deb
+Display the current configuration, local and remote repositories, sources and backup status
+
+    $ polyarchiv config [-C /my/config/dir] [--verbose]
+
+#### backup
+ 
+Backup all data sources. If you set a frequency, repositories that are not out-of-date are not run (unless you specified `--force`)
+
+    $ polyarchiv backup [-C /my/config/dir] [--force]
+    
+#### restore 
+
+Restore the last version of your local repository
+
+    $ polyarchiv backup [-C /my/config/dir] [--force]
+
+#### build packages 
+
+    $ ./debianize.sh
+    $ python setup.py bdist_rpm
     
 Next steps
 ----------

@@ -3,8 +3,7 @@
 # base packages
 sudo apt-get update
 sudo apt-get upgrade --yes
-sudo apt-get install --yes vim dh-make ntp rsync liblzma-dev tree python-all-dev virtualenvwrapper python-setuptools python-futures python-stdeb
-sudo apt-get install --yes python3-stdeb python-stdeb
+sudo apt-get install --yes vim dh-make ntp rsync liblzma-dev tree python-all-dev virtualenvwrapper python-setuptools python-futures python3-stdeb python-stdeb
 source /etc/bash_completion.d/virtualenvwrapper
 rm -rf build dist deb_dist
 set -e
