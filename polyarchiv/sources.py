@@ -20,7 +20,7 @@ import grp
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor.ldif3 import LDIFParser
-from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable
+from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable, check_username
 from polyarchiv.locals import LocalRepository
 from polyarchiv.repository import ParameterizedObject
 from polyarchiv.termcolor import YELLOW
@@ -52,8 +52,8 @@ class RSync(Source):
     The destination is a folder inside the local repository.
     """
     parameters = Source.parameters + [
-        Parameter('source_path', converter=check_directory, help_str='original folder to backup'),
-        Parameter('destination_path', help_str='destination folder (relative path, e.g. "./files")'),
+        Parameter('source_path', converter=check_directory, help_str='original folder to backup', required=True),
+        Parameter('destination_path', help_str='destination folder (relative path, e.g. "./files")', required=True),
         Parameter('rsync_executable', converter=check_executable, help_str='rsync executable (default: rsync)'),
         Parameter('exclude', help_str='exclude files matching PATTERN (see --exclude option from rsync). '
                                       'If PATTERN startswith @, then it should be the absolute path of a file '
@@ -129,9 +129,10 @@ class MySQL(Source):
     parameters = Source.parameters + [
         Parameter('host', help_str='database host'),
         Parameter('port', converter=int, help_str='database port'),
+        Parameter('sudo_user', help_str='sudo user, used for all SQL operations', converter=check_username),
         Parameter('user', help_str='database user'),
         Parameter('password', help_str='database password'),
-        Parameter('database', help_str='name of the backuped database'),
+        Parameter('database', help_str='name of the backuped database', required=True),
         Parameter('destination_path', help_str='relative path of the backup destination (e.g. "database.sql")'),
         Parameter('dump_executable', converter=check_executable,
                   help_str='path of the mysqldump executable (default: "mysqldump")'),
@@ -140,8 +141,10 @@ class MySQL(Source):
     ]
 
     def __init__(self, name, local_repository, host='localhost', port='3306', user='', password='', database='',
-                 destination_path='mysql_dump.sql', dump_executable='mysqldump', restore_executable='mysql', **kwargs):
+                 destination_path='mysql_dump.sql', sudo_user=None, dump_executable='mysqldump',
+                 restore_executable='mysql', **kwargs):
         super(MySQL, self).__init__(name, local_repository, **kwargs)
+        self.sudo_user = sudo_user
         self.restore_executable = restore_executable
         self.dump_executable = dump_executable
         self.host = host
@@ -155,7 +158,8 @@ class MySQL(Source):
         filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
         self.ensure_dir(filename, parent=True)
         cmd = self.get_dump_cmd_list()
-        cmd = [x % self.db_options for x in cmd]
+        if self.sudo_user:
+            cmd = ['sudo', '-u', self.sudo_user] + cmd
         env = os.environ.copy()
         env.update(self.get_env())
         if self.command_display:
@@ -174,7 +178,8 @@ class MySQL(Source):
         if not os.path.isfile(filename):
             return
         cmd = self.get_restore_cmd_list()
-        cmd = [x % self.db_options for x in cmd]
+        if self.sudo_user:
+            cmd = ['sudo', '-u', self.sudo_user] + cmd
         env = os.environ.copy()
         env.update(self.get_env())
         if self.command_display:
@@ -184,33 +189,28 @@ class MySQL(Source):
         with open(filename, 'rb') as fd:
             self.execute_command(cmd, env=env, stdin=fd, stderr=self.stderr, stdout=self.stdout)
 
-    @property
-    def db_options(self):
-        return {'HOST': self.host, 'PORT': self.port, 'USER': self.user, 'PASSWORD': self.password,
-                'NAME': self.database}
-
     def get_dump_cmd_list(self):
         """ :return:
         :rtype: :class:`list` of :class:`str`
         """
-        command = [self.dump_executable, '--user=%(USER)s', '--password=%(PASSWORD)s']
-        if self.db_options.get('HOST'):
-            command += ['--host=%(HOST)s']
-        if self.db_options.get('PORT'):
-            command += ['--port=%(PORT)s']
-        command += ['%(NAME)s']
+        command = [self.dump_executable]
+        if self.user:
+            command += ['--user=%s' % self.user]
+        if self.password:
+            command += ['--password=%s' % self.password]
+        if self.host:
+            command += ['--host=%s' % self.host]
+        if self.port:
+            command += ['--port=%s' % self.port]
+        command += [self.database]
         return command
 
     def get_restore_cmd_list(self):
         """ :return:
         :rtype: :class:`list` of :class:`str`
         """
-        command = [self.restore_executable, '--user=%(USER)s', '--password=%(PASSWORD)s']
-        if self.db_options.get('HOST'):
-            command += ['--host=%(HOST)s']
-        if self.db_options.get('PORT'):
-            command += ['--port=%(PORT)s']
-        command += ['%(NAME)s']
+        command = self.get_dump_cmd_list()
+        command[0] = self.restore_executable
         return command
 
     def get_env(self):
@@ -233,26 +233,21 @@ class PostgresSQL(MySQL):
                                           restore_executable=restore_executable, **kwargs)
 
     def get_dump_cmd_list(self):
-        command = [self.dump_executable, '--username=%(USER)s']
-        if self.db_options.get('HOST'):
-            command += ['--host=%(HOST)s']
-        if self.db_options.get('PORT'):
-            command += ['--port=%(PORT)s']
-        command += ['%(NAME)s']
-        return command
-
-    def get_restore_cmd_list(self):
-        command = [self.restore_executable, '--username=%(USER)s']
-        if self.db_options.get('HOST'):
-            command += ['--host=%(HOST)s']
-        if self.db_options.get('PORT'):
-            command += ['--port=%(PORT)s']
-        command += ['%(NAME)s']
+        command = [self.dump_executable]
+        if self.user:
+            command += ['--username=%s' % self.user]
+        if self.host:
+            command += ['--host=%s' % self.host]
+        if self.port:
+            command += ['--port=%s' % self.port]
+        command += [self.database]
         return command
 
     def get_env(self):
         """Extra environment variables to be passed to shell execution"""
-        return {'PGPASSWORD': '%(PASSWORD)s' % self.db_options}
+        if self.password:
+            return {'PGPASSWORD': self.password}
+        return {}
 
 
 class Ldap(Source):

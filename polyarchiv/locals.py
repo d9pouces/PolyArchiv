@@ -30,19 +30,17 @@ class LocalRepository(Repository):
     """
     parameters = Repository.parameters + [
         Parameter('local_tags', converter=strip_split,
-                  help_str='list of tags (comma-separated) associated to this local repository'),
+                  help_str='list of tags (comma-separated) associated to this local repository. Default: "local"'),
         Parameter('included_remote_tags', converter=strip_split,
                   help_str='any remote repository with one of these tags (comma-separated) will be associated '
-                           'to this local repo. You can use ? or * as jokers in these tags.'),
+                           'to this local repo. You can use ? or * as jokers in these tags. Default: "*"'),
         Parameter('excluded_remote_tags', converter=strip_split,
                   help_str='any remote repository with one of these tags (comma-separated) will not be associated'
                            ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_local_tags and included_remote_tags.'),
-        # Parameter('last_backup_file', help_str='write the backup date to this file (default: \'./.last-backup\')'),
     ]
 
     def __init__(self, name, local_tags=None, included_remote_tags=None, excluded_remote_tags=None,
-                 # last_backup_file='.last-backup',
                  **kwargs):
         super(LocalRepository, self).__init__(name=name, **kwargs)
         self.local_tags = ['local'] if local_tags is None else local_tags
@@ -210,7 +208,7 @@ class FileRepository(LocalRepository):
     """
 
     parameters = LocalRepository.parameters + [
-        Parameter('local_path', converter=check_directory,
+        Parameter('local_path', converter=check_directory, required=True,
                   help_str='absolute path where all data are locally gathered [*]')
     ]
     METADATA_FOLDER = 'metadata'

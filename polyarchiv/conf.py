@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 
 import os
 
+import pwd
+
 from polyarchiv.utils import text_type
 
 __author__ = 'Matthieu Gallet'
@@ -10,6 +12,12 @@ __author__ = 'Matthieu Gallet'
 
 def bool_setting(value):
     return text_type(value).lower() in {'1', 'ok', 'yes', 'true', 'on'}
+
+
+def check_username(value):
+    if value not in {x[0] for x in pwd.getpwall()}:
+        raise ValueError('%s is not a valid user' % value)
+    return value
 
 
 def str_or_none(text):
