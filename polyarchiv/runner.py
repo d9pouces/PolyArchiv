@@ -114,11 +114,13 @@ class Runner(ParameterizedObject):
         assert issubclass(engine_cls, ParameterizedObject)
         result = {'command_display': self.command_display, 'command_confirm': self.command_confirm,
                   'command_execute': self.command_execute, 'command_keep_output': self.command_keep_output}
-
+        missing_parameters = []
         for parameter in engine_cls.parameters:
             assert isinstance(parameter, Parameter)
             option = parameter.option_name
             if not parser.has_option(section, option):
+                if parameter.required:
+                    missing_parameters.append(parameter.option_name)
                 continue
             value = parser.get(section, option)
             try:
@@ -126,6 +128,10 @@ class Runner(ParameterizedObject):
             except ValueError as e:
                 cprint('In file \'%s\', section \'%s\', option \'%s\':' % (config_file, section, option), RED)
                 raise e
+        if missing_parameters:
+            text = 'In file \'%s\', section \'%s\', missing options \'%s\'' % (
+                config_file, section, ', '.join(missing_parameters))
+            raise ValueError(text)
         return result
 
     def _load_engine(self, config_file, parser, section, args, available_engines, expected_cls):

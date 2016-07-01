@@ -214,13 +214,13 @@ class CommonRemoteRepository(RemoteRepository):
     parameters = RemoteRepository.parameters + [
         Parameter('metadata_url', required=True,
                   help_str='send metadata (about the successful last backup) to this URL [**]'),
-        Parameter('metadata_private_key', required=True,
+        Parameter('metadata_private_key',
                   help_str='private key associated to \'metadata_url\' [**]'),
-        Parameter('metadata_ca_cert', required=True,
+        Parameter('metadata_ca_cert',
                   help_str='private certificate associated to \'metadata_url\' [**]'),
-        Parameter('metadata_keytab', required=True,
+        Parameter('metadata_keytab',
                   help_str='keytab (for Kerberos authentication) associated to \'metadata_url\' [**]'),
-        Parameter('metadata_ssh_options', required=True,
+        Parameter('metadata_ssh_options',
                   help_str='SSH options associated to \'metadata_url\' [**]'),
     ]
 

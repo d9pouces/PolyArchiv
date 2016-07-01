@@ -113,8 +113,21 @@ Restore the last version of your local repository
 
 #### build packages 
 
-    $ ./debianize.sh
-    $ python setup.py bdist_rpm
+    $ ./debianize.sh  # create .deb package
+    $ python setup.py bdist_rpm  # create .rpm package
+    
+#### other options
+
+  * `-h`: show helps and exit
+  * `-v`: verbose mode
+  * `-f`: force backup operation, even if the most recent backup is still valid
+  * `-n`: display a NRPE-compatible output
+  * `-D`: no write action is performed
+  * `--show-commands`: display all write actions as a bash operation
+  * `--confirm-commands`: require a validation of each action
+  * `--config`: specify another config dir
+  * `--only-locals`: limit operations to the local repositories with this tags (can be used several times)
+  * `--only-remotes`: limit operations to the remote repositories with this tags (can be used several times)
     
 Next steps
 ----------
