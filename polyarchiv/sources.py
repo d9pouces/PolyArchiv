@@ -343,7 +343,7 @@ class Dovecot(Source):
                   help_str='path of the slapcat executable (default: "doveadm")'),
     ]
 
-    def __init__(self, name, local_repository, destination_path='docevot', dump_executable='doveadm',
+    def __init__(self, name, local_repository, destination_path='dovecot', dump_executable='doveadm',
                  mailbox=None, user_mask=None, socket=None, **kwargs):
         super(Dovecot, self).__init__(name, local_repository, **kwargs)
         self.socket = socket
