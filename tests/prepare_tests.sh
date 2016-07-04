@@ -155,3 +155,5 @@ mkdir -p $HOME/backends/files
 #-----------------------------------------------------------------------------------------------------------------------
 sudo mkdir -p /var/backups/locals/
 sudo chown -R vagrant:vagrant /var/backups/locals/
+mkdir -p $HOME/remotes/remote-git/
+git init --bare $HOME/remotes/remote-git/local2.git

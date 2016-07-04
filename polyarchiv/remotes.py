@@ -326,19 +326,17 @@ class GitRepository(CommonRemoteRepository):
         assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
         worktree = export_data_path
         git_dir = os.path.join(self.private_path(local_repository), 'git')
-        git_config_path = os.path.join(git_dir, '.gitconfig')
         os.chdir(worktree)
         git_command = [self.git_executable, '--git-dir', git_dir, '--work-tree', worktree]
         self.execute_command(git_command + ['init'], cwd=worktree)
-        if not os.path.isfile(git_config_path):
-            self.execute_command([self.git_executable, 'config', '--global', 'user.email', self.commit_email],
-                                 env={'HOME': git_dir})
-            self.execute_command([self.git_executable, 'config', '--global', 'user.name', self.commit_name],
-                                 env={'HOME': git_dir})
+        self.execute_command([self.git_executable, 'config', '--global', 'user.email', self.commit_email],
+                             env={'HOME': git_dir})
+        self.execute_command([self.git_executable, 'config', '--global', 'user.name', self.commit_name],
+                             env={'HOME': git_dir})
         self.execute_command(git_command + ['add', '.'])
         # noinspection PyTypeChecker
         self.execute_command(git_command + ['commit', '-am', self.format_value(self.commit_message, local_repository)],
-                             ignore_errors=True, env={'HOME': self.private_path(local_repository)})
+                             ignore_errors=True, env={'HOME': git_dir})
 
         remote_url = self.format_value(self.remote_url, local_repository)
         if not self.check_remote_url(local_repository):
@@ -352,7 +350,7 @@ class GitRepository(CommonRemoteRepository):
         if self.private_key and not remote_url.startswith('http'):
             private_key = self.format_value(self.private_key, local_repository)
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
-        self.execute_command(cmd, cwd=worktree)
+        self.execute_command(cmd, cwd=worktree, env={'HOME': git_dir})
 
     def check_remote_url(self, local_repository):
         return True
