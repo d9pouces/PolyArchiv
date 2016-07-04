@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 sudo apt-get install -y git python-pip tree vim python-nose
 mkdir -p $HOME/.ssh
-#ssh-keygen -N "" -f $HOME/.ssh/id_rsa
-cp $HOME/.ssh/id_rsa.pub $HOME/.ssh/authorized_keys
+ssh-keygen -N "" -f $HOME/.ssh/id_rsa
+cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
 echo "StrictHostKeyChecking no" > $HOME/.ssh/config
 
 
@@ -44,8 +44,8 @@ sudo service slapd restart
 sudo ldapadd -Y EXTERNAL -H ldapi:// -f /vagrant/tests/sample.ldif
 
 # create a single data file
-sudo mkdir -p /var/data/some-files
-echo "added" | sudo tee /var/data/some-files/file01
+sudo mkdir -p /var/input/some-files
+echo "added" | sudo tee /var/input/some-files/file01
 
 ########################################################################################################################
 # prepare all services for remote repositories
@@ -56,7 +56,7 @@ echo "added" | sudo tee /var/data/some-files/file01
 sudo apt-get install -y apache2
 sudo apachectl stop
 sudo a2enmod dav_fs dav dav_lock
-# toto is the password
+# password is "toto"
 cat << EOF | sudo tee /var/www/passwd
 testuser:\$apr1\$jOdqQ9bi\$oMppGue2YwfLiipj.IiYu.
 EOF
@@ -135,7 +135,10 @@ mkdir -p $HOME/remotes/ssh
 # prepare remote folder (direct rsync)
 #-----------------------------------------------------------------------------------------------------------------------
 mkdir -p $HOME/remotes/files
-
+#-----------------------------------------------------------------------------------------------------------------------
+# prepare metadata folder
+#-----------------------------------------------------------------------------------------------------------------------
+mkdir -p $HOME/metadata
 ########################################################################################################################
 # run backend tests
 ########################################################################################################################
@@ -147,3 +150,8 @@ mkdir -p $HOME/backends/ssh
 # prepare remote folder (direct rsync)
 #-----------------------------------------------------------------------------------------------------------------------
 mkdir -p $HOME/backends/files
+#-----------------------------------------------------------------------------------------------------------------------
+# prepare local backups
+#-----------------------------------------------------------------------------------------------------------------------
+sudo mkdir -p /var/backups/locals/
+sudo chown -R vagrant:vagrant /var/backups/locals/

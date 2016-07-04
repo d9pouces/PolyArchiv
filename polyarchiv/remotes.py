@@ -7,7 +7,6 @@ import logging
 import sys
 from collections import OrderedDict
 
-
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
 # noinspection PyProtectedMember
@@ -213,7 +212,8 @@ class CommonRemoteRepository(RemoteRepository):
     """A RemoteRepository with meaningful implementations pour set_info/get_info"""
     parameters = RemoteRepository.parameters + [
         Parameter('metadata_url', required=True,
-                  help_str='send metadata (about the successful last backup) to this URL [**]'),
+                  help_str='send metadata (about the successful last backup) to this URL.'
+                           'Should end by "/" [**]'),
         Parameter('metadata_private_key',
                   help_str='private key associated to \'metadata_url\' [**]'),
         Parameter('metadata_ca_cert',
@@ -297,6 +297,9 @@ class GitRepository(CommonRemoteRepository):
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
         Parameter('private_key', converter=check_file,
                   help_str='absolute path of the private key file (for SSH key authentication) [*]'),
+        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")'),
+        Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
+        Parameter('commit_message', help_str='commit message (default: "Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s") [*]'),
         Parameter('remote_url', help_str='URL of the remote server, including username and password (e.g.: '
                                          'git@mygitlab.example.org/project.git, file:///foo/bar/project.git or '
                                          'https://username:password@mygitlab.example.org/username/project.git). '
@@ -304,9 +307,6 @@ class GitRepository(CommonRemoteRepository):
                                          'The remote repository must already exists. If you created it by hand, do not '
                                          'forget to set \'git config --bool core.bare true\'. [*]',
                   converter=check_git_url),
-        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")'),
-        Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
-        Parameter('commit_message', help_str='commit message (default: "Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s") [*]'),
     ]
 
     def __init__(self, name, remote_url='', remote_branch='master', git_executable='git', private_key=None,
@@ -429,11 +429,11 @@ class GitlabRepository(GitRepository):
 class Synchronize(CommonRemoteRepository):
     parameters = CommonRemoteRepository.parameters + [
         Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must be a folder name [*]'),
-        Parameter('private_key', required=True, help_str='private key or certificate associated to \'remote_url\' [*]'),
-        Parameter('ca_cert', required=True, help_str='CA certificate associated to \'remote_url\'. '
-                                                     'Set to "any" for not checking certificates [*]'),
-        Parameter('keytab', required=True, help_str='keytab (for Kerberos) associated to \'remote_url\' [*]'),
-        Parameter('ssh_options', required=True, help_str='SSH options associated to \'url\' [*]'),
+        Parameter('private_key', help_str='private key or certificate associated to \'remote_url\' [*]'),
+        Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
+                                      'Set to "any" for not checking certificates [*]'),
+        Parameter('keytab', help_str='keytab (for Kerberos) associated to \'remote_url\' [*]'),
+        Parameter('ssh_options', help_str='SSH options associated to \'url\' [*]'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
     ]
@@ -476,11 +476,11 @@ class TarArchive(CommonRemoteRepository):
         Parameter('remote_url', required=True, help_str='synchronize data to this URL, like '
                                                         '\'ssh://user@hostname/folder/archive.tar.gz\'. '
                                                         'Must end by ".tar.gz", "tar.bz2", "tar.xz" [*]'),
-        Parameter('private_key', required=True, help_str='private key or certificate associated to \'remote_url\' [*]'),
-        Parameter('ca_cert', required=True, help_str='CA certificate associated to \'remote_url\'. '
-                                                     'Set to "any" for not checking certificates [*]'),
-        Parameter('keytab', required=True, help_str='keytab (for Kerberos) associated to \'remote_url\' [*]'),
-        Parameter('ssh_options', required=True, help_str='SSH options associated to \'url\' [*]'),
+        Parameter('private_key', help_str='private key or certificate associated to \'remote_url\' [*]'),
+        Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
+                                      'Set to "any" for not checking certificates [*]'),
+        Parameter('keytab', help_str='keytab (for Kerberos) associated to \'remote_url\' [*]'),
+        Parameter('ssh_options', help_str='SSH options associated to \'url\' [*]'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
         Parameter('tar_executable', converter=check_executable, common=True,

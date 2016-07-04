@@ -26,7 +26,7 @@ def check_git_url(remote_url):
 
     """
     parsed_url = urlparse(remote_url)
-    if parsed_url.scheme not in ('http', 'https', 'git'):
+    if parsed_url.scheme and parsed_url.scheme not in ('http', 'https', 'file'):
         raise ValueError('Invalid scheme for remote URL: %s' % parsed_url.scheme)
     return remote_url
 

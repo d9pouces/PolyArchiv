@@ -3,7 +3,7 @@ engine=files
 frequency=daily
 local_path=/var/backups/locals/local1
 
-[sql]
+[source "sql"]
 engine=mysql
 host=localhost
 port=3306

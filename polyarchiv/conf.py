@@ -63,7 +63,7 @@ def check_file(value):
     """
     if os.path.isfile(value):
         return value
-    raise ValueError('%s is not a valid directory' % value)
+    raise ValueError('%s is not a valid file' % value)
 
 
 def check_executable(value):

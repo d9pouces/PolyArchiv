@@ -270,6 +270,7 @@ class FileRepository(LocalRepository):
             fd.write(content)
 
     def get_lock(self):
+        self.ensure_dir(self.lock_filepath, parent=True)
         lock_ = Lock(self.lock_filepath)
         if lock_.acquire(timeout=1):
             return lock_

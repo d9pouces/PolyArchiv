@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-bash prepare_tests.sh
+#bash /vagrant/tests/prepare_tests.sh
 
 
 ########################################################################################################################
@@ -11,17 +11,17 @@ sudo mkdir -p /var/backups/locals/local1 /var/backups/locals/local2 /var/backups
 
 # locally install polyarchiv
 cd /vagrant
-python setup.py develop --user
 
+CONFIG=/vagrant/tests/config
+SCRIPT=/vagrant/run.py
 # run some commands
-sudo $HOME/.local/bin/polyarchiv -C /vagrant/tests/config plugins -v
-sudo $HOME/.local/bin/polyarchiv -C /vagrant/tests/config config -v
-sudo $HOME/.local/bin/polyarchiv -C /vagrant/tests/config check
-sudo $HOME/.local/bin/polyarchiv -C /vagrant/tests/config backup -D --show-commands
-sudo $HOME/.local/bin/polyarchiv -C /vagrant/tests/config backup --show-commands
-echo "added" | sudo tee /var/data/some-files/file02
-sudo rm -f /var/data/some-files/file01
-sudo $HOME/.local/bin/polyarchiv -C /vagrant/tests/config backup --show-commands -v
+sudo python ${SCRIPT} -C ${CONFIG} config -v
+sudo python ${SCRIPT} -C ${CONFIG} check
+sudo python ${SCRIPT} -C ${CONFIG} backup -D --show-commands
+sudo python ${SCRIPT} -C ${CONFIG} backup --show-commands
+echo "added" | sudo tee /var/input/some-files/file02
+sudo rm -f /var/input/some-files/file01
+sudo python ${SCRIPT} -C ${CONFIG} backup --show-commands -v
 # file01 is still here!
-sudo $HOME/.local/bin/polyarchiv -C /vagrant/tests/config backup --show-commands --force
+sudo python ${SCRIPT} -C ${CONFIG} backup --show-commands --force
 # file02 is removed

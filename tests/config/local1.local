@@ -6,7 +6,7 @@ included_remote_tags=*
 excluded_remote_tags=
 frequency=daily
 
-[source_1]
+[source "source_1"]
 engine=postgressql
 host=localhost
 port=5432
@@ -15,7 +15,7 @@ password=testtest
 database=testdb
 destination_path=postgres.sql
 
-[source_2]
+[source "source_2"]
 engine=mysql
 host=localhost
 port=3306
@@ -24,16 +24,11 @@ password=testtest
 database=testdb
 destination_path=mysql.sql
 
-[source_3]
+[source "source_3"]
 engine=rsync
-source_path=/var/data/some-files
+source_path=/var/input/some-files/
 destination_path=files
 
-[source_4]
+[source "source_4"]
 engine=ldap
-host=localhost
-port=3306
-user=test
-password=testtest
-database=testdb
 destination_path=ldap.ldif
