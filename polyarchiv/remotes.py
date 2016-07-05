@@ -211,7 +211,7 @@ class RemoteRepository(Repository):
 class CommonRemoteRepository(RemoteRepository):
     """A RemoteRepository with meaningful implementations pour set_info/get_info"""
     parameters = RemoteRepository.parameters + [
-        Parameter('metadata_url', required=True,
+        Parameter('metadata_url', required=False,
                   help_str='send metadata (about the successful last backup) to this URL.'
                            'Should end by "/" [**]'),
         Parameter('metadata_private_key',
@@ -232,6 +232,18 @@ class CommonRemoteRepository(RemoteRepository):
         self.metadata_ca_cert = metadata_ca_cert
         self.metadata_keytab = metadata_keytab
         self.metadata_ssh_options = metadata_ssh_options
+        self.metadata_url_requirements = []
+        # list of values using non-constant values
+
+    def format_value(self, value, local_repository, use_constant_values=False):
+        """Check if the metadata_url is required: at least one formatted value uses non-constant values"""
+        if use_constant_values:
+            return super(CommonRemoteRepository, self).format_value(value, local_repository, use_constant_values)
+        result = super(CommonRemoteRepository, self).format_value(value, local_repository, False)
+        constant_result = super(CommonRemoteRepository, self).format_value(value, local_repository, True)
+        if constant_result != result:
+            self.metadata_url_requirements.append(value)
+        return result
 
     def do_restore(self, local_repository, export_data_path):
         raise NotImplementedError
@@ -241,6 +253,13 @@ class CommonRemoteRepository(RemoteRepository):
 
     def _get_metadata_backend(self, local_repository):
         assert isinstance(local_repository, LocalRepository)
+        if self.metadata_url is None:
+            p1 = 's' if len(self.metadata_url_requirements) > 1 else ''
+            p2 = '' if len(self.metadata_url_requirements) > 1 else ''
+            cprint('value%s "%s" use%s time/host-dependent variables. '
+                   'You should define the "metadata_url" parameter to ease restore operation' %
+                   (p1, ', '.join(self.metadata_url_requirements), p2), RED)
+            return None
         metadata_url = self.format_value(self.metadata_url, local_repository, use_constant_values=True)
         if metadata_url.endswith('/'):
             metadata_url += '%s.json' % local_repository.name
@@ -261,11 +280,12 @@ class CommonRemoteRepository(RemoteRepository):
         if not os.path.isfile(path) or force_remote:
             self.ensure_dir(path, parent=True)
             backend = self._get_metadata_backend(local_repository)
-            # noinspection PyBroadException
-            try:
-                backend.sync_file_to_local(path)
-            except:  # happens on the first sync (no remote data available)
-                pass
+            if backend is not None:
+                # noinspection PyBroadException
+                try:
+                    backend.sync_file_to_local(path)
+                except:  # happens on the first sync (no remote data available)
+                    pass
         if os.path.isfile(path) and not force_remote:
             with codecs.open(path, 'r', encoding='utf-8') as fd:
                 content = fd.read()
@@ -281,7 +301,8 @@ class CommonRemoteRepository(RemoteRepository):
         with codecs.open(path, 'w', encoding='utf-8') as fd:
             fd.write(content)
         backend = self._get_metadata_backend(local_repository)
-        backend.sync_file_from_local(path)
+        if backend is not None:
+            backend.sync_file_from_local(path)
 
 
 class GitRepository(CommonRemoteRepository):
@@ -344,7 +365,6 @@ class GitRepository(CommonRemoteRepository):
         cmd = []
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
-
         cmd += git_command + ['push', remote_url, 'master:master']
         # noinspection PyTypeChecker
         if self.private_key and not remote_url.startswith('http'):

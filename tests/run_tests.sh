@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#bash /vagrant/tests/prepare_tests.sh
+bash /vagrant/tests/prepare_tests.sh
 
 
 ########################################################################################################################

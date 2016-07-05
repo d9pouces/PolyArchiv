@@ -53,7 +53,9 @@ def get_backend(repository, root_url, keytab=None, private_key=None, ca_cert=Non
     """
     parsed_url = urlparse(root_url)
     scheme = parsed_url.scheme
-    if scheme == 'file':
+    if parsed_url.netloc == '' and scheme == '':  # root_url = "/foo/bar/baz/'
+        return FileStorageBackend(repository, parsed_url.path, rsync_executable=rsync_executable)
+    elif scheme == 'file':
         return FileStorageBackend(repository, parsed_url.path, rsync_executable=rsync_executable)
     elif scheme in ('http', 'https'):
         url = '%s://%s' % (parsed_url.scheme, parsed_url.hostname)
@@ -78,7 +80,7 @@ def get_backend(repository, root_url, keytab=None, private_key=None, ca_cert=Non
                                  username=parsed_url.username, private_key=private_key,
                                  rsync_executable=rsync_executable, ssh_executable=ssh_executable,
                                  scp_executable=scp_executable, ssh_options=ssh_options)
-    raise ValueError('Unknown protocol %s' % scheme)
+    raise ValueError('Unknown protocol %s' % root_url)
 
 
 def force_dirname(path):
