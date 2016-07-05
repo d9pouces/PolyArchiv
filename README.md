@@ -60,7 +60,7 @@ Each repository (either local or remote) is associated to a backup frequency.
 If a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
 
 Finally, all remote repositories must store some metadata at a predictable (independant of the time and hostname) remote location (HTTP/SSH/file).
-These metadata are required for restore operations.
+These metadata can be required for restore operations.
 
 Installation
 ------------
@@ -385,6 +385,15 @@ Of course, you can use several filters, there are applied in the order of appari
     [filter "encrypt"]
     password=p@ssw0rd
     engine=encrypt
+    
+Remote metadata storage
+-----------------------
+
+Most parameters for remote repositories can rely on time-based, or host-based, variables.
+For example, `remote_url = ssh://example.org/backups/%(hostname)s/%(name)s-%(Y)s-%(m)s.tar.gz`.
+If you restore your data on a brand new machine, there is no way to determine the previous `hostname`, nor
+the time of the last backup (the `Y` and `m` values).
+So, when your remote parameters depends on such variables, you should use a metadata_url 
 
 Adding your engines
 -------------------
