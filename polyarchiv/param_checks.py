@@ -5,8 +5,9 @@ try:
     # noinspection PyCompatibility
     from urllib.parse import urlparse, urlencode, quote_plus
 except ImportError:
-    # noinspection PyCompatibility
+    # noinspection PyCompatibility, PyUnresolvedReferences
     from urlparse import urlparse
+    # noinspection PyUnresolvedReferences
     from urllib import urlencode, quote_plus
 
 

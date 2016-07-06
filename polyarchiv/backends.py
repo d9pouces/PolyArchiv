@@ -28,8 +28,9 @@ try:
     # noinspection PyCompatibility
     from urllib.parse import urlparse, urlencode, quote_plus
 except ImportError:
-    # noinspection PyCompatibility
+    # noinspection PyCompatibility,PyUnresolvedReferences
     from urlparse import urlparse
+    # noinspection PyUnresolvedReferences
     from urllib import urlencode, quote_plus
 
 DOWNLOAD_CHUNK_SIZE_BYTES = 1 * 1024 * 1024
@@ -51,6 +52,8 @@ def get_backend(repository, root_url, keytab=None, private_key=None, ca_cert=Non
     :param ssh_executable:
     :return:
     """
+    # noinspection PyUnusedLocal
+    curl_executable = curl_executable
     parsed_url = urlparse(root_url)
     scheme = parsed_url.scheme
     if parsed_url.netloc == '' and scheme == '':  # root_url = "/foo/bar/baz/'
