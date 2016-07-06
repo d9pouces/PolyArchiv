@@ -25,3 +25,8 @@ sudo python ${SCRIPT} -C ${CONFIG} backup --show-commands -v
 # file01 is still here!
 sudo python ${SCRIPT} -C ${CONFIG} backup --show-commands --force
 # file02 is removed
+
+sudo rm -rf /var/backups/locals/local1 /var/backups/locals/local2
+sudo rm -rf /var/input/some-files
+sudo python ${SCRIPT} -C ${CONFIG} restore --show-commands
+
