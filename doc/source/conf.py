@@ -40,7 +40,7 @@ for line in codecs.open(os.path.join(root_path, 'polyarchiv', '__init__.py'), 'r
 extensions = [
     'sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.todo',
     'sphinx.ext.coverage', 'sphinx.ext.ifconfig', 'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx',
+    'sphinx.ext.intersphinx', 'polysphinx',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -177,7 +177,7 @@ html_static_path = ['_static']
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'Polyarchiv doc'
-
+# 20a3f2
 
 # -- Options for LaTeX output --------------------------------------------------
 

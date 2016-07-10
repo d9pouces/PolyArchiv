@@ -158,9 +158,9 @@ def main(engines_file=None):
     return return_code
 
 
-def display_classes(plugin_category, verbose=False, width=80):
+def display_classes(engines, verbose=False, width=80):
     """display plugins of a given category"""
-    for name, engine_cls in plugin_category.items():
+    for name, engine_cls in engines.items():
         cprint('  * engine=%s' % name, BOLD, GREEN)
         if engine_cls.__doc__:
             cprint('    ' + engine_cls.__doc__.strip(), GREY, BOLD)

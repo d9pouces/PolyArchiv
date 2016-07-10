@@ -49,6 +49,8 @@ The complete backup operation is split into three steps for each local repositor
    installation
    configuration
    examples
+   locals
+   remotes
    debian
    filters
 

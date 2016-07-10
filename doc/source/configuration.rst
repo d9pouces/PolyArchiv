@@ -45,8 +45,14 @@ Local repositories
 ------------------
 
 As said before, a local repository is defined in a `.ini` file written in the right configuration directory and with a name ending by `.local`.
-The local repository is defined in a mandatory section `[repository]`.
+
+The local repository is defined in a mandatory section `[repository]`. This local repository can a bunch of plain files, a local git repo or even an tar archive.
 The main option is `engine`, defining the kind of local repository.
+
+You must define each source of this local repository in a `[source "name_of_the_source"]` section.
+Again, you must set the `engine` option, defining the kind of source.
+
+You can also define some filters (please check the :ref:`filters` section).
 
 .. code-block:: bash
 
