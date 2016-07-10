@@ -48,5 +48,4 @@ Finally, you can use PolyArchiv without installation:
   cd PolyArchiv
   python run.py
 
-
-
+You can now use `Polyarchiv` and check all run options (:ref:`options`).

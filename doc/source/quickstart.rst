@@ -16,6 +16,7 @@ Then you can add a local repository, indicating the data to backup:
   mkdir -p /var/backups/my-project
   cat << EOF | sudo tee /etc/polyarchiv/my-project.local
   [repository]
+  frequency=daily
   engine=files
   local_path=/var/backups/my-project
   frequency=daily
