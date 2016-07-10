@@ -8,7 +8,6 @@ First, you obviously need to install Polyarchiv, and display the default configu
   sudo pip install polyarchiv
   polyarchiv config
 
-
 Then you can add a local repository, indicating the data to backup:
 
 .. code-block:: bash

@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Register all components of this extension"""
+"""Generate the documentation for all PolyArchiv engines"""
 
 from polysphinx.nodes import EnginesHelpNode
 from polysphinx.directives import EngineDirective

@@ -67,4 +67,6 @@ Of course, you can use several filters, there are applied in the order of appari
 Available filters
 -----------------
 
+Required parameters are marked in red.
+
 .. polyengines:: filters

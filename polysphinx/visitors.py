@@ -16,7 +16,7 @@ def render_engines_html(self, node, engines, options):
     names = [x for x in sorted(engines.keys())]
     for name in names:
         engine_cls = engines[name]
-        content += '<dt><h3>%s</h3></dt>\n' % name
+        content += '<dt><h3>engine=%s</h3></dt>\n' % name
         if engine_cls.__doc__:
             content += '<dd>%s' % engine_cls.__doc__.strip()
         if verbose:
@@ -24,14 +24,18 @@ def render_engines_html(self, node, engines, options):
             # noinspection PyUnresolvedReferences
             for parameter in sorted(engine_cls.parameters, key=lambda x: x.option_name):
                 assert isinstance(parameter, Parameter)
+                if parameter.required:
+                    style = 'style="color: #C55;"'
+                else:
+                    style = 'style="color: #555;"'
                 if parameter.common:
                     continue
                 elif parameter.help_str:
                     help_str, footnote = format_help(parameter.help_str)
-                    content += '<li><b>%s</b>: %s</li>' % (parameter.option_name, help_str)
+                    content += '<li><b %s>%s</b>: %s</li>' % (style, parameter.option_name, help_str)
                     footnotes |= footnote
                 else:
-                    content += '<li><b>%s</b></li>' % parameter.option_name
+                    content += '<li><b %s>%s</b></li>' % (style, parameter.option_name)
             content += '</ul></p>'
 
         content += '</dd>'
