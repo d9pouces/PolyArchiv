@@ -244,32 +244,6 @@ Extra backup options
   * `--only-locals`: limit used local repositories to these tags
   * `--only-remotes`: limit used remote repositories to these tags
 
-URLs
-----
-
-Excepting git URLs, valid URLs must look like one of these examples:
-  * `file:///foo/bar/baz` for direct file operation,
-  * `ssh://username@hostname/boo/bar/baz`, but `keytab` or `private_key` must be set,
-  * `http(s)://username:password@hostname/foo/bar/baz.git`, you can set `ca_cert` to the private root certificate or to `"any"` for accepting self-signed certificates. 
-  * `http(s)://:@hostname/foo/bar/baz.git` and `private_key` for certificate auth
-
-Of course, `http`-like URLs require a WebDAV-compliant server (you can use Apache or Nginx).
-
-URLs for git remotes must look like:
-  * `file:///foo/bar/baz.git`,
-  * `git@hostname/foo/bar/baz.git` (and `private_key` must be set),
-  * `http(s)://username:password@hostname/foo/bar/baz.git`
-  * `http(s)://:@hostname/foo/bar/baz.git` (but `keytab` must be set, not the `:@` in the URL!)
-
-Remote metadata storage
------------------------
-
-Most parameters for remote repositories can rely on time-based, or host-based, variables.
-For example, `remote_url = ssh://example.org/backups/%(hostname)s/%(name)s-%(Y)s-%(m)s.tar.gz`.
-If you restore your data on a brand new machine, there is no way to determine the previous `hostname`, nor
-the time of the last backup (the `Y` and `m` values).
-So, when your remote parameters depends on such variables, you should use a metadata_url 
-
 Adding your engines
 -------------------
 
