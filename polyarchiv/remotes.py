@@ -581,7 +581,7 @@ class TarArchive(CommonRemoteRepository):
         self.execute_command([self.tar_executable, '-C', export_data_path, '-xf', archive_filename])
 
 
-class SmartTarArchive(TarArchive):
+class RollingTarArchive(TarArchive):
     """Collect all files of your local repository into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
     to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
 
@@ -609,14 +609,14 @@ class SmartTarArchive(TarArchive):
             break
 
     def __init__(self, name, hourly_count=1, daily_count=30, weekly_count=10, yearly_count=20, **kwargs):
-        super(SmartTarArchive, self).__init__(name, **kwargs)
+        super(RollingTarArchive, self).__init__(name, **kwargs)
         self.hourly_count = hourly_count
         self.daily_count = daily_count
         self.weekly_count = weekly_count
         self.yearly_count = yearly_count
 
     def do_backup(self, local_repository, export_data_path, info):
-        super(SmartTarArchive, self).do_backup(local_repository, export_data_path, info)
+        super(RollingTarArchive, self).do_backup(local_repository, export_data_path, info)
         if info.data is None:
             info.data = []
             # info.data must be a list of dict (old values)
@@ -674,7 +674,7 @@ class SmartTarArchive(TarArchive):
         >>> times[7] = False
         >>> times[8] = False
         >>> times[9] = False
-        >>> result = SmartTarArchive.set_accepted_times(3, times, not_after_time=14)
+        >>> result = RollingTarArchive.set_accepted_times(3, times, not_after_time=14)
         >>> print(result)
         OrderedDict([(0, True), (3, True), (4, False), (5, False), (7, True), (8, False), (9, False)])
 

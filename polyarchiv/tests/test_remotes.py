@@ -8,7 +8,7 @@ import tempfile
 import subprocess
 
 from polyarchiv.locals import FileRepository
-from polyarchiv.remotes import Synchronize, RemoteRepository, GitRepository, TarArchive, SmartTarArchive
+from polyarchiv.remotes import Synchronize, RemoteRepository, GitRepository, TarArchive, RollingTarArchive
 from polyarchiv.sources import RSync
 from polyarchiv.tests.test_base import FileTestCase
 
@@ -76,8 +76,8 @@ class TarArchiveRemoteTestCase(RemoteTestCase):
                           command_display=True, command_keep_output=False)
 
 
-class SmartTarArchiveRemoteTestCase(RemoteTestCase):
+class RollingTarArchiveRemoteTestCase(RemoteTestCase):
     def get_remote_repository(self):
-        return SmartTarArchive('remote', remote_url='file://%s/archive.tar.gz' % self.remote_storage_dir,
+        return RollingTarArchive('remote', remote_url='file://%s/archive.tar.gz' % self.remote_storage_dir,
                                metadata_url='file://%s/metadata.json' % self.metadata_storage_dir,
                                command_display=True, command_keep_output=False)

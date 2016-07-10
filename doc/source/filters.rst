@@ -34,13 +34,13 @@ Imagine you want to encrypt your backup files, and you have two remote and two l
 First case
 ----------
 
-You must apply the encryption filter to all local repositories you wan to protect.
-Original data are still available on the disk but not used by remote repositories.
+Example: you must apply the encryption filter to all local repositories you wan to protect.
+Original (not crypted!) data are still available on the disk but not used by remote repositories.
 
 Second case
 -----------
 
-All local repositories that are processed by the remote repositories are encrypted.
+Example: all local repositories that are processed by the remote repositories are encrypted.
 However, if you use several remote repositories, the encryption process is performed several times.
 Moreover, clear-text data are still available on the disk.
 

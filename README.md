@@ -51,7 +51,7 @@ There are also several kinds of remote repositories:
   * gitlab: almost identical to the previous one, but able to automatically create the remote repository,
   * synchronize: uses rsync to copy all files to a remote location,
   * archive: creates an archive (.tar.gz/bz2/xz) and pushes it to a remote location, 
-  * smart_archive: creates an archive, pushes it to a remote location. Deletes some previous archives 
+  * rolling_archive: creates an archive, pushes it to a remote location. Deletes some previous archives 
     (say, one per day during six days, then one per week during three weeks, then one per month during 12 months) 
 
 These remote repositories are optional and you can of course use only local backups. All parameters (especially the remote location) can depend on the date and time, and on the hostname.
