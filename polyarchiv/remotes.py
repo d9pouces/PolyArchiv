@@ -213,7 +213,7 @@ class CommonRemoteRepository(RemoteRepository):
     parameters = RemoteRepository.parameters + [
         Parameter('metadata_url', required=False,
                   help_str='send metadata (about the successful last backup) to this URL.'
-                           'Should end by "/" [**]'),
+                           'Should end by "/" or use the {name} variable [**]'),
         Parameter('metadata_private_key',
                   help_str='private key associated to \'metadata_url\' [**]'),
         Parameter('metadata_ca_cert',
