@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # base packages
 sudo apt-get update
 sudo apt-get upgrade --yes

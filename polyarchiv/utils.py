@@ -7,6 +7,8 @@ import re
 import shutil
 import sys
 
+from pip._vendor.distlib.compat import raw_input
+
 __author__ = 'Matthieu Gallet'
 
 if sys.version_info[0] == 3:
@@ -22,7 +24,7 @@ def get_input_text(prompt):
     if hasattr(sys.stdin, 'encoding') and sys.stdin.encoding:
         encoding = sys.stdin.encoding
     if sys.version_info[0] == 2:
-        # noinspection PyCompatibility
+        # noinspection PyCompatibility,PyUnresolvedReferences
         result = raw_input(prompt).decode(encoding)
     else:
         result = input(prompt)

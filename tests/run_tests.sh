@@ -30,3 +30,4 @@ sudo rm -rf /var/backups/locals/local1 /var/backups/locals/local2
 sudo rm -rf /var/input/some-files
 sudo python ${SCRIPT} -C ${CONFIG} restore --show-commands
 
+bash /vagrant/debianize.sh
