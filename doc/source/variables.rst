@@ -13,6 +13,13 @@ By default, only the following variables are defined:
   * the time of backup is also available, with a separate variable for each component: `Y`, `d` `M`, …
     Please check the `doc <https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior>`_ to discover all of them.
 
+
+.. warning::
+
+  If you use time-dependent variables (or `hostname`, or `fqdn`), you should also use the `metadata_url` parameter.
+  Check :ref:`remote_metadata` for more info.
+
+
 In the local config file, you can add a new section `[variables]`.
 Of course, the name of the option is the name of the variable.
 
@@ -20,15 +27,19 @@ In the remote config, you can also override some variables defined in local repo
 by adding a new section, specific to this local repository.
 Check the example below, made of two local repositories and a single remote one:
 
-.. code-block:: bash
+.. code-block:: ini
+  :caption: /etc/polyarchiv/my-local-1.local
+  :name: variables:/etc/polyarchiv/my-local-1.local
 
-  cat /etc/polyarchiv/my-local-1.local
   [repository]
   engine=git
   [variables]
   group=MyGroup1
 
-  cat /etc/polyarchiv/my-local-2.local
+.. code-block:: ini
+  :caption: /etc/polyarchiv/my-local-2.local
+  :name: variables:/etc/polyarchiv/my-local-2.local
+
   [repository]
   engine=archive
   archive_name={name}-{Y}-{m}-{d}.tar.gz  <-- this is a customizable parameter
@@ -37,7 +48,10 @@ Check the example below, made of two local repositories and a single remote one:
   name=MY-LOCAL-2
   ; you can override the default `name` variable
 
-  cat /etc/polyarchiv/my-remote.remote
+.. code-block:: ini
+  :caption: /etc/polyarchiv/my-remote.remote
+  :name: variables:/etc/polyarchiv/my-remote.remote
+
   [repository]
   engine=git
   remote_url=http://{host}/{group}/{name}.git  <-- another one
@@ -49,7 +63,6 @@ Check the example below, made of two local repositories and a single remote one:
   [variables "my-local-2"]
   group=MY-GROUP-2
   ; you can override the `group` variable of `my-local-2` only in the `my-remote` remote repository.
-
 
 
 With this configuration, `my-local-1` is sent to `remote_url=http://gitlab.example.org/MyGroup1/my-local-1.git` and

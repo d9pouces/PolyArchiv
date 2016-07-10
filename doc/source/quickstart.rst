@@ -1,5 +1,5 @@
-Quick start
-===========
+Quick start guide
+=================
 
 First, you obviously need to install Polyarchiv, and display the default configuration directory (should be `/etc/polyarchiv`):
 

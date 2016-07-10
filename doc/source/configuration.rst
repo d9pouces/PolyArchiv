@@ -33,13 +33,12 @@ There are also several kinds of remote repositories:
   * rolling_archive: creates an archive, pushes it to a remote location. Deletes some previous archives
     (say, one per day during six days, then one per week during three weeks, then one per month during 12 months)
 
-These remote repositories are optional and you can of course use only local backups. All parameters (especially the remote location) can depend on the date and time, and on the hostname.
+These remote repositories are optional and you can of course use only local backups.
+Several remote parameters (especially the remote location) can depend on the date/time or the hostname (check the remote doc for more information).
 
-Each repository (either local or remote) is associated to a backup frequency.
-If a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
-
-Finally, all remote repositories must store some metadata at a predictable (independant of the time and hostname) remote location (HTTP/SSH/file).
-These metadata can be required for restore operations.
+Each repository (either local or remote) can be associated to a backup frequency:
+if a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
+If no frequency is set, then the backup is performed every time you launch polyarchiv.
 
 Local repositories
 ------------------
@@ -54,9 +53,9 @@ Again, you must set the `engine` option, defining the kind of source. Please che
 
 You can also define some filters for transforming files (please check the :ref:`filters` section).
 
-.. code-block:: bash
+.. code-block::  ini
+  :caption: /etc/polyarchiv/my-local.local
 
-  cat /etc/polyarchiv/my-local.local
   [repository]
   engine=git
   local_path=/tmp/local
@@ -88,7 +87,6 @@ You can also define some filters for transforming files (please check the :ref:`
   source_path=/tmp/source/files
   destination_path=./files
 
-
 Remote repositories
 -------------------
 
@@ -96,8 +94,9 @@ As said before, a remote repository is defined by a `ini` file in the configurat
 This config file requires a mandatory section `[repository]`.
 The main option is `engine`, defining the kind of remote repository. Please check the list of available remote repositories: :ref:`remotes`.
 
-By default, all remote repositories are used with all local repositories. Therefore, the remote parameters should use variables, like name of the local repository.
-Please check the section about :ref:`variables`.
+By default, all remote repositories are used with all local repositories. Therefore, you should use at least the `name`
+variable (the  name of the local repository) to backup several local repositories with the same remote repository.
+Please check the section :ref:`variables` for a more detailed explanation.
 
 URLs
 ----
@@ -113,58 +112,69 @@ Of course, `http`-like URLs require a WebDAV-compliant server (you can use Apach
 URLs for git remotes must look like:
   * `file:///foo/bar/baz.git`,
   * `git@hostname/foo/bar/baz.git` (and `private_key` must be set),
-  * `http(s)://username:password@hostname/foo/bar/baz.git`
-  * `http(s)://:@hostname/foo/bar/baz.git` (but `keytab` must be set, not the `:@` in the URL!)
+  * `http(s)://username:password@hostname/foo/bar/baz.git`,
+  * `http(s)://x:x@hostname/foo/bar/baz.git` (if `keytab` set; note the `x:x@`!).
+
+.. _remote_metadata:
 
 Remote metadata storage
 -----------------------
 
-Most parameters for remote repositories can rely on time-based, or host-based, variables.
-For example, `remote_url = ssh://example.org/backups/{hostname}/{name}-{Y}-{m}.tar.gz`.
+Most parameters for remote repositories can rely on time-based, or host-based, variables: for example,
+`remote_url = ssh://example.org/backups/{hostname}/{name}-{Y}-{m}.tar.gz`.
 If you restore your data on a brand new machine, there is no way to determine the previous `hostname`, nor
 the time of the last backup (the `Y` and `m` values).
-So, when your remote parameters depends on such variables, you should use a metadata_url
+So, if your remote parameters depend on such variables, you should use the `metadata_url` parameter, allowing to
+store (and retrieve!) these data to a predictible location.
+This URL should either depend on the `name` variable or ends by `/` (allowing to append `{name}.json`).
 
 Associating local and remote repositories
 -----------------------------------------
 
 All remote repositories apply to all local repositories but you can change this behaviour by applying tags to repositories.
-By default, a local repository has the tag `local` and include all remote repositories `included_remote_tags=*`.
-A remote repository has the tag `remote` and include all local repositories `included_local_tags=*`.
+By default, a local repository has the tag `local` and include all existing remote repositories: `included_remote_tags=*`.
+A remote repository has the tag `remote` and include all local repositories: `included_local_tags=*`.
 
 If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
 
-.. code-block:: bash
+.. code-block::  ini
+  :caption: /etc/polyarchiv/my-remote.remote
+  :name: tags1:/etc/polyarchiv/my-remote.remote
 
-  cat /etc/polyarchiv/my-remote.remote
   [repository]
   engine=git
   excluded_local_tags=*large,huge
 
-and add the "large" tag in the local configuration:
+and add the `large` tag to the local configuration you want to avoid
+(traditionnal shell expansion with ? and * is used for comparing included and excluded tags, so you can put `extra-large`
+instead of simply `large`):
 
-.. code-block:: bash
+.. code-block:: ini
+  :caption: /etc/polyarchiv/my-local.local
+  :name: tags1:/etc/polyarchiv/my-local.local
 
-  cat /etc/polyarchiv/my-local.local
   [repository]
   engine=git
   local_path=/tmp/local
-  local_tags=local,large
+  local_tags=local,extra-large
 
-Traditionnal shell expansion is used for comparing included and excluded tags. Tags can be applied to remote repositories:
 
-.. code-block:: bash
+Tags can also be applied to remote repositories:
 
-  cat /etc/polyarchiv/my-remote.remote
+.. code-block:: ini
+  :caption: /etc/polyarchiv/my-remote.remote
+  :name: tags:/etc/polyarchiv/my-remote.remote
+
   [repository]
   engine=git
   remote_tags=small-only
 
 and add the "large" tag to the local configuration:
 
-.. code-block:: bash
+.. code-block::  ini
+  :caption: /etc/polyarchiv/my-local.local
+  :name: tags:/etc/polyarchiv/my-local.local
 
-  cat /etc/polyarchiv/my-local.local
   [repository]
   engine=git
   local_path=/tmp/local

@@ -52,9 +52,9 @@ Applying filters
 You only have to add a `[filter "name_of_the_filter"]` section to your config file.
 Of course, you can use several filters, there are applied in the order of apparition in the config file.
 
-.. code-block:: bash
+.. code-block:: ini
+  :caption: /etc/polyarchiv/my-local-1.local
 
-  cat /etc/polyarchiv/my-local-1.local
   [repository]
   engine=git
   [filter "hash"]
