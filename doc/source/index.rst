@@ -37,7 +37,7 @@ The complete backup operation is split into three steps for each local repositor
 
   1. collect all data from sources (databases, files, config files, …) to the local repositories,
   2. perform the local backup operation (maybe local archiving),
-  3. send all these data to a distant server (you can skip this step).
+  3. send all these data to distant servers (you can skip this step).
 
 
 .. toctree::
@@ -48,12 +48,4 @@ The complete backup operation is split into three steps for each local repositor
    configuration
    debian
    filters
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 
