@@ -44,5 +44,44 @@ These metadata can be required for restore operations.
 Local repositories
 ------------------
 
+As said before, a local repository is defined in a `.ini` file written in the right configuration directory and with a name ending by `.local`.
+The local repository is defined in a mandatory section `[repository]`.
+The main option is `engine`, defining the kind of local repository.
+
+.. code-block:: bash
+
+  cat /etc/polyarchiv/my-local.local
+  [repository]
+  engine=git
+  local_path=/tmp/local
+  local_tags=local
+  included_remote_tags=*
+  excluded_remote_tags=
+  frequency=daily
+
+  [source "source_1"]
+  engine=postgressql
+  host=localhost
+  port=5432
+  user=test
+  password=testtest
+  database=testdb
+  destination_path=./postgres.sql
+
+  [source "source_2"]
+  engine=mysql
+  host=localhost
+  port=3306
+  user=test
+  password=testtest
+  database=testdb
+  destination_path=./mysql.sql
+
+  [source "source_3"]
+  engine=rsync
+  source_path=/tmp/source/files
+  destination_path=./files
+
+
 Remote repositories
 -------------------
