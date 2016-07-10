@@ -43,7 +43,9 @@ The complete backup operation is split into three steps for each local repositor
 .. toctree::
    :maxdepth: 1
 
+   quickstart
    installation
+   options
    configuration
    examples
    locals

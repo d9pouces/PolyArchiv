@@ -450,7 +450,6 @@ class Synchronize(CommonRemoteRepository):
         Parameter('private_key', help_str='private key or certificate associated to \'remote_url\' [*]'),
         Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
                                       'Set to "any" for not checking certificates [*]'),
-        Parameter('keytab', help_str='keytab (for Kerberos) associated to \'remote_url\' [*]'),
         Parameter('ssh_options', help_str='SSH options associated to \'url\' [*]'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),

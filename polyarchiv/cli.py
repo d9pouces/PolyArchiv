@@ -54,8 +54,9 @@ def main(engines_file=None):
                         default=False)
     parser.add_argument('--only-locals', nargs='+', help='limit to these local tags', default=[])
     parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
-    parser.add_argument('--skip-local', action='store_true', help='skip the local step', default=False)
-    parser.add_argument('--skip-remote', action='store_true', help='skip the remote step', default=False)
+    parser.add_argument('--skip-local', action='store_true', help='skip the local step during a backup', default=False)
+    parser.add_argument('--skip-remote', action='store_true', help='skip the remote step during a backup',
+                        default=False)
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
     parser.add_argument('command', help='backup|restore|config|plugins')
     args = parser.parse_args()

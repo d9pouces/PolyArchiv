@@ -20,14 +20,13 @@ for line in codecs.open(os.path.join('polyarchiv', '__init__.py'), 'r', encoding
     matcher = re.match(r"""^__version__\s*=\s*['"](.*)['"]\s*$""", line)
     version = version or matcher and matcher.group(1)
 
-print(version)
 
 with codecs.open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as fd:
     long_description = fd.read()
 
 sources, remotes, locals_, filters = [], [], [], []
 engines_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'engines.ini')
-print(engines_file)
+
 if os.path.isfile(engines_file):
     parser = RawConfigParser()
     parser.read([engines_file])
