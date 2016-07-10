@@ -7,12 +7,11 @@ import re
 import shutil
 import sys
 
-from pip._vendor.distlib.compat import raw_input
-
 __author__ = 'Matthieu Gallet'
 
 if sys.version_info[0] == 3:
     text_type = str
+    raw_input = input
 else:
     # noinspection PyUnresolvedReferences
     text_type = unicode
