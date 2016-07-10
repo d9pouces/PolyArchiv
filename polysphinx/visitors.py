@@ -11,7 +11,7 @@ def render_engines_html(self, node, engines, options):
     cls = ''
     if options.get('class'):
         cls = ' class="%s"' % options['class']
-
+    footnotes = 0
     content = "<dl %s>" % cls
     for name, engine_cls in engines.items():
         content += '<dt><h3>%s</h3></dt>\n' % name
@@ -25,15 +25,35 @@ def render_engines_html(self, node, engines, options):
                 if parameter.common:
                     continue
                 elif parameter.help_str:
-                    content += '<li><b>%s</b>: %s</li>' % (parameter.option_name, parameter.help_str)
+                    help_str, footnote = format_help(parameter.help_str)
+                    content += '<li><b>%s</b>: %s</li>' % (parameter.option_name, help_str)
+                    footnotes |= footnote
                 else:
                     content += '<li><b>%s</b></li>' % parameter.option_name
             content += '</ul></p>'
 
         content += '</dd>'
     content += "</dl>"
-
+    if footnotes:
+        content += '<ol>'
+        if footnotes & 1:
+            content += '<li id="note-1">this parameter can use variables</li>'
+        if footnotes & 2:
+            content += '<li id="note-2">this parameter can use time/host-independent variables</li>'
+        content += '</ol>'
     self.body.append(content)
+
+
+def format_help(text):
+    has_footnote = 0
+    if '[*]' in text:
+        has_footnote = 1
+        text = text.replace('[*]', '<a href="#note-1" title="this parameter can use variables"><sup>1</sup></a>')
+    if '[**]' in text:
+        has_footnote = 2
+        text = text.replace('[**]', '<a href="#note-2" title="this parameter can use time/host-independent '
+                                    'variables"><sup>2</sup></a>')
+    return text, has_footnote
 
 
 def visit_folder_node(self, node):
