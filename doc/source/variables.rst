@@ -31,7 +31,7 @@ Check the example below, made of two local repositories and a single remote one:
   cat /etc/polyarchiv/my-local-2.local
   [repository]
   engine=archive
-  archive_name=%(name)s-%(Y)s-%(m)-%(d)s.tar.gz  <-- this is a customizable parameter
+  archive_name={name}-{Y}-{m}-{d}.tar.gz  <-- this is a customizable parameter
   [variables]
   group=MyGroup2
   name=MY-LOCAL-2
@@ -40,7 +40,7 @@ Check the example below, made of two local repositories and a single remote one:
   cat /etc/polyarchiv/my-remote.remote
   [repository]
   engine=git
-  remote_url=http://%(host)s/%(group)s/%(name)s.git  <-- another one
+  remote_url=http://{host}/{group}/{name}.git  <-- another one
   ; requires a `group` variable in each local repository
   ; the `name` variable always exists
   [variables]

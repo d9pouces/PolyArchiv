@@ -120,7 +120,7 @@ Remote metadata storage
 -----------------------
 
 Most parameters for remote repositories can rely on time-based, or host-based, variables.
-For example, `remote_url = ssh://example.org/backups/%(hostname)s/%(name)s-%(Y)s-%(m)s.tar.gz`.
+For example, `remote_url = ssh://example.org/backups/{hostname}/{name}-{Y}-{m}.tar.gz`.
 If you restore your data on a brand new machine, there is no way to determine the previous `hostname`, nor
 the time of the last backup (the `Y` and `m` values).
 So, when your remote parameters depends on such variables, you should use a metadata_url
@@ -171,5 +171,3 @@ and add the "large" tag to the local configuration:
   included_remote_tags=huge,large
 
 Since the remote repository does not present either the `huge` tag or the `large` tag, it will not be applied.
-
-

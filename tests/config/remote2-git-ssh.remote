@@ -1,6 +1,6 @@
 [repository]
 engine=git
-metadata_url=file:///home/vagrant/metadata/gitssh/%(name)s.json
-remote_url=vagrant@localhost:remotes/remote-git/%(name)s.git
+metadata_url=file:///home/vagrant/metadata/gitssh/{name}.json
+remote_url=vagrant@localhost:remotes/remote-git/{name}.git
 included_local_tags=*
 private_key=/home/vagrant/.ssh/id_rsa

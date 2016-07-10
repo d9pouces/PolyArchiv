@@ -73,7 +73,7 @@ class RemoteRepository(Repository):
         if use_constant_values:
             variables.update(self.constant_format_values)
         try:
-            formatted_value = value % variables
+            formatted_value = value.format(**variables)
         except KeyError as e:
             txt = text_type(e)[len('KeyError:'):]
             raise ValueError('Unable to format \'%s\': variable %s is missing' % (value, txt))
@@ -320,7 +320,7 @@ class GitRepository(CommonRemoteRepository):
                   help_str='absolute path of the private key file (for SSH key authentication) [*]'),
         Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")'),
         Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
-        Parameter('commit_message', help_str='commit message (default: "Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s") [*]'),
+        Parameter('commit_message', help_str='commit message (default: "Backup {Y}/{m}/{d} {H}:{M}") [*]'),
         Parameter('remote_url', help_str='URL of the remote server, including username and password (e.g.: '
                                          'git@mygitlab.example.org/project.git, file:///foo/bar/project.git or '
                                          'https://username:password@mygitlab.example.org/username/project.git). '
@@ -332,7 +332,7 @@ class GitRepository(CommonRemoteRepository):
 
     def __init__(self, name, remote_url='', remote_branch='master', git_executable='git', private_key=None,
                  keytab=None, commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
-                 commit_message='Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s', **kwargs):
+                 commit_message='Backup {Y}/{m}/{d} {H}:{M}', **kwargs):
         super(GitRepository, self).__init__(name, **kwargs)
         self.keytab = keytab
         self.private_key = private_key
@@ -604,7 +604,7 @@ class RollingTarArchive(TarArchive):
         if parameter.arg_name == 'remote_url':
             parameters[index] = Parameter('remote_url', required=True,
                                           help_str='synchronize data to this URL (SHOULD DEPEND ON THE DATE AND TIME): '
-                                                   '\'file:///var/backup/archive-%(Y)s-%(m)s-%(d)s_%(H)s-%(M)s.tar.gz\''
+                                                   '\'file:///var/backup/archive-{Y}-{m}-{d}_{H}-{M}.tar.gz\''
                                                    'Must end by ".tar.gz", "tar.bz2", "tar.xz" [*]')
             break
 
@@ -698,5 +698,5 @@ class RollingTarArchive(TarArchive):
         return result
 
     def archive_name_prefix(self, local_repository):
-        archive_name = self.format_value('archive-%(Y)s-%(m)s-%(d)s_%(H)s-%(M)s', local_repository)
+        archive_name = self.format_value('archive-{Y}-{m}-{d}_{H}-{M}', local_repository)
         return os.path.join(self.private_path(local_repository), archive_name)

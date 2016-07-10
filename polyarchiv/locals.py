@@ -196,7 +196,7 @@ class LocalRepository(Repository):
 
     def format_value(self, value):
         try:
-            formatted_value = value % self.variables
+            formatted_value = value.format(**self.variables)
         except KeyError as e:
             txt = text_type(e)[len('KeyError:'):]
             raise ValueError('Unable to format \'%s\': variable %s is missing' % (value, txt))
@@ -304,11 +304,11 @@ class GitRepository(FileRepository):
         Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net") '
                                            '[*]'),
         Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv") [*]'),
-        Parameter('commit_message', help_str='commit message (default: "Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s") [*]'),
+        Parameter('commit_message', help_str='commit message (default: "Backup {Y}/{m}/{d} {H}:{M}") [*]'),
     ]
 
     def __init__(self, name, git_executable='git', commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
-                 commit_message='Backup %(Y)s/%(m)s/%(d)s %(H)s:%(M)s', **kwargs):
+                 commit_message='Backup {Y}/{m}/{d} {H}:{M}', **kwargs):
         super(GitRepository, self).__init__(name=name, **kwargs)
         self.commit_name = commit_name
         self.commit_email = commit_email

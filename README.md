@@ -202,12 +202,12 @@ Here is a gitlab acting as remote storage for git local repo:
     engine=git
     frequency=daily
     remote_tags=
-    remote_url=http://gitlab.example.org/group/%(name)s.git
+    remote_url=http://gitlab.example.org/group/{name}.git
     remote_branch=master
     user=mgallet
     included_local_tags=*
 
-`%(name)s` will be replaced by the name of the local repository; for example the name of the `my-local.local` local repository is 
+`{name}` will be replaced by the name of the local repository; for example the name of the `my-local.local` local repository is 
 obviously `my-local`). You can specify (a bit) more complex replacement rules (see below).
 
 Maybe you also want a full backup (as an archive) uploaded monthly (the tenth day of each month) to a FTP server:
@@ -217,7 +217,7 @@ Maybe you also want a full backup (as an archive) uploaded monthly (the tenth da
     engine=tar
     frequency=monthly:10
     remote_tags=
-    remote_url=ftp://myftp.example.org/backups/%(name)s/
+    remote_url=ftp://myftp.example.org/backups/{name}/
     remote_branch=master
     user=mgallet
     password=p@ssw0rd

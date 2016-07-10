@@ -1,10 +1,10 @@
 [repository]
 engine=gitlab
-metadata_url=file:///home/vagrant/metadata/gitlab/%(name)s.json
-remote_url=git@localhost:remotes/remote-git/%(name)s.git
+metadata_url=file:///home/vagrant/metadata/gitlab/{name}.json
+remote_url=git@localhost:remotes/remote-git/{name}.git
 included_local_tags=*
 api_key=4utHentic4ti0n_token
 gitlab_url=http://vagrant/
-project_name=root/%(name)s
+project_name=root/{name}
 username=root
 password=secret_pass
