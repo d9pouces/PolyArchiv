@@ -13,7 +13,9 @@ def render_engines_html(self, node, engines, options):
         cls = ' class="%s"' % options['class']
     footnotes = 0
     content = "<dl %s>" % cls
-    for name, engine_cls in engines.items():
+    names = [x for x in sorted(engines.keys())]
+    for name in names:
+        engine_cls = engines[name]
         content += '<dt><h3>%s</h3></dt>\n' % name
         if engine_cls.__doc__:
             content += '<dd>%s' % engine_cls.__doc__.strip()

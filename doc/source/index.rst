@@ -40,9 +40,6 @@ The complete backup operation is split into three steps for each local repositor
   3. send all these data to distant servers (you can skip this step).
 
 
-
-
-
 .. toctree::
    :maxdepth: 1
 
@@ -51,6 +48,8 @@ The complete backup operation is split into three steps for each local repositor
    examples
    locals
    remotes
-   debian
+   sources
    filters
+   variables
+   debian
 

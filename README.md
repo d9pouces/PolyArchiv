@@ -244,45 +244,6 @@ Extra backup options
   * `--only-locals`: limit used local repositories to these tags
   * `--only-remotes`: limit used remote repositories to these tags
 
-Associating local and remote repositories
------------------------------------------
-
-All remote repositories apply to all local repositories but you can change this behaviour by applying tags to repositories.
-By default, a local repository has the tag `local` and include all remote repositories `included_remote_tags=*`.
-A remote repository has the tag `remote` and include all local repositories `included_local_tags=*`.
-
-If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
- 
-    $ cat /etc/polyarchiv/my-remote.remote
-    [repository]
-    engine=git
-    excluded_local_tags=*large,huge
-
-and add the "large" tag in the local configuration:
-
-    $ cat /etc/polyarchiv/my-local.local
-    [repository]
-    engine=git
-    local_path=/tmp/local
-    local_tags=local,large
-
-Traditionnal shell expansion is used for comparing included and excluded tags. Tags can be applied to remote repositories:
-
-    $ cat /etc/polyarchiv/my-remote.remote
-    [repository]
-    engine=git
-    remote_tags=small-only
-
-and add the "large" tag to the local configuration:
-
-    $ cat /etc/polyarchiv/my-local.local
-    [repository]
-    engine=git
-    local_path=/tmp/local
-    included_remote_tags=huge,large
-    
-Since the remote repository does not present either the `huge` tag or the `large` tag, it will not be applied.
-
 URLs
 ----
 
@@ -299,58 +260,6 @@ URLs for git remotes must look like:
   * `git@hostname/foo/bar/baz.git` (and `private_key` must be set),
   * `http(s)://username:password@hostname/foo/bar/baz.git`
   * `http(s)://:@hostname/foo/bar/baz.git` (but `keytab` must be set, not the `:@` in the URL!)
-  
-
-Replacement rules
------------------
-
-Some repository parameters can be modified at runtime using custom variables.
-Check `polyarchiv plugins -v` for a complete documentation of each customizable parameter.
-By default, only the following variables are defined:
-
-  * `name`: basename of the corresponding config local repository.
-  * `fqdn`: local hostname, with the domain name (e.g., `vm1.test.example.org`)
-  * `hostname`: local hostname (e.g., `vm1`)
-  * the time of backup is also available, with a separate variable for each component: `Y`, `d` `M`, …
-    Please check https://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior to discover all of them.
-
-In the local config file, you can add a new section `[variables]`. 
-Of course, the name of the option is the name of the variable.
-
-In the remote config, you can also override some variables defined in local repositories,
-by adding a new section, specific to this local repository.
-Check the example below:
-
-    $ cat /etc/polyarchiv/my-local-1.local
-    [repository]
-    engine=git
-    [variables]
-    group=MyGroup1
-    
-    $ cat /etc/polyarchiv/my-local-2.local
-    [repository]
-    engine=archive
-    archive_name=%(name)s-%(Y)s-%(m)-%(d)s.tar.gz  <-- this is a customizable parameter
-    [variables]
-    group=MyGroup2
-    name=MY-LOCAL-2
-    ; you can override the default `name` variable
-
-    $ cat /etc/polyarchiv/my-remote.remote
-    [repository]
-    engine=git
-    remote_url=http://%(host)s/%(group)s/%(name)s.git  <-- another one
-    ; requires a `group` variable in each local repository
-    ; the `name` variable always exists
-    [variables]
-    host=gitlab.example.org
-    
-    [variables "my-local-2"]
-    group=MY-GROUP-2
-    ; you can override the `group` variable of `my-local-2` only in the `my-remote` remote repository.
-
-`my-local-1` is sent to `remote_url=http://gitlab.example.org/MyGroup1/my-local-1.git`.
-`my-local-2` is sent to `remote_url=http://gitlab.example.org/MY-GROUP-2/MY-LOCAL-2.git`.
 
 Remote metadata storage
 -----------------------

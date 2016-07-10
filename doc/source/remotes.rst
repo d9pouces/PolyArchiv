@@ -1,3 +1,5 @@
+.. _remotes:
+
 Available remote repositories
 =============================
 

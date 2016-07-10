@@ -340,7 +340,7 @@ class Dovecot(Source):
                                      ' TCP socket.'),
         Parameter('user_mask', help_str='only sync this user ("*" and "?" wildcards can be used).'),
         Parameter('dump_executable', converter=check_executable,
-                  help_str='path of the slapcat executable (default: "doveadm")'),
+                  help_str='path of the doveadm executable (default: "doveadm")'),
     ]
 
     def __init__(self, name, local_repository, destination_path='dovecot', dump_executable='doveadm',

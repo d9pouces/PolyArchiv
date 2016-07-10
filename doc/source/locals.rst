@@ -1,3 +1,5 @@
+.. _locals:
+
 Available local repositories
 ============================
 

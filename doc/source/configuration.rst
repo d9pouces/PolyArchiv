@@ -44,15 +44,15 @@ These metadata can be required for restore operations.
 Local repositories
 ------------------
 
-As said before, a local repository is defined in a `.ini` file written in the right configuration directory and with a name ending by `.local`.
+As said before, a local repository is defined by a `ini` file in the configuration directory and with a name ending by `.local`.
 
 The local repository is defined in a mandatory section `[repository]`. This local repository can a bunch of plain files, a local git repo or even an tar archive.
-The main option is `engine`, defining the kind of local repository.
+The main option is `engine`, defining the kind of local repository. The complete list of the available kinds is here: :ref:`locals`.
 
 You must define each source of this local repository in a `[source "name_of_the_source"]` section.
-Again, you must set the `engine` option, defining the kind of source.
+Again, you must set the `engine` option, defining the kind of source. Please check the list of available sources: :ref:`sources`.
 
-You can also define some filters (please check the :ref:`filters` section).
+You can also define some filters for transforming files (please check the :ref:`filters` section).
 
 .. code-block:: bash
 
@@ -91,3 +91,60 @@ You can also define some filters (please check the :ref:`filters` section).
 
 Remote repositories
 -------------------
+
+As said before, a remote repository is defined by a `ini` file in the configuration directory and with a name ending by `.remote`.
+This config file requires a mandatory section `[repository]`.
+The main option is `engine`, defining the kind of remote repository. Please check the list of available remote repositories: :ref:`remotes`.
+
+By default, all remote repositories are used with all local repositories. Therefore, the remote parameters should use variables, like name of the local repository.
+Please check the section about :ref:`variables`.
+
+
+Associating local and remote repositories
+-----------------------------------------
+
+All remote repositories apply to all local repositories but you can change this behaviour by applying tags to repositories.
+By default, a local repository has the tag `local` and include all remote repositories `included_remote_tags=*`.
+A remote repository has the tag `remote` and include all local repositories `included_local_tags=*`.
+
+If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
+
+.. code-block:: bash
+
+  cat /etc/polyarchiv/my-remote.remote
+  [repository]
+  engine=git
+  excluded_local_tags=*large,huge
+
+and add the "large" tag in the local configuration:
+
+.. code-block:: bash
+
+  cat /etc/polyarchiv/my-local.local
+  [repository]
+  engine=git
+  local_path=/tmp/local
+  local_tags=local,large
+
+Traditionnal shell expansion is used for comparing included and excluded tags. Tags can be applied to remote repositories:
+
+.. code-block:: bash
+
+  cat /etc/polyarchiv/my-remote.remote
+  [repository]
+  engine=git
+  remote_tags=small-only
+
+and add the "large" tag to the local configuration:
+
+.. code-block:: bash
+
+  cat /etc/polyarchiv/my-local.local
+  [repository]
+  engine=git
+  local_path=/tmp/local
+  included_remote_tags=huge,large
+
+Since the remote repository does not present either the `huge` tag or the `large` tag, it will not be applied.
+
+
