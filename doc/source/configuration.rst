@@ -7,7 +7,7 @@ Configuration is based on standard `.ini <https://docs.python.org/3/library/conf
   * `my-remote-repo.remote` defines a remote repository named `my-remote-repo`.
 
 All these files are expected in the config directory `/etc/polyarchiv`. If you installed PolyArchiv in a virtualenv, this folder
-is inside your virtualenv. You can also use `polyarchiv config` to display the used configuration directory, and you can change it with
+is inside your virtualenv. You can also use `polyarchiv config` to display the actual configuration directory, and you can change it with
 the `-C` option.
 
 
