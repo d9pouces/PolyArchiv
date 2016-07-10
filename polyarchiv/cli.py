@@ -54,6 +54,8 @@ def main(engines_file=None):
                         default=False)
     parser.add_argument('--only-locals', nargs='+', help='limit to these local tags', default=[])
     parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
+    parser.add_argument('--skip-local', action='store_true', help='skip the local step', default=False)
+    parser.add_argument('--skip-remote', action='store_true', help='skip the remote step', default=False)
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
     parser.add_argument('command', help='backup|restore|config|plugins')
     args = parser.parse_args()
@@ -75,7 +77,8 @@ def main(engines_file=None):
     if command == 'backup':
         if runner.load():
             local_results, remote_results = runner.backup(only_locals=args.only_locals, only_remotes=args.only_remotes,
-                                                          force=args.force)
+                                                          force=args.force, skip_local=args.skip_local,
+                                                          skip_remote=args.skip_remote)
             local_failures = ['local:%s' % x for (x, y) in local_results.items() if not y]
             remote_failures = ['local:%s/remote:%s' % x for (x, y) in remote_results.items() if not y]
             if local_failures or remote_failures:

@@ -323,7 +323,7 @@ class Runner(ParameterizedObject):
                 if self.can_associate(local, remote):
                     local_remote_command(local, remote)
 
-    def backup(self, force=False, only_locals=None, only_remotes=None):
+    def backup(self, force=False, only_locals=None, only_remotes=None, skip_local=False, skip_remote=False):
         """Run a backup operation. return two dicts
         first result is {local_repository.name: bool}  (dict["my-local_repo"] = True if successful)
         second result is {(local_repository.name, remote_repository.name): bool}
@@ -341,16 +341,17 @@ class Runner(ParameterizedObject):
             if only_locals and local_name not in only_locals:
                 continue
             assert isinstance(local, LocalRepository)
-            result = local.backup(force=force)
-            if result:
-                logger.info('[OK] local repository %s' % local.name)
-                local_results[local.name] = True
-            else:
-                logger.error('[KO] local repository %s' % local.name)
-                local_results[local.name] = False
-                continue
+            if not skip_local:
+                result = local.backup(force=force)
+                if result:
+                    logger.info('[OK] local repository %s' % local.name)
+                    local_results[local.name] = True
+                else:
+                    logger.error('[KO] local repository %s' % local.name)
+                    local_results[local.name] = False
+                    continue
             for remote_name, remote in self.remote_repositories.items():
-                if only_remotes and remote_name not in only_remotes:
+                if only_remotes and remote_name not in only_remotes and not skip_remote:
                     continue
                 assert isinstance(remote, RemoteRepository)
                 if not self.can_associate(local, remote):
