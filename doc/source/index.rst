@@ -40,27 +40,14 @@ The complete backup operation is split into three steps for each local repositor
   3. send all these data to a distant server (you can skip this step).
 
 
-:doc:`installation`
-    Instruction on how to get the distribution
-
-:doc:`configuration`
-    All configuration options
-
-:doc:`debian`
-    Packaging Polyarchiv for Debian or Ubuntu
-
-
-
-Full table of contents
-======================
-
 .. toctree::
    :maxdepth: 1
 
    installation
+   examples
    configuration
    debian
-   examples
+   filters
 
 
 Indices and tables

@@ -18,6 +18,11 @@ if you prefer to install it in your home:
 
   pip install polyarchiv --user
 
+Of course, you can also use `easy_install` (even it should be replaced by `pip`):
+
+.. code-block:: bash
+
+  easy_install polyarchiv
 
 from the source
 ---------------
