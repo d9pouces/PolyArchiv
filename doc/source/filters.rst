@@ -64,8 +64,8 @@ Of course, you can use several filters, there are applied in the order of appari
   password=p@ssw0rd
   engine=encrypt
 
-Available filters
------------------
+Built-in filters
+----------------
 
 Required parameters are marked in red.
 

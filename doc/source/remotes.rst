@@ -1,7 +1,7 @@
 .. _remotes:
 
-Available remote repositories
-=============================
+Built-in remote repositories
+============================
 
 Required parameters are marked in red.
 

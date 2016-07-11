@@ -1,7 +1,7 @@
 .. _locals:
 
-Available local repositories
-============================
+Built-in local repositories
+===========================
 
 Required parameters are marked in red.
 
