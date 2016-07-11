@@ -43,7 +43,7 @@ command_suffix = '3' if sys.version_info[0] == 3 else ''
 setup(
     name='polyarchiv',
     version=version,
-    description='Multiple-source backup tool: backup files|MySQL|LDAP|PostgresSQL to git|rsync|duplicity|tar archives',
+    description='Multiple-source backup tool: backup files|MySQL|LDAP|PostgresSQL to git|rsync|tar archives',
     long_description=long_description,
     author='Matthieu Gallet',
     author_email='mgallet@19pouces.net',

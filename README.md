@@ -214,7 +214,7 @@ Maybe you also want a full backup (as an archive) uploaded monthly (the tenth da
 
     $ cat /etc/polyarchiv/my-remote2.remote
     [repository]
-    engine=tar
+    engine=archive
     frequency=monthly:10
     remote_tags=
     remote_url=ftp://myftp.example.org/backups/{name}/
