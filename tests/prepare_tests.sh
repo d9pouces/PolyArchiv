@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
-sudo apt-get install -y git python-pip tree vim python-nose
+sudo apt-get install -y git python-pip tree vim python-nose python-sphinx
 mkdir -p $HOME/.ssh
 ssh-keygen -N "" -f $HOME/.ssh/id_rsa
 cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
 echo "StrictHostKeyChecking no" > $HOME/.ssh/config
+
+########################################################################################################################
+# prepare all services to backup
+########################################################################################################################
+sudo adduser --disabled-password --gecos "" testuser
+TEST_HOME=/home/testuser
+sudo rm -rf ${TEST_HOME}/.ssh
+sudo cp -r $HOME/.ssh ${TEST_HOME}/.ssh
+sudo mkdir -p ${TEST_HOME}/sources/to_backup/some-files
+echo "added" | sudo tee ${TEST_HOME}/sources/to_backup/some-files/file01
+sudo chown -R testuser:testuser ${TEST_HOME}
 
 
 ########################################################################################################################

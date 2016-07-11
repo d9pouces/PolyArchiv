@@ -115,6 +115,11 @@ URLs for git remotes must look like:
   * `http(s)://username:password@hostname/foo/bar/baz.git`,
   * `http(s)://x:x@hostname/foo/bar/baz.git` (if `keytab` set; note the `x:x@`!).
 
+.. warning::
+
+  The first SSH connection can fail if the destination is unknown. Be sure you have either `StrictHostKeyChecking no` in
+  your SSH configuration file, or (safer choice) the remote server is known.
+
 .. _remote_metadata:
 
 Remote metadata storage

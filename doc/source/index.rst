@@ -33,11 +33,12 @@ Backup data from multiple local sources (organized in local repositories) and se
 You should organize your data in local repositories, each local repository having its own backup policy.
 Think local repositories as projects (a website) or services (Ldap, Kerberos, …), but of course, you can organize your data as you want.
 
+
 The complete backup operation is split into three steps for each local repository:
 
   1. collect all data from sources (databases, files, config files, …) to the local repositories,
-  2. perform the local backup operation (maybe local archiving),
-  3. send all these data to distant servers (you can skip this step).
+  2. perform the local backup operation (maybe a local `git` archive, or just raw files),
+  3. send all these data to distant servers (you can of course skip this step).
 
 
 .. toctree::

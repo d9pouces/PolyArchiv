@@ -8,13 +8,13 @@ import os
 import shutil
 
 from polyarchiv.locals import FileRepository
-from polyarchiv.sources import LocalFiles, PostgresSQL, MySQL, Ldap
+from polyarchiv.sources import LocalFiles, PostgresSQL, MySQL, Ldap, RemoteFiles
 from polyarchiv.tests.test_base import FileTestCase
 
 __author__ = 'Matthieu Gallet'
 
 log = {'version': 1, 'disable_existing_loggers': True,
-       'formatters': {'color': {'()': 'logging.Formatter', 'format': "%(log_color)s%(message)s%(reset)s"}},
+       'formatters': {'color': {'()': 'logging.Formatter', 'format': "%(message)s"}},
        'handlers': {'stream': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'color'}},
        'loggers': {'polyarchiv': {'handlers': ['stream', ], 'level': 'DEBUG', 'propagate': False}}}
 logging.config.dictConfig(log)
@@ -28,8 +28,8 @@ class TestSources(FileTestCase):
         self.local_repository = FileRepository('test_repo', local_path=self.local_repository_path, command_display=True,
                                                command_keep_output=True)
 
-    def test_rsync(self):
-        source = LocalFiles('rsync', self.local_repository, destination_path='rsync',
+    def test_local_files(self):
+        source = LocalFiles('local_files', self.local_repository, destination_path='local_files',
                             source_path=self.original_dir_path)
         source.backup()
         self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
@@ -38,10 +38,25 @@ class TestSources(FileTestCase):
         source.backup()
         self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
 
-        source = LocalFiles('rsync', self.local_repository, destination_path='rsync',
+        source = LocalFiles('local_files', self.local_repository, destination_path='local_files',
                             source_path=self.copy_dir_path)
         source.restore()
         self.assertEqualPaths(self.original_dir_path, self.copy_dir_path)
+
+    def test_remote_files(self):
+        original_dir_path = '/home/testuser/sources/to_backup/'
+        source = RemoteFiles('remote_files', self.local_repository, destination_path='remote_files',
+                             source_url='ssh://testuser@localhost%s' % original_dir_path,
+                             private_key='/home/vagrant/.ssh/id_rsa')
+        source.backup()
+        self.assertEqualPaths(original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
+        copy_dir_path = '/home/testuser/sources/to_backup/'
+
+        source = RemoteFiles('remote_files', self.local_repository, destination_path='remote_files',
+                             source_url='ssh://testuser@localhost%s' % copy_dir_path,
+                             private_key='/home/vagrant/.ssh/id_rsa')
+        source.restore()
+        self.assertEqualPaths(original_dir_path, copy_dir_path)
 
     def test_postgresql(self):
         filename = 'postgresql.sql'

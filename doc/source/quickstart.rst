@@ -18,7 +18,6 @@ Then you can add a local repository, indicating the data to backup:
   frequency=daily
   engine=files
   local_path=/var/backups/my-project
-  frequency=daily
 
   [source "database"]
   engine=postgressql
@@ -41,6 +40,7 @@ And then we want to synchronize these data to a remote server using `rsync`.
 
   cat << EOF | sudo tee /etc/polyarchiv/my-server.remote
   [repository]
+  frequency=daily
   engine=synchronize
   remote_url=ssh://backupuser@my-server/var/backups/remotes/{name}/
   private_key=/home/backupuser/.ssh/id_rsa
