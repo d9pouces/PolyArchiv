@@ -69,6 +69,7 @@ class ParameterizedObject(object):
             for k, v in env.items():
                 cprint('%s=%s' % (k, v), YELLOW)
         if cwd:
+            self.ensure_dir(cwd, parent=False)
             self.can_execute_command(['cd', cwd])
         if self.can_execute_command(cmd_text):
             p = subprocess.Popen(cmd, stdin=stdin, stderr=stderr or self.stderr, stdout=stdout or self.stdout,

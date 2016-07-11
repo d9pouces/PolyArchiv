@@ -14,19 +14,6 @@ from polyarchiv.tests.test_base import FileTestCase
 
 
 class RemoteTestCase(FileTestCase):
-    def setUp(self):
-        super(RemoteTestCase, self).setUp()
-
-    @staticmethod
-    def prepare():
-        original_dir_path = tempfile.mkdtemp(prefix='original-dir')
-        copy_dir_path = tempfile.mkdtemp(prefix='copy-dir')
-        local_repository_path = tempfile.mkdtemp(prefix='local-repository')
-
-        os.makedirs(os.path.join(original_dir_path, 'folder'))
-        shutil.copy2(__file__, os.path.join(original_dir_path, 'test.py'))
-        shutil.copy2(__file__, os.path.join(original_dir_path, 'folder', 'sub_test.py'))
-        return original_dir_path, copy_dir_path, local_repository_path
 
     def test_remote_repository(self):
         original_dir_path, copy_dir_path, local_repository_path = self.prepare()
@@ -80,24 +67,23 @@ class SynchronizeRemoteTestCase(RemoteTestCase):
 class GitRemoteTestCase(RemoteTestCase):
     def get_remote_repository(self):
         remote_storage_dir, metadata_storage_dir = self.get_storage_dirs()
-        # return Synchronize('remote', remote_url='file://%s' % remote_storage_dir,
-        #                    metadata_url='file://%s/metadata.json' % metadata_storage_dir,
-        #                    command_display=True, command_keep_output=False)
         subprocess.check_call(['git', 'init', '--bare', '%s/project.git' % remote_storage_dir])
-#         return GitRepository('remote', remote_url='file://%s/project.git' % remote_storage_dir,
-#                              metadata_url='file://%s/metadata.json' % metadata_storage_dir,
-#                              command_display=True, command_keep_output=False)
+        return GitRepository('remote', remote_url='file://%s/project.git' % remote_storage_dir,
+                             metadata_url='file://%s/metadata.json' % metadata_storage_dir,
+                             command_display=True, command_keep_output=False)
 
 
-# class TarArchiveRemoteTestCase(RemoteTestCase):
-#     def get_remote_repository(self):
-#         return TarArchive('remote', 2remote_url='file://%s/archive.tar.gz' % self.remote_storage_dir,
-#                           metadata_url='file://%s/metadata.json' % self.metadata_storage_dir,
-#                           command_display=True, command_keep_output=False)
-#
-#
-# class RollingTarArchiveRemoteTestCase(RemoteTestCase):
-#     def get_remote_repository(self):
-#         return RollingTarArchive('remote', remote_url='file://%s/archive.tar.gz' % self.remote_storage_dir,
-#                                  metadata_url='file://%s/metadata.json' % self.metadata_storage_dir,
-#                                  command_display=True, command_keep_output=False)
+class TarArchiveRemoteTestCase(RemoteTestCase):
+    def get_remote_repository(self):
+        remote_storage_dir, metadata_storage_dir = self.get_storage_dirs()
+        return TarArchive('remote', remote_url='file://%s/archive.tar.gz' % remote_storage_dir,
+                          metadata_url='file://%s/metadata.json' % metadata_storage_dir,
+                          command_display=True, command_keep_output=False)
+
+
+class RollingTarArchiveRemoteTestCase(RemoteTestCase):
+    def get_remote_repository(self):
+        remote_storage_dir, metadata_storage_dir = self.get_storage_dirs()
+        return RollingTarArchive('remote', remote_url='file://%s/archive.tar.gz' % remote_storage_dir,
+                                 metadata_url='file://%s/metadata.json' % metadata_storage_dir,
+                                 command_display=True, command_keep_output=False)

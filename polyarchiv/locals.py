@@ -69,6 +69,7 @@ class LocalRepository(Repository):
         elif force:
             logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
         lock_ = None
+        cwd = os.getcwd()
         try:
             if self.can_execute_command(''):
                 lock_ = self.get_lock()
@@ -92,6 +93,8 @@ class LocalRepository(Repository):
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
             info.last_message = text_type(e)
+        finally:
+            os.chdir(cwd)
 
         if lock_ is not None:
             try:

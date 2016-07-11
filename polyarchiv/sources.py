@@ -115,8 +115,9 @@ class LocalFiles(Source):
         if self.preserve_hard_links:
             cmd.append('-H')
         dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
-        self.ensure_dir(dirname)
         source = self.source_path
+        self.ensure_dir(dirname)
+        self.ensure_dir(source)
         if not source.endswith(os.path.sep):
             source += os.path.sep
         if not dirname.endswith(os.path.sep):
