@@ -14,6 +14,8 @@ class TestLocalRepository(FileTestCase):
 
     def test_local_repository(self):
         local_repository = self.get_local_repository()
+        if local_repository is None:
+            return
         assert isinstance(local_repository, LocalRepository)
         local_repository.variables.update(RemoteRepository.constant_format_values)
         source = LocalFiles('rsync', local_repository, self.original_dir_path, destination_path='rsync')
@@ -25,7 +27,7 @@ class TestLocalRepository(FileTestCase):
         self.assertEqualPaths(self.copy_dir_path, self.original_dir_path)
 
     def get_local_repository(self):
-        raise NotImplementedError
+        return None
 
 
 class TestFileLocalRepository(TestLocalRepository):

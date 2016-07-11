@@ -32,11 +32,11 @@ class TestSources(FileTestCase):
         source = LocalFiles('local_files', self.local_repository, destination_path='local_files',
                             source_path=self.original_dir_path)
         source.backup()
-        self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
+        self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'local_files'))
         shutil.copy2(__file__, os.path.join(self.original_dir_path, 'test2.py'))
         os.remove(os.path.join(self.original_dir_path, 'test.py'))
         source.backup()
-        self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
+        self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'local_files'))
 
         source = LocalFiles('local_files', self.local_repository, destination_path='local_files',
                             source_path=self.copy_dir_path)
@@ -49,8 +49,8 @@ class TestSources(FileTestCase):
                              source_url='ssh://testuser@localhost%s' % original_dir_path,
                              private_key='/home/vagrant/.ssh/id_rsa')
         source.backup()
-        self.assertEqualPaths(original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
-        copy_dir_path = '/home/testuser/sources/to_backup/'
+        self.assertEqualPaths(original_dir_path, os.path.join(self.local_repository.export_data_path, 'remote_files'))
+        copy_dir_path = '/home/testuser/sources/to_restore/'
 
         source = RemoteFiles('remote_files', self.local_repository, destination_path='remote_files',
                              source_url='ssh://testuser@localhost%s' % copy_dir_path,
@@ -139,10 +139,10 @@ class TestSources(FileTestCase):
     @staticmethod
     def get_ldif_content(dst_path):
         def valid(x):
-            if ' 2016' in x or 'UUID' in x:
+            if ' 2016' in x or 'UUID' in x or 'userPassword' in x:
                 return False
             return True
 
         with codecs.open(dst_path, 'r', encoding='latin1') as fd:
-            lines = [line for line in fd if valid(line.strip())]
+            lines = [line.strip() for line in fd if valid(line.strip())]
         return '\n'.join(lines)

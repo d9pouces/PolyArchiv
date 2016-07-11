@@ -36,10 +36,10 @@ class FileTestCase(TestCase):
         self.assertEmpty(dircmp.left_only)
         self.assertEmpty(dircmp.right_only)
         self.assertEmpty(dircmp.diff_files)
-
-    def tearDown(self):
-        for path in self.temp_data:
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-            elif os.path.exists(path):
-                os.remove(path)
+    #
+    # def tearDown(self):
+    #     for path in self.temp_data:
+    #         if os.path.isdir(path):
+    #             shutil.rmtree(path)
+    #         elif os.path.exists(path):
+    #             os.remove(path)
