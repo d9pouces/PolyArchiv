@@ -25,6 +25,6 @@ database=testdb
 destination_path=./mysql.sql
 
 [source_3]
-engine=polyarchiv.sources.RSync
+engine=polyarchiv.sources.LocalFiles
 source_path=/tmp/source/files
 destination_path=./files

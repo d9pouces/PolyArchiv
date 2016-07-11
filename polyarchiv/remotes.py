@@ -446,7 +446,7 @@ class GitlabRepository(GitRepository):
 
 class Synchronize(CommonRemoteRepository):
     parameters = CommonRemoteRepository.parameters + [
-        Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must be a folder name [*]'),
+        Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must ends by a folder name [*]'),
         Parameter('private_key', help_str='private key or certificate associated to \'remote_url\' [*]'),
         Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
                                       'Set to "any" for not checking certificates [*]'),

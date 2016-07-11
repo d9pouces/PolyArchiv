@@ -20,7 +20,8 @@ import grp
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor.ldif3 import LDIFParser
-from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable, check_username
+from polyarchiv.backends import get_backend
+from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable, check_username, check_file
 from polyarchiv.locals import LocalRepository
 from polyarchiv.repository import ParameterizedObject
 from polyarchiv.termcolor import YELLOW
@@ -47,7 +48,7 @@ class Source(ParameterizedObject):
         raise NotImplementedError
 
 
-class RSync(Source):
+class LocalFiles(Source):
     """copy all files from the given source_path to the local repository using rsync.
     The destination is a folder inside the local repository.
     """
@@ -77,7 +78,7 @@ class RSync(Source):
             of a file (cf. the --include-from option from rsync)
         :param preserve_hard_links: preserve hard links
         """
-        super(RSync, self).__init__(name, local_repository, **kwargs)
+        super(LocalFiles, self).__init__(name, local_repository, **kwargs)
         self.source_path = source_path
         self.destination_path = destination_path
         self.rsync_executable = rsync_executable
@@ -374,3 +375,49 @@ class Dovecot(Source):
             cmd += ['-u', self.user_mask]
         cmd += [dirname]
         self.execute_command(cmd)
+
+
+class RemoteFiles(Source):
+    """copy the remote files from the given server/source_path to the local repository using rsync.
+    The destination is a folder inside the local repository.
+    """
+    parameters = Source.parameters + [
+        Parameter('source_url', required=True, help_str='synchronize data from this URL. Must ends by a folder name'),
+        Parameter('destination_path', help_str='destination folder (like "./remote-files")', required=True),
+        Parameter('private_key', help_str='private key or certificate associated to \'remote_url\''),
+        Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
+                                      'Set to "any" for not checking certificates'),
+        Parameter('ssh_options', help_str='SSH options associated to \'url\''),
+        Parameter('keytab', converter=check_file,
+                  help_str='absolute path of the keytab file (for Kerberos authentication)'),
+    ]
+
+    def __init__(self, name, local_repository, source_url='', destination_path='', keytab=None, private_key=None,
+                 ca_cert=None, ssh_options=None, **kwargs):
+        """
+        :param local_repository: local repository where files are stored
+        :param source_url: remote folders to add to the local repository
+        :param destination_path: relative path of the backup destination (must be a directory name, e.g. "data")
+        """
+        super(RemoteFiles, self).__init__(name, local_repository, **kwargs)
+        self.destination_path = destination_path
+        self.source_url = source_url
+        self.keytab = keytab
+        self.private_key = private_key
+        self.ca_cert = ca_cert
+        self.ssh_options = ssh_options
+
+    def backup(self):
+        backend = self._get_backend()
+        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        backend.sync_dir_to_local(dirname)
+
+    def _get_backend(self):
+        backend = get_backend(self.local_repository, self.source_url, keytab=self.keytab, private_key=self.private_key,
+                              ca_cert=self.ca_cert, ssh_options=self.ssh_options)
+        return backend
+
+    def restore(self):
+        backend = self._get_backend()
+        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        backend.sync_dir_from_local(dirname)

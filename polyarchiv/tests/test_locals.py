@@ -6,7 +6,7 @@ import shutil
 
 from polyarchiv.locals import FileRepository, LocalRepository, GitRepository, ArchiveRepository
 from polyarchiv.remotes import RemoteRepository
-from polyarchiv.sources import RSync
+from polyarchiv.sources import LocalFiles
 from polyarchiv.tests.test_base import FileTestCase
 
 
@@ -16,7 +16,7 @@ class TestLocalRepository(FileTestCase):
         local_repository = self.get_local_repository()
         assert isinstance(local_repository, LocalRepository)
         local_repository.variables.update(RemoteRepository.constant_format_values)
-        source = RSync('rsync', local_repository, self.original_dir_path, destination_path='rsync')
+        source = LocalFiles('rsync', local_repository, self.original_dir_path, destination_path='rsync')
         local_repository.add_source(source)
         local_repository.backup()
         shutil.rmtree(self.copy_dir_path)

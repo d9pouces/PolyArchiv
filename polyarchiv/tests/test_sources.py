@@ -8,7 +8,7 @@ import os
 import shutil
 
 from polyarchiv.locals import FileRepository
-from polyarchiv.sources import RSync, PostgresSQL, MySQL, Ldap
+from polyarchiv.sources import LocalFiles, PostgresSQL, MySQL, Ldap
 from polyarchiv.tests.test_base import FileTestCase
 
 __author__ = 'Matthieu Gallet'
@@ -29,8 +29,8 @@ class TestSources(FileTestCase):
                                                command_keep_output=True)
 
     def test_rsync(self):
-        source = RSync('rsync', self.local_repository, destination_path='rsync',
-                       source_path=self.original_dir_path)
+        source = LocalFiles('rsync', self.local_repository, destination_path='rsync',
+                            source_path=self.original_dir_path)
         source.backup()
         self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
         shutil.copy2(__file__, os.path.join(self.original_dir_path, 'test2.py'))
@@ -38,8 +38,8 @@ class TestSources(FileTestCase):
         source.backup()
         self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'rsync'))
 
-        source = RSync('rsync', self.local_repository, destination_path='rsync',
-                       source_path=self.copy_dir_path)
+        source = LocalFiles('rsync', self.local_repository, destination_path='rsync',
+                            source_path=self.copy_dir_path)
         source.restore()
         self.assertEqualPaths(self.original_dir_path, self.copy_dir_path)
 

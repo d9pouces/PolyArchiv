@@ -9,7 +9,7 @@ import subprocess
 
 from polyarchiv.locals import FileRepository
 from polyarchiv.remotes import Synchronize, RemoteRepository, GitRepository, TarArchive, RollingTarArchive
-from polyarchiv.sources import RSync
+from polyarchiv.sources import LocalFiles
 from polyarchiv.tests.test_base import FileTestCase
 
 
@@ -46,7 +46,7 @@ class RemoteTestCase(FileTestCase):
         local_repository = FileRepository('test_repo', local_path=self.local_repository_path, command_display=True,
                                           command_keep_output=True)
         local_repository.variables.update(RemoteRepository.constant_format_values)
-        source = RSync('rsync', local_repository, self.original_dir_path, destination_path='rsync')
+        source = LocalFiles('rsync', local_repository, self.original_dir_path, destination_path='rsync')
         local_repository.add_source(source)
         return local_repository
 
