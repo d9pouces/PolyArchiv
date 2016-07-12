@@ -184,18 +184,17 @@ class RemoteRepository(Repository):
             fd.write(content)
 
     def restore(self, local_repository):
-        pass
-        # info = self.get_info(local_repository, force_remote=True)
-        # assert isinstance(local_repository, LocalRepository)
-        # assert isinstance(info, RepositoryInfo)
-        # local_repository.variables.update(info.variables)
-        # next_path = local_repository.export_data_path
-        # for filter_ in self.filters:
-        #     assert isinstance(filter_, FileFilter)
-        #     next_path = filter_.next_path(next_path, self.filter_private_path(local_repository, filter_),
-        #                                   allow_in_place=False)
-        # self.do_restore(local_repository, next_path)
-        # self.apply_restore_filters(local_repository)
+        info = self.get_info(local_repository, force_remote=True)
+        assert isinstance(local_repository, LocalRepository)
+        assert isinstance(info, RepositoryInfo)
+        local_repository.variables.update(info.variables)
+        next_path = local_repository.export_data_path
+        for filter_ in self.filters:
+            assert isinstance(filter_, FileFilter)
+            next_path = filter_.next_path(next_path, self.filter_private_path(local_repository, filter_),
+                                          allow_in_place=False)
+        self.do_restore(local_repository, next_path)
+        self.apply_restore_filters(local_repository)
 
     def do_restore(self, local_repository, export_data_path):
         raise NotImplementedError
