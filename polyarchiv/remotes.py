@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 import codecs
 import datetime
 import logging
-import sys
 from collections import OrderedDict
 
 # noinspection PyProtectedMember
@@ -393,8 +392,7 @@ class GitRepository(CommonRemoteRepository):
         if self.private_key and not remote_url.startswith('http'):
             private_key = self.format_value(self.private_key, local_repository)
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
-        self.execute_command(cmd, cwd=os.path.dirname(worktree),
-                             stdout=sys.stdout, stderr=sys.stderr)
+        self.execute_command(cmd, cwd=os.path.dirname(worktree))
 
 
 class GitlabRepository(GitRepository):
