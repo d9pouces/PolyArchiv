@@ -31,7 +31,7 @@ def render_engines_html(self, node, engines, options):
                 if parameter.common:
                     continue
                 elif parameter.help_str:
-                    help_str, footnote = format_help(parameter.help_str)
+                    help_str, footnote = format_help(parameter.option_name, parameter.help_str)
                     content += '<li><b %s>%s</b>: %s</li>' % (style, parameter.option_name, help_str)
                     footnotes |= footnote
                 else:
@@ -46,11 +46,14 @@ def render_engines_html(self, node, engines, options):
             content += '<li id="note-1">this parameter can use variables</li>'
         if footnotes & 2:
             content += '<li id="note-2">this parameter can use time/host-independent variables</li>'
+        if footnotes & 4:
+            content += '<li id="note-3">please only use file/http/https/ssh URLs. If a username and a password are ' \
+                       'required, their must be provided in the URL.</li>'
         content += '</ol>'
     self.body.append(content)
 
 
-def format_help(text):
+def format_help(name, text):
     has_footnote = 0
     if '[*]' in text:
         has_footnote = 1
@@ -59,6 +62,9 @@ def format_help(text):
         has_footnote = 2
         text = text.replace('[**]', '<a href="#note-2" title="this parameter can use time/host-independent '
                                     'variables"><sup>2</sup></a>')
+    if name.endswith('_url'):
+        text += '<a href="#note-3" title="please check the documentation about URLs"><sup>3</sup></a>'
+        has_footnote |= 4
     return text, has_footnote
 
 

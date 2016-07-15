@@ -329,7 +329,7 @@ class GitRepository(CommonRemoteRepository):
                                          'The password is not required for SSH connections (you should use SSH keys).'
                                          'The remote repository must already exists. If you created it by hand, do not '
                                          'forget to set \'git config --bool core.bare true\'. [*]',
-                  converter=check_git_url),
+                  required=True, converter=check_git_url),
     ]
 
     def __init__(self, name, remote_url='', remote_branch='master', git_executable='git', private_key=None,
@@ -403,12 +403,13 @@ class GitlabRepository(GitRepository):
     The remote repository is automatically created if required using the HTTP API provided by Gitlab.
     """
     parameters = GitRepository.parameters[:-1] + [
-        Parameter('gitlab_url', help_str='HTTP URL of the gitlab server (e.g.: \'https://mygitlab.example.org/\') [*]'),
-        Parameter('project_name', help_str='Name of the Gitlab project (e.g. \'myuser/myproject\')[*]'),
+        Parameter('gitlab_url', help_str='HTTP URL of the gitlab server (e.g.: \'https://mygitlab.example.org/\') [*]',
+                  required=True),
+        Parameter('project_name', help_str='Name of the Gitlab project (e.g. \'myuser/myproject\')[*]', required=True),
         Parameter('username', help_str='Username to use for pushing data. If you use git+ssh, use the SSH username'
                                        ' (often \'git\'), otherwise use your real username. [*]'),
         Parameter('password', help_str='Password for HTTP auth (if private_key and keytab are not set) [*]'),
-        Parameter('api_key', help_str='API key allowing for creating new repositories [*]'),
+        Parameter('api_key', help_str='API key allowing for creating new repositories [*]', required=True),
     ]
 
     def __init__(self, name, gitlab_url='', api_key=None, project_name='', username='', password='', private_key=None,

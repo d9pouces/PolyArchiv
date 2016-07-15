@@ -98,6 +98,8 @@ By default, all remote repositories are used with all local repositories. Theref
 variable (the  name of the local repository) to backup several local repositories with the same remote repository.
 Please check the section :ref:`variables` for a more detailed explanation.
 
+.. _urls:
+
 URLs
 ----
 
