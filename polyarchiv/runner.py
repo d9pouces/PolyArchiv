@@ -22,7 +22,7 @@ except ImportError:
     iter_entry_points = None
 
 from polyarchiv.conf import Parameter
-from polyarchiv.locals import LocalRepository
+from polyarchiv.collect_points import CollectPoint
 from polyarchiv.remotes import RemoteRepository
 from polyarchiv.repository import ParameterizedObject, RepositoryInfo
 from polyarchiv.termcolor import cprint, RED, GREEN, YELLOW
@@ -52,7 +52,7 @@ class Runner(ParameterizedObject):
     def __init__(self, config_directories, engines_file=None, **kwargs):
         super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
-        self.available_local_engines, self.available_source_engines, self.available_remote_engines, \
+        self.available_collect_point_engines, self.available_source_engines, self.available_remote_engines, \
             self.available_filter_engines = self.find_available_engines(engines_file)
         self.local_repositories = {}
         self.remote_repositories = {}
@@ -61,7 +61,7 @@ class Runner(ParameterizedObject):
 
     @staticmethod
     def find_available_engines(engines_file=None):
-        available_local_engines = {}
+        available_collect_point_engines = {}
         available_remote_engines = {}
         available_source_engines = {}
         available_filter_engines = {}
@@ -76,7 +76,7 @@ class Runner(ParameterizedObject):
                         pass
                 return result
 
-            available_local_engines.update(import_points('polyarchiv.locals'))
+            available_collect_point_engines.update(import_points('polyarchiv.collect_points'))
             available_remote_engines.update(import_points('polyarchiv.remotes'))
             available_source_engines.update(import_points('polyarchiv.sources'))
             available_filter_engines.update(import_points('polyarchiv.filters'))
@@ -90,9 +90,9 @@ class Runner(ParameterizedObject):
 
             available_source_engines.update(import_items('sources'))
             available_remote_engines.update(import_items('remotes'))
-            available_local_engines.update(import_items('locals'))
+            available_collect_point_engines.update(import_items('collect_points'))
             available_filter_engines.update(import_items('filters'))
-        return available_local_engines, available_source_engines, available_remote_engines, available_filter_engines
+        return available_collect_point_engines, available_source_engines, available_remote_engines, available_filter_engines
 
     def load(self, show_errors=True):
         result = True
@@ -204,12 +204,12 @@ class Runner(ParameterizedObject):
             # noinspection PyTypeChecker
             local_name = os.path.basename(config_file).rpartition('.')[0]
             local = self._load_engine(config_file, parser, self.repository_section, [local_name],
-                                      self.available_local_engines, LocalRepository)
-            assert isinstance(local, LocalRepository)
+                                      self.available_collect_point_engines, CollectPoint)
+            assert isinstance(local, CollectPoint)
             # noinspection PyTypeChecker
             local.variables = {'name': local_name}
             local.variables.update(common_values)
-            # load variables applying to the whole local repository
+            # load variables applying to the whole collect point
             if parser.has_section(self.variables_section):
                 local.variables.update({opt: parser.get(self.variables_section, opt)
                                         for opt in parser.options(self.variables_section)})
@@ -253,7 +253,7 @@ class Runner(ParameterizedObject):
                                                 self.available_filter_engines, FileFilter)
                     remote.add_filter(filter_)
                 local_name = self._decompose_section_name(config_file, section, self.local_variables_section)
-                if local_name:  # section looks like [variables "local repository"]
+                if local_name:  # section looks like [variables "collect point"]
                     remote.local_variables[local_name] = {opt: parser.get(section, opt)
                                                           for opt in parser.options(section)}
             self.remote_config_files.append(config_file)
@@ -261,11 +261,11 @@ class Runner(ParameterizedObject):
 
     @staticmethod
     def can_associate(local, remote):
-        """Return True if the remote can be associated to the local repository
+        """Return True if the remote can be associated to the collect point
         :param local:
         :param remote:
         """
-        assert isinstance(local, LocalRepository)
+        assert isinstance(local, CollectPoint)
         assert isinstance(remote, RemoteRepository)
         for local_tag in local.local_tags:
             for remote_pattern in remote.excluded_local_tags:
@@ -286,17 +286,17 @@ class Runner(ParameterizedObject):
         return False
 
     def apply_commands(self, local_command=None, remote_command=None, local_remote_command=None,
-                       only_locals=None, only_remotes=None):
+                       only_collect_points=None, only_remotes=None):
         """ Apply the given commands to the available local and remote repositories.
 
-        :param local_command: callable(local_repository) -> None
+        :param local_command: callable(collect_point) -> None
         :type local_command: `callable`
-        :param local_remote_command: callable(local_repository, remote_repository) -> None
+        :param local_remote_command: callable(collect_point, remote_repository) -> None
         :type local_remote_command: `callable`
         :param remote_command: callable(remote_repository) -> None
         :type remote_command: `callable`
-        :param only_locals: list of selected local repositories (all if not specified)
-        :type only_locals: :class:`list`
+        :param only_collect_points: list of selected collect points (all if not specified)
+        :type only_collect_points: :class:`list`
         :param only_remotes: list of selected remote repositories (all if not specified)
         :type only_remotes: :class:`list`
         :return:
@@ -309,9 +309,9 @@ class Runner(ParameterizedObject):
                 assert isinstance(remote, RemoteRepository)
                 remote_command(remote)
         for local_name, local in self.local_repositories.items():
-            if only_locals and local_name not in only_locals:
+            if only_collect_points and local_name not in only_collect_points:
                 continue
-            assert isinstance(local, LocalRepository)
+            assert isinstance(local, CollectPoint)
             if local_command is not None:
                 local_command(local)
             if local_remote_command is None:
@@ -323,14 +323,14 @@ class Runner(ParameterizedObject):
                 if self.can_associate(local, remote):
                     local_remote_command(local, remote)
 
-    def backup(self, force=False, only_locals=None, only_remotes=None, skip_local=False, skip_remote=False):
+    def backup(self, force=False, only_collect_points=None, only_remotes=None, skip_collect=False, skip_remote=False):
         """Run a backup operation. return two dicts
-        first result is {local_repository.name: bool}  (dict["my-local_repo"] = True if successful)
-        second result is {(local_repository.name, remote_repository.name): bool}
+        first result is {collect_point.name: bool}  (dict["my-local_repo"] = True if successful)
+        second result is {(collect_point.name, remote_repository.name): bool}
 
         :param force: force backup even if not out-of-date
-        :param only_locals: limit to the selected local repositories
-        :type only_locals: :class:`list` of `str`
+        :param only_collect_points: limit to the selected collect points
+        :type only_collect_points: :class:`list` of `str`
         :param only_remotes: limit to the selected remote repositories
         :type only_remotes: :class:`list` of `str`
         :return:
@@ -338,16 +338,16 @@ class Runner(ParameterizedObject):
         local_results = {}
         remote_results = {}
         for local_name, local in self.local_repositories.items():
-            if only_locals and local_name not in only_locals:
+            if only_collect_points and local_name not in only_collect_points:
                 continue
-            assert isinstance(local, LocalRepository)
-            if not skip_local:
+            assert isinstance(local, CollectPoint)
+            if not skip_collect:
                 result = local.backup(force=force)
                 if result:
-                    logger.info('[OK] local repository %s' % local.name)
+                    logger.info('[OK] collect point %s' % local.name)
                     local_results[local.name] = True
                 else:
-                    logger.error('[KO] local repository %s' % local.name)
+                    logger.error('[KO] collect point %s' % local.name)
                     local_results[local.name] = False
                     continue
             for remote_name, remote in self.remote_repositories.items():
@@ -358,26 +358,26 @@ class Runner(ParameterizedObject):
                     continue
                 result = remote.backup(local, force=force)
                 if result:
-                    logger.info('[OK] remote repository %s on local repository %s' % (remote.name, local.name))
+                    logger.info('[OK] remote repository %s on collect point %s' % (remote.name, local.name))
                     remote_results[(remote.name, local.name)] = True
                 else:
-                    logger.error('[KO] remote repository %s on local repository %s' % (remote.name, local.name))
+                    logger.error('[KO] remote repository %s on collect point %s' % (remote.name, local.name))
                     remote_results[(remote.name, local.name)] = False
         return local_results, remote_results
 
-    def restore(self, only_locals=None, only_remotes=None, no_remote=False):
+    def restore(self, only_collect_points=None, only_remotes=None, no_remote=False):
         """Run a backup operation
 
         :param no_remote: do not use remote repositories
-        :param only_locals: limit to the selected local repositories
-        :type only_locals: :class:`list` of `str`
+        :param only_collect_points: limit to the selected collect points
+        :type only_collect_points: :class:`list` of `str`
         :param only_remotes: limit to the selected remote repositories
         :type only_remotes: :class:`list` of `str`
         :return:
         """
         for local_name, local in self.local_repositories.items():
-            assert isinstance(local, LocalRepository)
-            if only_locals and local_name not in only_locals:
+            assert isinstance(local, CollectPoint)
+            if only_collect_points and local_name not in only_collect_points:
                 continue
             best_remote_date = None
             best_remote = None

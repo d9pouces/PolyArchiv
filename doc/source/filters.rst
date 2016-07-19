@@ -3,14 +3,14 @@
 Filters
 =======
 
-By default, a local repository gather some files from its sources and expose them to all remote repositories.
+By default, a collect point gather some files from its sources and expose them to all remote repositories.
 You can apply some changes on these files, before sending them to the remote repositories.
 These operation can happen after the local backup, or only before a given remote backup.
-Imagine you want to encrypt your backup files, and you have two remote and two local repositories.
+Imagine you want to encrypt your backup files, and you have two remote and two collect points.
 
 .. code-block:: bash
 
-                               local repository                                                   remote repository 1
+                               collect point                                                   remote repository 1
   /------------------------------------------------------------------------\        /-----------------------------------------------\
   | /------------------\     /----------\     /----------\     /---------\ |        | /----------\     /----------\     /---------\ |
   | | source 1: files  | --> |          | --> |          | --> |         | |        | |          | --> |          | --> |         | |
@@ -36,13 +36,13 @@ Imagine you want to encrypt your backup files, and you have two remote and two l
 First case
 ----------
 
-Example: you must apply the encryption filter to all local repositories you wan to protect.
+Example: you must apply the encryption filter to all collect points you wan to protect.
 Original (not crypted!) data are still available on the disk but not used by remote repositories.
 
 Second case
 -----------
 
-Example: all local repositories that are processed by the remote repositories are encrypted.
+Example: all collect points that are processed by the remote repositories are encrypted.
 However, if you use several remote repositories, the encryption process is performed several times.
 Moreover, clear-text data are still available on the disk.
 

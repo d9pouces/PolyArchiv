@@ -7,7 +7,7 @@ Some repository parameters can be modified at runtime using custom variables.
 Check `polyarchiv plugins -v` for a complete documentation of each customizable parameter.
 By default, only the following variables are defined:
 
-  * `name`: basename of the corresponding config local repository.
+  * `name`: basename of the corresponding config collect point.
   * `fqdn`: local hostname, with the domain name (e.g., `vm1.test.example.org`)
   * `hostname`: local hostname (e.g., `vm1`)
   * the time of backup is also available, with a separate variable for each component: `Y`, `d` `M`, …
@@ -23,9 +23,9 @@ By default, only the following variables are defined:
 In the local config file, you can add a new section `[variables]`.
 Of course, the name of the option is the name of the variable.
 
-In the remote config, you can also override some variables defined in local repositories,
-by adding a new section, specific to this local repository.
-Check the example below, made of two local repositories and a single remote one:
+In the remote config, you can also override some variables defined in collect points,
+by adding a new section, specific to this collect point.
+Check the example below, made of two collect points and a single remote one:
 
 .. code-block:: ini
   :caption: /etc/polyarchiv/my-local-1.local
@@ -55,7 +55,7 @@ Check the example below, made of two local repositories and a single remote one:
   [repository]
   engine=git
   remote_url=http://{host}/{group}/{name}.git  <-- another one
-  ; requires a `group` variable in each local repository
+  ; requires a `group` variable in each collect point
   ; the `name` variable always exists
   [variables]
   host=gitlab.example.org

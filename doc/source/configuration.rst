@@ -3,7 +3,7 @@ Configuration
 
 Configuration is based on standard `.ini <https://docs.python.org/3/library/configparser.html>`_ files, each file corresponding to one repository:
 
-  * `my-local-repo.local` defines a local repository named `my-local-repo`,
+  * `my-local-repo.local` defines a collect point named `my-local-repo`,
   * `my-remote-repo.remote` defines a remote repository named `my-remote-repo`.
 
 All these files are expected in the config directory `/etc/polyarchiv`. If you installed PolyArchiv in a virtualenv, this folder
@@ -11,17 +11,17 @@ is inside your virtualenv. You can also use `polyarchiv config` to display the a
 the `-C` option.
 
 
-Each local repository defines a base folder and one or more data sources, all of them being defined in the `my-local-repo.local` file:
+Each collect point defines a base folder and one or more data sources, all of them being defined in the `my-local-repo.local` file:
 
   * directory with files,
   * MySQL or PostgreSQL database to dump,
   * Dovecot mails,
   * OpenLDAP database to dump.
 
-There are several kinds of local repositories:
+There are several kinds of collect points:
 
   * raw files,
-  * local git repository: after each backup, files that have been gathered from the different sources are added and locally commited.
+  * git repository: after each backup, files that have been gathered from the different sources are added and locally commited.
   * archive: all collected files are merged into a single .tar.(gz/bz2/xz) archive.
 
 There are also several kinds of remote repositories:
@@ -40,15 +40,15 @@ Each repository (either local or remote) can be associated to a backup frequency
 if a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
 If no frequency is set, then the backup is performed every time you launch polyarchiv.
 
-Local repositories
+collect points
 ------------------
 
-As said before, a local repository is defined by a `ini` file in the configuration directory and with a name ending by `.local`.
+As said before, a collect point is defined by a `ini` file in the configuration directory and with a name ending by `.local`.
 
-The local repository is defined in a mandatory section `[repository]`. This local repository can a bunch of plain files, a local git repo or even an tar archive.
-The main option is `engine`, defining the kind of local repository. The complete list of the available kinds is here: :ref:`locals`.
+The collect point is defined in a mandatory section `[repository]`. This collect point can a bunch of plain files, a local git repo or even an tar archive.
+The main option is `engine`, defining the kind of collect point. The complete list of the available kinds is here: :ref:`collect_points`.
 
-You must define each source of this local repository in a `[source "name_of_the_source"]` section.
+You must define each source of this collect point in a `[source "name_of_the_source"]` section.
 Again, you must set the `engine` option, defining the kind of source. Please check the list of available sources: :ref:`sources`.
 
 You can also define some filters for transforming files (please check the :ref:`filters` section).
@@ -94,8 +94,8 @@ As said before, a remote repository is defined by a `ini` file in the configurat
 This config file requires a mandatory section `[repository]`.
 The main option is `engine`, defining the kind of remote repository. Please check the list of available remote repositories: :ref:`remotes`.
 
-By default, all remote repositories are used with all local repositories. Therefore, you should use at least the `name`
-variable (the  name of the local repository) to backup several local repositories with the same remote repository.
+By default, all remote repositories are used with all collect points. Therefore, you should use at least the `name`
+variable (the  name of the collect point) to backup several collect points with the same remote repository.
 Please check the section :ref:`variables` for a more detailed explanation.
 
 .. _urls:
@@ -138,11 +138,11 @@ This URL should either depend on the `name` variable or ends by `/` (allowing to
 Associating local and remote repositories
 -----------------------------------------
 
-All remote repositories apply to all local repositories but you can change this behaviour by applying tags to repositories.
-By default, a local repository has the tag `local` and include all existing remote repositories: `included_remote_tags=*`.
-A remote repository has the tag `remote` and include all local repositories: `included_local_tags=*`.
+All remote repositories apply to all collect points but you can change this behaviour by applying tags to repositories.
+By default, a collect point has the tag `local` and include all existing remote repositories: `included_remote_tags=*`.
+A remote repository has the tag `remote` and include all collect points: `included_local_tags=*`.
 
-If large local repositories should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
+If large collect points should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
 
 .. code-block::  ini
   :caption: /etc/polyarchiv/my-remote.remote

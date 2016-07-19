@@ -24,13 +24,13 @@ __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv')
 
 
-class LocalRepository(Repository):
-    """Local repository, made of one or more sources.
+class CollectPoint(Repository):
+    """Collect point, made of one or more sources.
      Each source is run and contribute to new
     """
     parameters = Repository.parameters + [
         Parameter('local_tags', converter=strip_split,
-                  help_str='list of tags (comma-separated) associated to this local repository. Default: "local"'),
+                  help_str='list of tags (comma-separated) associated to this collect point. Default: "local"'),
         Parameter('included_remote_tags', converter=strip_split,
                   help_str='any remote repository with one of these tags (comma-separated) will be associated '
                            'to this local repo. You can use ? or * as jokers in these tags. Default: "*"'),
@@ -42,7 +42,7 @@ class LocalRepository(Repository):
 
     def __init__(self, name, local_tags=None, included_remote_tags=None, excluded_remote_tags=None,
                  **kwargs):
-        super(LocalRepository, self).__init__(name=name, **kwargs)
+        super(CollectPoint, self).__init__(name=name, **kwargs)
         self.local_tags = ['local'] if local_tags is None else local_tags
         self.included_remote_tags = ['*'] if included_remote_tags is None else included_remote_tags
         self.excluded_remote_tags = excluded_remote_tags or []
@@ -52,7 +52,7 @@ class LocalRepository(Repository):
     def backup(self, force=False):
         """ perform the backup and log all errors
         """
-        logger.info('backup of local repository %s' % self.name)
+        logger.info('backup of collect point %s' % self.name)
         info = self.get_info()
         assert isinstance(info, RepositoryInfo)
         out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(),
@@ -130,8 +130,8 @@ class LocalRepository(Repository):
     @property
     def import_data_path(self):
         """Must return a valid directory where a source can write its files.
-        If the local repository is not the filesystem, any file written in this directory by a source must be stored
-        to the local repository's storage.
+        If the collect point is not the filesystem, any file written in this directory by a source must be stored
+        to the collect point's storage.
         """
         raise NotImplementedError
 
@@ -206,11 +206,11 @@ class LocalRepository(Repository):
         return formatted_value
 
 
-class FileRepository(LocalRepository):
+class FileRepository(CollectPoint):
     """Collect files from all sources in the folder 'local_path'.
     """
 
-    parameters = LocalRepository.parameters + [
+    parameters = CollectPoint.parameters + [
         Parameter('local_path', converter=check_directory, required=True,
                   help_str='absolute path where all data are locally gathered [*]')
     ]
@@ -278,7 +278,7 @@ class FileRepository(LocalRepository):
         if lock_.acquire(timeout=1):
             return lock_
         else:
-            logger.error('Unable to lock local repository. Check if no other backup is currently running or '
+            logger.error('Unable to lock collect point. Check if no other backup is currently running or '
                          'delete %s' % self.lock_filepath)
             raise ValueError
 

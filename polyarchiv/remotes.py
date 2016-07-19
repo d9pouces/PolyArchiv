@@ -27,7 +27,7 @@ except ImportError:
 import os
 
 from polyarchiv.conf import Parameter, strip_split, check_executable, check_file
-from polyarchiv.locals import LocalRepository
+from polyarchiv.collect_points import CollectPoint
 from polyarchiv.repository import Repository, RepositoryInfo
 from polyarchiv.utils import text_type
 
@@ -43,10 +43,10 @@ class RemoteRepository(Repository):
         Parameter('remote_tags', converter=strip_split,
                   help_str='list of tags (comma-separated) associated to this remote repository'),
         Parameter('included_local_tags', converter=strip_split,
-                  help_str='any local repository with one of these tags (comma-separated) will be associated '
+                  help_str='any collect point with one of these tags (comma-separated) will be associated '
                            'to this remote repo. You can use ? or * as jokers in these tags.'),
         Parameter('excluded_local_tags', converter=strip_split,
-                  help_str='any local repository with one of these tags (comma-separated) will not be associated'
+                  help_str='any collect point with one of these tags (comma-separated) will not be associated'
                            ' to this remote repo. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_local_tags and included_remote_tags.'),
     ]
@@ -57,18 +57,18 @@ class RemoteRepository(Repository):
         self.included_local_tags = ['*'] if included_local_tags is None else included_local_tags
         self.excluded_local_tags = excluded_local_tags or []
         self.local_variables = {}
-        # values specific to a local: self.local_values[local_repository.name][key] = value
+        # values specific to a local: self.local_values[collect_point.name][key] = value
         # used to override remote parameters
 
-    def format_value(self, value, local_repository, use_constant_values=False):
+    def format_value(self, value, collect_point, use_constant_values=False):
         if value is None:
             return None
-        assert isinstance(local_repository, LocalRepository)
+        assert isinstance(collect_point, CollectPoint)
         variables = {}
         variables.update(self.variables)
-        variables.update(local_repository.variables)
-        if local_repository.name in self.local_variables:
-            variables.update(self.local_variables[local_repository.name])
+        variables.update(collect_point.variables)
+        if collect_point.name in self.local_variables:
+            variables.update(self.local_variables[collect_point.name])
         if use_constant_values:
             variables.update(self.constant_format_values)
         try:
@@ -78,13 +78,13 @@ class RemoteRepository(Repository):
             raise ValueError('Unable to format \'%s\': variable %s is missing' % (value, txt))
         return formatted_value
 
-    def backup(self, local_repository, force=False):
+    def backup(self, collect_point, force=False):
         """ perform the backup and log all errors
         """
-        logger.info('remote backup %s of local repository %s' % (self.name, local_repository.name))
-        info = self.get_info(local_repository)
+        logger.info('remote backup %s of collect point %s' % (self.name, collect_point.name))
+        info = self.get_info(collect_point)
         assert isinstance(info, RepositoryInfo)
-        assert isinstance(local_repository, LocalRepository)
+        assert isinstance(collect_point, CollectPoint)
         out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(),
                                                     previous_time=info.last_success)
         if not (force or out_of_date):
@@ -100,14 +100,14 @@ class RemoteRepository(Repository):
             logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
         lock_ = None
         # collect only (but all) variables that are related to host and time
-        info.variables = {k: v for (k, v) in local_repository.variables.items() if k in self.constant_format_values}
+        info.variables = {k: v for (k, v) in collect_point.variables.items() if k in self.constant_format_values}
         # these variables are required for a valid restore
         cwd = os.getcwd()
         try:
             if self.can_execute_command('# get lock'):
-                lock_ = local_repository.get_lock()
-            export_data_path = self.apply_backup_filters(local_repository)
-            self.do_backup(local_repository, export_data_path, info)
+                lock_ = collect_point.get_lock()
+            export_data_path = self.apply_backup_filters(collect_point)
+            self.do_backup(collect_point, export_data_path, info)
             info.success_count += 1
             info.last_state_valid = True
             info.last_success = datetime.datetime.now()
@@ -123,48 +123,48 @@ class RemoteRepository(Repository):
         if lock_ is not None:
             try:
                 if self.can_execute_command('# release lock'):
-                    local_repository.release_lock(lock_)
+                    collect_point.release_lock(lock_)
             except Exception as e:
                 cprint('unable to release lock. %s' % text_type(e), RED)
         if self.can_execute_command('# register this remote state'):
-            self.set_info(local_repository, info)
+            self.set_info(collect_point, info)
         return info.last_state_valid
 
-    def do_backup(self, local_repository, export_data_path, info):
-        """send backup data from the local repository
-        :param local_repository: the local repository
+    def do_backup(self, collect_point, export_data_path, info):
+        """send backup data from the collect point
+        :param collect_point: the collect point
         :param export_data_path: where all data are stored (path)
         :param info: RepositoryInfo object. its attribute `data` can be freely updated
         """
         raise NotImplementedError
 
-    def apply_backup_filters(self, local_repository):
-        assert isinstance(local_repository, LocalRepository)
-        next_path = local_repository.export_data_path
+    def apply_backup_filters(self, collect_point):
+        assert isinstance(collect_point, CollectPoint)
+        next_path = collect_point.export_data_path
         for filter_ in self.filters:
             assert isinstance(filter_, FileFilter)
-            next_path = filter_.backup(next_path, self.filter_private_path(local_repository, filter_),
+            next_path = filter_.backup(next_path, self.filter_private_path(collect_point, filter_),
                                        allow_in_place=False)
         return next_path
 
-    def apply_restore_filters(self, local_repository):
-        assert isinstance(local_repository, LocalRepository)
-        next_path = local_repository.export_data_path
+    def apply_restore_filters(self, collect_point):
+        assert isinstance(collect_point, CollectPoint)
+        next_path = collect_point.export_data_path
         filter_data = []
         for filter_ in self.filters:
             assert isinstance(filter_, FileFilter)
             filter_data.append((filter_, next_path))
-            next_path = filter_.next_path(next_path, self.filter_private_path(local_repository, filter_),
+            next_path = filter_.next_path(next_path, self.filter_private_path(collect_point, filter_),
                                           allow_in_place=False)
         for filter_, next_path in reversed(filter_data):
             assert isinstance(filter_, FileFilter)
-            filter_.restore(next_path, self.filter_private_path(local_repository, filter_),
+            filter_.restore(next_path, self.filter_private_path(collect_point, filter_),
                             allow_in_place=False)
 
     # noinspection PyMethodMayBeStatic
-    def get_info(self, local_repository, force_remote=False):
-        assert isinstance(local_repository, LocalRepository)
-        path = os.path.join(self.private_path(local_repository), '%s.json' % self.name)
+    def get_info(self, collect_point, force_remote=False):
+        assert isinstance(collect_point, CollectPoint)
+        path = os.path.join(self.private_path(collect_point), '%s.json' % self.name)
         if os.path.isfile(path):
             with codecs.open(path, 'r', encoding='utf-8') as fd:
                 content = fd.read()
@@ -173,41 +173,41 @@ class RemoteRepository(Repository):
             return RepositoryInfo()
 
     # noinspection PyMethodMayBeStatic
-    def set_info(self, local_repository, info):
-        assert isinstance(local_repository, LocalRepository)
+    def set_info(self, collect_point, info):
+        assert isinstance(collect_point, CollectPoint)
         assert isinstance(info, RepositoryInfo)
-        path = os.path.join(self.private_path(local_repository), '%s.json' % self.name)
+        path = os.path.join(self.private_path(collect_point), '%s.json' % self.name)
         self.ensure_dir(path, parent=True)
         content = info.to_str()
         with codecs.open(path, 'w', encoding='utf-8') as fd:
             fd.write(content)
 
-    def restore(self, local_repository):
-        info = self.get_info(local_repository, force_remote=True)
-        assert isinstance(local_repository, LocalRepository)
+    def restore(self, collect_point):
+        info = self.get_info(collect_point, force_remote=True)
+        assert isinstance(collect_point, CollectPoint)
         assert isinstance(info, RepositoryInfo)
-        local_repository.variables.update(info.variables)
-        next_path = local_repository.export_data_path
+        collect_point.variables.update(info.variables)
+        next_path = collect_point.export_data_path
         for filter_ in self.filters:
             assert isinstance(filter_, FileFilter)
-            next_path = filter_.next_path(next_path, self.filter_private_path(local_repository, filter_),
+            next_path = filter_.next_path(next_path, self.filter_private_path(collect_point, filter_),
                                           allow_in_place=False)
-        self.do_restore(local_repository, next_path)
-        self.apply_restore_filters(local_repository)
+        self.do_restore(collect_point, next_path)
+        self.apply_restore_filters(collect_point)
 
-    def do_restore(self, local_repository, export_data_path):
+    def do_restore(self, collect_point, export_data_path):
         raise NotImplementedError
 
     @lru_cache()
-    def private_path(self, local_repository):
-        assert isinstance(local_repository, LocalRepository)
-        return os.path.join(local_repository.remote_private_path(self), 'remote')
+    def private_path(self, collect_point):
+        assert isinstance(collect_point, CollectPoint)
+        return os.path.join(collect_point.remote_private_path(self), 'remote')
 
     @lru_cache()
-    def filter_private_path(self, local_repository, filter_):
-        assert isinstance(local_repository, LocalRepository)
+    def filter_private_path(self, collect_point, filter_):
+        assert isinstance(collect_point, CollectPoint)
         assert isinstance(filter_, FileFilter)
-        return os.path.join(local_repository.remote_private_path(self), 'filter-%s' % filter_.name)
+        return os.path.join(collect_point.remote_private_path(self), 'filter-%s' % filter_.name)
 
 
 class CommonRemoteRepository(RemoteRepository):
@@ -237,24 +237,24 @@ class CommonRemoteRepository(RemoteRepository):
         self.metadata_url_requirements = []
         # list of values using non-constant values
 
-    def format_value(self, value, local_repository, use_constant_values=False):
+    def format_value(self, value, collect_point, use_constant_values=False):
         """Check if the metadata_url is required: at least one formatted value uses non-constant values"""
         if use_constant_values:
-            return super(CommonRemoteRepository, self).format_value(value, local_repository, use_constant_values)
-        result = super(CommonRemoteRepository, self).format_value(value, local_repository, False)
-        constant_result = super(CommonRemoteRepository, self).format_value(value, local_repository, True)
+            return super(CommonRemoteRepository, self).format_value(value, collect_point, use_constant_values)
+        result = super(CommonRemoteRepository, self).format_value(value, collect_point, False)
+        constant_result = super(CommonRemoteRepository, self).format_value(value, collect_point, True)
         if constant_result != result:
             self.metadata_url_requirements.append(value)
         return result
 
-    def do_restore(self, local_repository, export_data_path):
+    def do_restore(self, collect_point, export_data_path):
         raise NotImplementedError
 
-    def do_backup(self, local_repository, export_data_path, info):
+    def do_backup(self, collect_point, export_data_path, info):
         raise NotImplementedError
 
-    def _get_metadata_backend(self, local_repository):
-        assert isinstance(local_repository, LocalRepository)
+    def _get_metadata_backend(self, collect_point):
+        assert isinstance(collect_point, CollectPoint)
         if self.metadata_url is None:
             p1 = 's' if len(self.metadata_url_requirements) > 1 else ''
             p2 = '' if len(self.metadata_url_requirements) > 1 else ''
@@ -262,13 +262,13 @@ class CommonRemoteRepository(RemoteRepository):
                    'You should define the "metadata_url" parameter to ease restore operation' %
                    (p1, ', '.join(self.metadata_url_requirements), p2), RED)
             return None
-        metadata_url = self.format_value(self.metadata_url, local_repository, use_constant_values=True)
+        metadata_url = self.format_value(self.metadata_url, collect_point, use_constant_values=True)
         if metadata_url.endswith('/'):
-            metadata_url += '%s.json' % local_repository.name
-        metadata_private_key = self.format_value(self.metadata_private_key, local_repository, use_constant_values=True)
-        metadata_ca_cert = self.format_value(self.metadata_ca_cert, local_repository, use_constant_values=True)
-        metadata_keytab = self.format_value(self.metadata_keytab, local_repository, use_constant_values=True)
-        metadata_ssh_options = self.format_value(self.metadata_ssh_options, local_repository, use_constant_values=True)
+            metadata_url += '%s.json' % collect_point.name
+        metadata_private_key = self.format_value(self.metadata_private_key, collect_point, use_constant_values=True)
+        metadata_ca_cert = self.format_value(self.metadata_ca_cert, collect_point, use_constant_values=True)
+        metadata_keytab = self.format_value(self.metadata_keytab, collect_point, use_constant_values=True)
+        metadata_ssh_options = self.format_value(self.metadata_ssh_options, collect_point, use_constant_values=True)
         backend = get_backend(self, metadata_url, keytab=metadata_keytab, private_key=metadata_private_key,
                               ca_cert=metadata_ca_cert, ssh_options=metadata_ssh_options, rsync_executable='rsync',
                               curl_executable='curl', scp_executable='scp', ssh_executable='ssh')
@@ -276,12 +276,12 @@ class CommonRemoteRepository(RemoteRepository):
         return backend
 
     @lru_cache()
-    def get_info(self, local_repository, force_remote=False):
-        assert isinstance(local_repository, LocalRepository)
-        path = os.path.join(self.private_path(local_repository), '%s.json' % self.name)
+    def get_info(self, collect_point, force_remote=False):
+        assert isinstance(collect_point, CollectPoint)
+        path = os.path.join(self.private_path(collect_point), '%s.json' % self.name)
         if not os.path.isfile(path) or force_remote:
             self.ensure_dir(path, parent=True)
-            backend = self._get_metadata_backend(local_repository)
+            backend = self._get_metadata_backend(collect_point)
             if backend is not None:
                 # noinspection PyBroadException
                 try:
@@ -294,21 +294,21 @@ class CommonRemoteRepository(RemoteRepository):
             return RepositoryInfo.from_str(content)
         return RepositoryInfo()
 
-    def set_info(self, local_repository, info):
-        assert isinstance(local_repository, LocalRepository)
+    def set_info(self, collect_point, info):
+        assert isinstance(collect_point, CollectPoint)
         assert isinstance(info, RepositoryInfo)
-        path = os.path.join(self.private_path(local_repository), '%s.json' % self.name)
+        path = os.path.join(self.private_path(collect_point), '%s.json' % self.name)
         self.ensure_dir(path, parent=True)
         content = info.to_str()
         with codecs.open(path, 'w', encoding='utf-8') as fd:
             fd.write(content)
-        backend = self._get_metadata_backend(local_repository)
+        backend = self._get_metadata_backend(collect_point)
         if backend is not None:
             backend.sync_file_from_local(path)
 
 
 class GitRepository(CommonRemoteRepository):
-    """Add a remote to a local repository and push local modification to this remote.
+    """Add a remote to a collect point and push local modification to this remote.
     Can use https (with password or kerberos auth) or git+ssh remotes (with private key authentication).
     local and remote branches are always named 'master'.
     """
@@ -345,10 +345,10 @@ class GitRepository(CommonRemoteRepository):
         self.commit_email = commit_email
         self.commit_message = commit_message
 
-    def do_backup(self, local_repository, export_data_path, info):
-        assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
+    def do_backup(self, collect_point, export_data_path, info):
+        assert isinstance(collect_point, CollectPoint)  # just to help PyCharm
         worktree = export_data_path
-        git_dir = os.path.join(self.private_path(local_repository), 'git')
+        git_dir = os.path.join(self.private_path(collect_point), 'git')
         os.chdir(worktree)
         git_command = [self.git_executable, '--git-dir', git_dir, '--work-tree', worktree]
         self.execute_command(git_command + ['init'], cwd=worktree)
@@ -358,45 +358,45 @@ class GitRepository(CommonRemoteRepository):
                              env={'HOME': git_dir})
         self.execute_command(git_command + ['add', '.'])
         # noinspection PyTypeChecker
-        self.execute_command(git_command + ['commit', '-am', self.format_value(self.commit_message, local_repository)],
+        self.execute_command(git_command + ['commit', '-am', self.format_value(self.commit_message, collect_point)],
                              ignore_errors=True, env={'HOME': git_dir})
 
-        remote_url = self.format_value(self.remote_url, local_repository)
-        if not self.check_remote_url(local_repository):
+        remote_url = self.format_value(self.remote_url, collect_point)
+        if not self.check_remote_url(collect_point):
             raise ValueError('Invalid remote repository: %s' % remote_url)
         cmd = []
         if self.keytab:
-            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
+            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, collect_point), '-U', '--']
         cmd += git_command + ['push', remote_url, 'master:master']
         # noinspection PyTypeChecker
         if self.private_key and not remote_url.startswith('http'):
-            private_key = self.format_value(self.private_key, local_repository)
+            private_key = self.format_value(self.private_key, collect_point)
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
         self.execute_command(cmd, cwd=worktree, env={'HOME': git_dir})
 
-    def check_remote_url(self, local_repository):
+    def check_remote_url(self, collect_point):
         return True
 
-    def do_restore(self, local_repository, export_data_path):
-        assert isinstance(local_repository, LocalRepository)  # just to help PyCharm
+    def do_restore(self, collect_point, export_data_path):
+        assert isinstance(collect_point, CollectPoint)  # just to help PyCharm
         worktree = export_data_path
-        git_dir = os.path.join(self.private_path(local_repository), 'git')
+        git_dir = os.path.join(self.private_path(collect_point), 'git')
         self.ensure_dir(git_dir, parent=True)
         self.ensure_absent(git_dir)
         self.ensure_dir(worktree, parent=True)
         self.ensure_absent(worktree)
-        remote_url = self.format_value(self.remote_url, local_repository)
+        remote_url = self.format_value(self.remote_url, collect_point)
         cmd = [self.git_executable, 'clone', '--separate-git-dir', git_dir, remote_url, worktree]
         if self.keytab:
-            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, local_repository), '-U', '--']
+            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, collect_point), '-U', '--']
         if self.private_key and not remote_url.startswith('http'):
-            private_key = self.format_value(self.private_key, local_repository)
+            private_key = self.format_value(self.private_key, collect_point)
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
         self.execute_command(cmd, cwd=os.path.dirname(worktree))
 
 
 class GitlabRepository(GitRepository):
-    """Add a remote to a local repository and push local modification to this remote.
+    """Add a remote to a collect point and push local modification to this remote.
     If the 'private_key' is set, then git+ssh is used for pushing data.
     Otherwise, use password or kerberos auth with git+http.
 
@@ -425,11 +425,11 @@ class GitlabRepository(GitRepository):
         self.project_name = project_name
         self.api_url = '%s://%s/api/v3' % (parsed.scheme, parsed.hostname)
 
-    def check_remote_url(self, local_repository):
-        project_name = self.format_value(self.project_name, local_repository)
-        api_url = self.format_value(self.api_url, local_repository)
-        api_key = self.format_value(self.api_key, local_repository)
-        remote_url = self.format_value(self.remote_url, local_repository)
+    def check_remote_url(self, collect_point):
+        project_name = self.format_value(self.project_name, collect_point)
+        api_url = self.format_value(self.api_url, collect_point)
+        api_key = self.format_value(self.api_key, collect_point)
+        remote_url = self.format_value(self.remote_url, collect_point)
         headers = {'PRIVATE-TOKEN': api_key}
         r = requests.get('%s/projects/%s' % (api_url, quote_plus(project_name)), headers=headers)
         if r.status_code == requests.codes.ok:
@@ -465,27 +465,27 @@ class Synchronize(CommonRemoteRepository):
         self.ca_cert = ca_cert
         self.ssh_options = ssh_options
 
-    def do_backup(self, local_repository, export_data_path, info):
-        backend = self._get_backend(local_repository)
+    def do_backup(self, collect_point, export_data_path, info):
+        backend = self._get_backend(collect_point)
         backend.sync_dir_from_local(export_data_path)
 
-    def _get_backend(self, local_repository):
-        remote_url = self.format_value(self.remote_url, local_repository)
-        keytab = self.format_value(self.keytab, local_repository)
-        private_key = self.format_value(self.private_key, local_repository)
-        ca_cert = self.format_value(self.ca_cert, local_repository)
-        ssh_options = self.format_value(self.ssh_options, local_repository)
-        backend = get_backend(local_repository, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
+    def _get_backend(self, collect_point):
+        remote_url = self.format_value(self.remote_url, collect_point)
+        keytab = self.format_value(self.keytab, collect_point)
+        private_key = self.format_value(self.private_key, collect_point)
+        ca_cert = self.format_value(self.ca_cert, collect_point)
+        ssh_options = self.format_value(self.ssh_options, collect_point)
+        backend = get_backend(collect_point, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
                               ssh_options=ssh_options)
         return backend
 
-    def do_restore(self, local_repository, export_data_path):
-        backend = self._get_backend(local_repository)
+    def do_restore(self, collect_point, export_data_path):
+        backend = self._get_backend(collect_point)
         backend.sync_dir_to_local(export_data_path)
 
 
 class TarArchive(CommonRemoteRepository):
-    """Collect all files of your local repository into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
+    """Collect all files of your collect point into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
     to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
 
     """
@@ -518,21 +518,21 @@ class TarArchive(CommonRemoteRepository):
         self.ca_cert = ca_cert
         self.ssh_options = ssh_options
 
-    def _get_backend(self, local_repository):
-        remote_url = self.format_value(self.remote_url, local_repository)
-        keytab = self.format_value(self.keytab, local_repository)
-        private_key = self.format_value(self.private_key, local_repository)
-        ca_cert = self.format_value(self.ca_cert, local_repository)
-        ssh_options = self.format_value(self.ssh_options, local_repository)
-        backend = get_backend(local_repository, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
+    def _get_backend(self, collect_point):
+        remote_url = self.format_value(self.remote_url, collect_point)
+        keytab = self.format_value(self.keytab, collect_point)
+        private_key = self.format_value(self.private_key, collect_point)
+        ca_cert = self.format_value(self.ca_cert, collect_point)
+        ssh_options = self.format_value(self.ssh_options, collect_point)
+        backend = get_backend(collect_point, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
                               ssh_options=ssh_options)
         return backend
 
-    def do_backup(self, local_repository, export_data_path, info):
-        assert isinstance(local_repository, LocalRepository)
-        backend = self._get_backend(local_repository)
-        remote_url = self.format_value(self.remote_url, local_repository)
-        archive_filename = self.archive_name_prefix(local_repository)
+    def do_backup(self, collect_point, export_data_path, info):
+        assert isinstance(collect_point, CollectPoint)
+        backend = self._get_backend(collect_point)
+        remote_url = self.format_value(self.remote_url, collect_point)
+        archive_filename = self.archive_name_prefix(collect_point)
         if remote_url.endswith('tar.gz'):
             archive_filename += '.tar.gz'
             cmd = [self.tar_executable, '-czf', archive_filename]
@@ -560,14 +560,14 @@ class TarArchive(CommonRemoteRepository):
         if error is not None:
             raise error
 
-    def archive_name_prefix(self, local_repository):
-        return os.path.join(self.private_path(local_repository), 'archive')
+    def archive_name_prefix(self, collect_point):
+        return os.path.join(self.private_path(collect_point), 'archive')
 
-    def do_restore(self, local_repository, export_data_path):
-        assert isinstance(local_repository, LocalRepository)
-        backend = self._get_backend(local_repository)
-        remote_url = self.format_value(self.remote_url, local_repository)
-        archive_filename = self.archive_name_prefix(local_repository)
+    def do_restore(self, collect_point, export_data_path):
+        assert isinstance(collect_point, CollectPoint)
+        backend = self._get_backend(collect_point)
+        remote_url = self.format_value(self.remote_url, collect_point)
+        archive_filename = self.archive_name_prefix(collect_point)
         if remote_url.endswith('tar.gz'):
             archive_filename += '.tar.gz'
         elif remote_url.endswith('tar.bz2'):
@@ -582,7 +582,7 @@ class TarArchive(CommonRemoteRepository):
 
 
 class RollingTarArchive(TarArchive):
-    """Collect all files of your local repository into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
+    """Collect all files of your collect point into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
     to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
 
     Also tracks previous archives to only keep a given number of hourly/daily/weekly/yearly backups,
@@ -615,8 +615,8 @@ class RollingTarArchive(TarArchive):
         self.weekly_count = weekly_count
         self.yearly_count = yearly_count
 
-    def do_backup(self, local_repository, export_data_path, info):
-        super(RollingTarArchive, self).do_backup(local_repository, export_data_path, info)
+    def do_backup(self, collect_point, export_data_path, info):
+        super(RollingTarArchive, self).do_backup(collect_point, export_data_path, info)
         if info.data is None:
             info.data = []
             # info.data must be a list of dict (old values)
@@ -624,7 +624,7 @@ class RollingTarArchive(TarArchive):
         if self.can_execute_command('# register this remote state'):
             info.last_state_valid = True
             info.last_success = datetime.datetime.now()
-            self.set_info(local_repository, info)
+            self.set_info(collect_point, info)
         # ok, there we have to check which old backup must be removed
         values = []
         time_to_values = {}
@@ -654,8 +654,8 @@ class RollingTarArchive(TarArchive):
         to_keep_values = [d for (d, v) in times.items() if v]
         info.data = [time_to_values[d] for d in reversed(to_keep_values)]
         for data in to_remove_values:
-            local_repository.variables = time_to_values[data]
-            backend = self._get_backend(local_repository)
+            collect_point.variables = time_to_values[data]
+            backend = self._get_backend(collect_point)
             backend.delete_on_distant()
 
     @staticmethod
@@ -697,6 +697,6 @@ class RollingTarArchive(TarArchive):
                 previous_time = current_time
         return result
 
-    def archive_name_prefix(self, local_repository):
-        archive_name = self.format_value('archive-{Y}-{m}-{d}_{H}-{M}', local_repository)
-        return os.path.join(self.private_path(local_repository), archive_name)
+    def archive_name_prefix(self, collect_point):
+        archive_name = self.format_value('archive-{Y}-{m}-{d}_{H}-{M}', collect_point)
+        return os.path.join(self.private_path(collect_point), archive_name)

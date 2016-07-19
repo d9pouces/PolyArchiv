@@ -7,7 +7,7 @@ import logging.config
 import os
 import shutil
 
-from polyarchiv.locals import FileRepository
+from polyarchiv.collect_points import FileRepository
 from polyarchiv.sources import LocalFiles, PostgresSQL, MySQL, Ldap, RemoteFiles
 from polyarchiv.tests.test_base import FileTestCase
 
@@ -25,34 +25,34 @@ class TestSources(FileTestCase):
 
     def setUp(self):
         super(TestSources, self).setUp()
-        self.local_repository = FileRepository('test_repo', local_path=self.local_repository_path, command_display=True,
+        self.collect_point = FileRepository('test_repo', local_path=self.collect_point_path, command_display=True,
                                                command_keep_output=True)
 
     def test_local_files(self):
-        source = LocalFiles('local_files', self.local_repository, destination_path='local_files',
+        source = LocalFiles('local_files', self.collect_point, destination_path='local_files',
                             source_path=self.original_dir_path)
         source.backup()
-        self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'local_files'))
+        self.assertEqualPaths(self.original_dir_path, os.path.join(self.collect_point.export_data_path, 'local_files'))
         shutil.copy2(__file__, os.path.join(self.original_dir_path, 'test2.py'))
         os.remove(os.path.join(self.original_dir_path, 'test.py'))
         source.backup()
-        self.assertEqualPaths(self.original_dir_path, os.path.join(self.local_repository.export_data_path, 'local_files'))
+        self.assertEqualPaths(self.original_dir_path, os.path.join(self.collect_point.export_data_path, 'local_files'))
 
-        source = LocalFiles('local_files', self.local_repository, destination_path='local_files',
+        source = LocalFiles('local_files', self.collect_point, destination_path='local_files',
                             source_path=self.copy_dir_path)
         source.restore()
         self.assertEqualPaths(self.original_dir_path, self.copy_dir_path)
 
     def test_remote_files(self):
         original_dir_path = '/home/testuser/sources/to_backup/'
-        source = RemoteFiles('remote_files', self.local_repository, destination_path='remote_files',
+        source = RemoteFiles('remote_files', self.collect_point, destination_path='remote_files',
                              source_url='ssh://testuser@localhost%s' % original_dir_path,
                              private_key='/home/vagrant/.ssh/id_rsa')
         source.backup()
-        self.assertEqualPaths(original_dir_path, os.path.join(self.local_repository.export_data_path, 'remote_files'))
+        self.assertEqualPaths(original_dir_path, os.path.join(self.collect_point.export_data_path, 'remote_files'))
         copy_dir_path = '/home/testuser/sources/to_restore/'
 
-        source = RemoteFiles('remote_files', self.local_repository, destination_path='remote_files',
+        source = RemoteFiles('remote_files', self.collect_point, destination_path='remote_files',
                              source_url='ssh://testuser@localhost%s' % copy_dir_path,
                              private_key='/home/vagrant/.ssh/id_rsa')
         source.restore()
@@ -60,41 +60,41 @@ class TestSources(FileTestCase):
 
     def test_postgresql(self):
         filename = 'postgresql.sql'
-        source = PostgresSQL('postgresql', self.local_repository,
+        source = PostgresSQL('postgresql', self.collect_point,
                              destination_path=filename, database='testdb',
                              host='localhost', port='5432', user='test', password='testtest')
         source.backup()
-        dst_path = os.path.join(self.local_repository.export_data_path, filename)
+        dst_path = os.path.join(self.collect_point.export_data_path, filename)
         src_path = '%s/samples/postgresql.sql' % os.path.dirname(__file__)
         dst_content = self.get_sql_content(dst_path)
         src_content = self.get_sql_content(src_path)
         self.assertEqual(dst_content, src_content)
-        source = PostgresSQL('postgresql', self.local_repository,
+        source = PostgresSQL('postgresql', self.collect_point,
                              destination_path=filename, database='restoredb',
                              host='localhost', port='5432', user='test', password='testtest')
         source.restore()
         source.backup()
-        dst_path = os.path.join(self.local_repository.export_data_path, filename)
+        dst_path = os.path.join(self.collect_point.export_data_path, filename)
         dst_content = self.get_sql_content(dst_path)
         self.assertEqual(dst_content, src_content)
 
     def test_mysql(self):
         filename = 'mysql.sql'
-        source = MySQL('mysql', self.local_repository,
+        source = MySQL('mysql', self.collect_point,
                        destination_path=filename, database='testdb',
                        host='localhost', port='3306', user='test', password='testtest')
         source.backup()
-        dst_path = os.path.join(self.local_repository.export_data_path, filename)
+        dst_path = os.path.join(self.collect_point.export_data_path, filename)
         src_path = '%s/samples/mysql.sql' % os.path.dirname(__file__)
         dst_content = self.get_sql_content(dst_path)
         src_content = self.get_sql_content(src_path)
         self.assertEqual(dst_content, src_content)
-        source = MySQL('mysql', self.local_repository,
+        source = MySQL('mysql', self.collect_point,
                        destination_path=filename, database='restoredb',
                        host='localhost', port='3306', user='test', password='testtest')
         source.restore()
         source.backup()
-        dst_path = os.path.join(self.local_repository.export_data_path, filename)
+        dst_path = os.path.join(self.collect_point.export_data_path, filename)
         dst_content = self.get_sql_content(dst_path)
         self.assertEqual(dst_content, src_content)
 
@@ -108,16 +108,16 @@ class TestSources(FileTestCase):
 
     def test_ldap(self):
         filename = 'ldap.ldif'
-        source = Ldap('ldap', self.local_repository, destination_path=filename, use_sudo=True)
+        source = Ldap('ldap', self.collect_point, destination_path=filename, use_sudo=True)
         source.backup()
         src_path = '%s/samples/ldap.ldif' % os.path.dirname(__file__)
-        dst_path = os.path.join(self.local_repository.export_data_path, filename)
+        dst_path = os.path.join(self.collect_point.export_data_path, filename)
         src_content = self.get_ldif_content(src_path)
         dst_content = self.get_ldif_content(dst_path)
         self.assertEqual(src_content, dst_content)
         source.restore()
         source.backup()
-        dst_path = os.path.join(self.local_repository.export_data_path, filename)
+        dst_path = os.path.join(self.collect_point.export_data_path, filename)
         dst_content = self.get_ldif_content(dst_path)
         self.assertEqual(src_content, dst_content)
 

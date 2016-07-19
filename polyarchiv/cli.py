@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 
-from polyarchiv.check import check_local_repository, check_remote_local_repository
+from polyarchiv.check import check_collect_point, check_remote_collect_point
 from polyarchiv.conf import Parameter
 from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN, GREY, RED
 
@@ -52,9 +52,9 @@ def main(engines_file=None):
                         default=False)
     parser.add_argument('--confirm-commands', action='store_true', help='ask the user to confirm each command',
                         default=False)
-    parser.add_argument('--only-locals', nargs='+', help='limit to these local tags', default=[])
+    parser.add_argument('--only-collect-points', nargs='+', help='limit to these local tags', default=[])
     parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
-    parser.add_argument('--skip-local', action='store_true', help='skip the local step during a backup', default=False)
+    parser.add_argument('--skip-collect', action='store_true', help='skip the local step during a backup', default=False)
     parser.add_argument('--skip-remote', action='store_true', help='skip the remote step during a backup',
                         default=False)
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
@@ -77,14 +77,15 @@ def main(engines_file=None):
                     command_keep_output=verbose)
     if command == 'backup':
         if runner.load():
-            local_results, remote_results = runner.backup(only_locals=args.only_locals, only_remotes=args.only_remotes,
-                                                          force=args.force, skip_local=args.skip_local,
-                                                          skip_remote=args.skip_remote)
-            local_failures = ['local:%s' % x for (x, y) in local_results.items() if not y]
+            collect_point_results, remote_results = runner.backup(only_collect_points=args.only_collect_points,
+                                                                  only_remotes=args.only_remotes,
+                                                                  force=args.force, skip_collect=args.skip_collect,
+                                                                  skip_remote=args.skip_remote)
+            collect_point_failures = ['collect_point:%s' % x for (x, y) in collect_point_results.items() if not y]
             remote_failures = ['local:%s/remote:%s' % x for (x, y) in remote_results.items() if not y]
-            if local_failures or remote_failures:
+            if collect_point_failures or remote_failures:
                 if args.nrpe:
-                    cprint('CRITICAL - failed backups: %s ' % ' '.join(local_failures + remote_failures))
+                    cprint('CRITICAL - failed backups: %s ' % ' '.join(collect_point_failures + remote_failures))
                 return_code = 2
             elif args.nrpe:
                 cprint('OK - all backups are valid')
@@ -95,25 +96,25 @@ def main(engines_file=None):
             return_code = 1
     elif command == 'restore':
         if runner.load():
-            runner.restore(args.only_locals, args.only_remotes)
+            runner.restore(args.only_collect_points, args.only_remotes)
     elif command == 'config':
         cprint('configuration directory: %s (you can change it with -C /other/directory)' % args.config, YELLOW)
         if runner.load():
             if not verbose:
                 cprint('you can display more info with --verbose', CYAN)
-            from polyarchiv.show import show_local_repository, show_remote_local_repository, show_remote_repository
-            runner.apply_commands(local_command=show_local_repository, remote_command=show_remote_repository,
-                                  local_remote_command=show_remote_local_repository,
-                                  only_locals=args.only_locals, only_remotes=args.only_remotes)
+            from polyarchiv.show import show_collect_point, show_remote_collect_point, show_remote_repository
+            runner.apply_commands(local_command=show_collect_point, remote_command=show_remote_repository,
+                                  local_remote_command=show_remote_collect_point,
+                                  only_collect_points=args.only_collect_points, only_remotes=args.only_remotes)
     elif command == 'check':
         if runner.load():
-            from polyarchiv.show import show_local_repository, show_remote_local_repository, \
+            from polyarchiv.show import show_collect_point, show_remote_collect_point, \
                 show_remote_repository
             values = {'return_text': [], 'return_code': 0}
-            local_command = functools.partial(check_local_repository, values)
-            remote_command = functools.partial(check_remote_local_repository, values)
+            local_command = functools.partial(check_collect_point, values)
+            remote_command = functools.partial(check_remote_collect_point, values)
             runner.apply_commands(local_command=local_command, local_remote_command=remote_command,
-                                  only_locals=args.only_locals, only_remotes=args.only_remotes)
+                                  only_collect_points=args.only_collect_points, only_remotes=args.only_remotes)
             return_code = values['return_code']
             msg = ', '.join(values['return_text'])
             if return_code == 0:
@@ -140,11 +141,11 @@ def main(engines_file=None):
         if not verbose:
             cprint('display available options for each engine with --verbose', CYAN)
 
-        available_local_engines, available_source_engines, available_remote_engines, available_filter_engines = \
+        available_collect_point_engines, available_source_engines, available_remote_engines, available_filter_engines = \
             Runner.find_available_engines(engines_file)
-        cprint('available local repository engines:', YELLOW, BOLD)
+        cprint('available collect point engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
-        display_classes(available_local_engines, verbose=verbose, width=width)
+        display_classes(available_collect_point_engines, verbose=verbose, width=width)
         cprint('available source engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
         display_classes(available_source_engines, verbose=verbose, width=width)

@@ -2,7 +2,7 @@
 import datetime
 import logging
 
-from polyarchiv.locals import LocalRepository
+from polyarchiv.collect_points import CollectPoint
 from polyarchiv.remotes import RemoteRepository
 from polyarchiv.repository import RepositoryInfo
 from polyarchiv.runner import Runner
@@ -14,23 +14,23 @@ __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv.show')
 
 
-def show_local_repository(local_repository, engines_file=None):
-    available_local_engines, available_source_engines, __, __ = Runner.find_available_engines(engines_file)
+def show_collect_point(collect_point, engines_file=None):
+    available_collect_point_engines, available_source_engines, __, __ = Runner.find_available_engines(engines_file)
 
     # ##################################################################################################################
-    assert isinstance(local_repository, LocalRepository)
-    cprint('local repository %s selected' % local_repository.name, CYAN)
-    if local_repository.__class__ in available_local_engines:
-        engine = available_local_engines[local_repository.__class__]
+    assert isinstance(collect_point, CollectPoint)
+    cprint('collect point %s selected' % collect_point.name, CYAN)
+    if collect_point.__class__ in available_collect_point_engines:
+        engine = available_collect_point_engines[collect_point.__class__]
     else:
-        engine = '%s.%s' % (local_repository.__class__.__module__, local_repository.__class__.__name__)
+        engine = '%s.%s' % (collect_point.__class__.__module__, collect_point.__class__.__name__)
     logger.debug('engine: %s' % engine)
-    if local_repository.__doc__:
-        logger.debug(local_repository.__doc__)
+    if collect_point.__doc__:
+        logger.debug(collect_point.__doc__)
     # ##################################################################################################################
-    for source in local_repository.sources:
+    for source in collect_point.sources:
         assert isinstance(source, Source)
-        cprint('  * source %s added to %s' % (source.name, local_repository.name), CYAN)
+        cprint('  * source %s added to %s' % (source.name, collect_point.name), CYAN)
         if source.__class__ in available_source_engines:
             engine = available_source_engines[source.__class__]
         else:
@@ -40,16 +40,16 @@ def show_local_repository(local_repository, engines_file=None):
             logger.debug(source.__doc__)
     # ##################################################################################################################
     try:
-        info = local_repository.get_info()
+        info = collect_point.get_info()
     except ValueError as e:
-        cprint('Unable to retrieve more information from the local repository: %s' % e, RED)
+        cprint('Unable to retrieve more information from the collect point: %s' % e, RED)
         return
     assert isinstance(info, RepositoryInfo)
     if info.last_success is None:
         cprint('No successful local backup', RED)
     else:
         now = datetime.datetime.now()
-        out_of_date = local_repository.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
+        out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
         if out_of_date:
             cprint('Last local backup is out of date: %s' % info.last_success, YELLOW, BOLD)
         else:
@@ -71,13 +71,13 @@ def show_remote_repository(remote_repository, engines_file=None):
         logger.debug(remote_repository.__doc__)
 
 
-def show_remote_local_repository(local_repository, remote_repository):
-    assert isinstance(local_repository, LocalRepository)
+def show_remote_collect_point(collect_point, remote_repository):
+    assert isinstance(collect_point, CollectPoint)
     assert isinstance(remote_repository, RemoteRepository)
-    cprint('  * remote repository %s selected on local repository %s' % (remote_repository.name, local_repository.name),
+    cprint('  * remote repository %s selected on collect point %s' % (remote_repository.name, collect_point.name),
            CYAN)
     try:
-        info = remote_repository.get_info(local_repository)
+        info = remote_repository.get_info(collect_point)
     except ValueError as e:
         cprint('Unable to retrieve more information from the remote repository: %s' % e, RED)
         return
@@ -86,7 +86,7 @@ def show_remote_local_repository(local_repository, remote_repository):
         cprint('No successful remote backup for %s' % remote_repository.name, RED)
     else:
         now = datetime.datetime.now()
-        out_of_date = local_repository.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
+        out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
         if out_of_date:
             cprint('Last local backup is out of date on %s: %s' % (remote_repository.name, info.last_success), YELLOW,
                    BOLD)

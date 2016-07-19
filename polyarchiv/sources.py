@@ -22,7 +22,7 @@ import grp
 from polyarchiv._vendor.ldif3 import LDIFParser
 from polyarchiv.backends import get_backend
 from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable, check_username, check_file
-from polyarchiv.locals import LocalRepository
+from polyarchiv.collect_points import CollectPoint
 from polyarchiv.repository import ParameterizedObject
 from polyarchiv.termcolor import YELLOW
 from polyarchiv.termcolor import cprint
@@ -34,10 +34,10 @@ class Source(ParameterizedObject):
     """base source class"""
     parameters = ParameterizedObject.parameters + []
 
-    def __init__(self, name, local_repository, **kwargs):
+    def __init__(self, name, collect_point, **kwargs):
         super(Source, self).__init__(name, **kwargs)
-        assert isinstance(local_repository, LocalRepository)
-        self.local_repository = local_repository
+        assert isinstance(collect_point, CollectPoint)
+        self.collect_point = collect_point
 
     def backup(self):
         """Backup data corresponding to this source"""
@@ -49,8 +49,8 @@ class Source(ParameterizedObject):
 
 
 class LocalFiles(Source):
-    """copy all files from the given source_path to the local repository using rsync.
-    The destination is a folder inside the local repository.
+    """copy all files from the given source_path to the collect point using rsync.
+    The destination is a folder inside the collect point.
     """
     parameters = Source.parameters + [
         Parameter('source_path', converter=check_directory, help_str='original folder to backup', required=True),
@@ -65,10 +65,10 @@ class LocalFiles(Source):
         Parameter('preserve_hard_links', converter=bool_setting, help_str='true|false: preserve hard links'),
     ]
 
-    def __init__(self, name, local_repository, source_path='', destination_path='', rsync_executable='rsync',
+    def __init__(self, name, collect_point, source_path='', destination_path='', rsync_executable='rsync',
                  exclude='', include='', preserve_hard_links='', **kwargs):
         """
-        :param local_repository: local repository where files are stored
+        :param collect_point: collect point where files are stored
         :param source_path: absolute path of a directory to backup
         :param destination_path: relative path of the backup destination (must be a directory name, e.g. "data")
         :param rsync_executable: path of the rsync executable
@@ -78,7 +78,7 @@ class LocalFiles(Source):
             of a file (cf. the --include-from option from rsync)
         :param preserve_hard_links: preserve hard links
         """
-        super(LocalFiles, self).__init__(name, local_repository, **kwargs)
+        super(LocalFiles, self).__init__(name, collect_point, **kwargs)
         self.source_path = source_path
         self.destination_path = destination_path
         self.rsync_executable = rsync_executable
@@ -100,7 +100,7 @@ class LocalFiles(Source):
             cmd += ['--include-from', self.include[1:]]
         elif self.include:
             cmd += ['--include', self.include]
-        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
         self.ensure_dir(dirname)
         source = self.source_path
         if not source.endswith(os.path.sep):
@@ -114,7 +114,7 @@ class LocalFiles(Source):
         cmd = [self.rsync_executable, '-a', '--delete', '-S', ]
         if self.preserve_hard_links:
             cmd.append('-H')
-        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
         source = self.source_path
         self.ensure_dir(dirname)
         self.ensure_dir(source)
@@ -127,7 +127,7 @@ class LocalFiles(Source):
 
 
 class MySQL(Source):
-    """Dump the content of a MySQL database with the mysqldump utility to a filename in the local repository"""
+    """Dump the content of a MySQL database with the mysqldump utility to a filename in the collect point"""
     parameters = Source.parameters + [
         Parameter('host', help_str='database host'),
         Parameter('port', converter=int, help_str='database port'),
@@ -142,10 +142,10 @@ class MySQL(Source):
                   help_str='path of the mysql executable (default: "mysql")'),
     ]
 
-    def __init__(self, name, local_repository, host='localhost', port='3306', user='', password='', database='',
+    def __init__(self, name, collect_point, host='localhost', port='3306', user='', password='', database='',
                  destination_path='mysql_dump.sql', sudo_user=None, dump_executable='mysqldump',
                  restore_executable='mysql', **kwargs):
-        super(MySQL, self).__init__(name, local_repository, **kwargs)
+        super(MySQL, self).__init__(name, collect_point, **kwargs)
         self.sudo_user = sudo_user
         self.restore_executable = restore_executable
         self.dump_executable = dump_executable
@@ -157,7 +157,7 @@ class MySQL(Source):
         self.destination_path = destination_path
 
     def backup(self):
-        filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        filename = os.path.join(self.collect_point.import_data_path, self.destination_path)
         self.ensure_dir(filename, parent=True)
         cmd = self.get_dump_cmd_list()
         if self.sudo_user:
@@ -176,7 +176,7 @@ class MySQL(Source):
             raise subprocess.CalledProcessError(p.returncode, cmd[0])
 
     def restore(self):
-        filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        filename = os.path.join(self.collect_point.import_data_path, self.destination_path)
         if not os.path.isfile(filename):
             return
         cmd = self.get_restore_cmd_list()
@@ -221,7 +221,7 @@ class MySQL(Source):
 
 
 class PostgresSQL(MySQL):
-    """Dump the content of a PostgresSQL database with the pg_dump utility to a filename in the local repository"""
+    """Dump the content of a PostgresSQL database with the pg_dump utility to a filename in the collect point"""
     parameters = MySQL.parameters[:-2] + [
         Parameter('dump_executable', converter=check_executable,
                   help_str='path of the pg_dump executable (default: "pg_dump")'),
@@ -229,9 +229,9 @@ class PostgresSQL(MySQL):
                   help_str='path of the psql executable (default: "psql")'),
     ]
 
-    def __init__(self, name, local_repository, port='5432', dump_executable='pg_dump', restore_executable='psql',
+    def __init__(self, name, collect_point, port='5432', dump_executable='pg_dump', restore_executable='psql',
                  **kwargs):
-        super(PostgresSQL, self).__init__(name, local_repository, port=port, dump_executable=dump_executable,
+        super(PostgresSQL, self).__init__(name, collect_point, port=port, dump_executable=dump_executable,
                                           restore_executable=restore_executable, **kwargs)
 
     def get_dump_cmd_list(self):
@@ -253,7 +253,7 @@ class PostgresSQL(MySQL):
 
 
 class Ldap(Source):
-    """Dump a OpenLDAP database using slapcat to a filename in the local repository.
+    """Dump a OpenLDAP database using slapcat to a filename in the collect point.
     Must be run on the LDAP server."""
     parameters = Source.parameters + [
         Parameter('destination_path', help_str='filename of the dump (not an absolute path)'),
@@ -267,9 +267,9 @@ class Ldap(Source):
                   help_str='path of the slapadd executable (default: "slapadd")'),
     ]
 
-    def __init__(self, name, local_repository, destination_path='ldap.ldif', dump_executable='slapcat',
+    def __init__(self, name, collect_point, destination_path='ldap.ldif', dump_executable='slapcat',
                  use_sudo=False, restore_executable='slapadd', database=1, ldap_base=None, **kwargs):
-        super(Ldap, self).__init__(name, local_repository, **kwargs)
+        super(Ldap, self).__init__(name, collect_point, **kwargs)
         self.destination_path = destination_path
         self.dump_executable = dump_executable
         self.restore_executable = restore_executable
@@ -278,7 +278,7 @@ class Ldap(Source):
         self.database = database
 
     def backup(self):
-        filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        filename = os.path.join(self.collect_point.import_data_path, self.destination_path)
         self.ensure_dir(filename, parent=True)
         cmd = []
         if self.use_sudo:
@@ -295,7 +295,7 @@ class Ldap(Source):
             p.communicate()
 
     def restore(self):
-        filename = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        filename = os.path.join(self.collect_point.import_data_path, self.destination_path)
         if not os.path.isfile(filename):
             return
         prefix = []
@@ -332,7 +332,7 @@ class Ldap(Source):
 
 
 class Dovecot(Source):
-    """Dump a OpenLDAP database using slapcat to a filename in the local repository.
+    """Dump a OpenLDAP database using slapcat to a filename in the collect point.
     Must be run on the LDAP server."""
     parameters = Source.parameters + [
         Parameter('destination_path', help_str='dirname of the dump (not an absolute path)'),
@@ -345,9 +345,9 @@ class Dovecot(Source):
                   help_str='path of the doveadm executable (default: "doveadm")'),
     ]
 
-    def __init__(self, name, local_repository, destination_path='dovecot', dump_executable='doveadm',
+    def __init__(self, name, collect_point, destination_path='dovecot', dump_executable='doveadm',
                  mailbox=None, user_mask=None, socket=None, **kwargs):
-        super(Dovecot, self).__init__(name, local_repository, **kwargs)
+        super(Dovecot, self).__init__(name, collect_point, **kwargs)
         self.socket = socket
         self.destination_path = destination_path
         self.dump_executable = dump_executable
@@ -361,7 +361,7 @@ class Dovecot(Source):
         self.perform_action(restore=True)
 
     def perform_action(self, restore):
-        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
         self.ensure_dir(dirname)
         cmd = [self.dump_executable, 'backup', ]
         if restore:
@@ -379,8 +379,8 @@ class Dovecot(Source):
 
 
 class RemoteFiles(Source):
-    """copy the remote files from the given server/source_path to the local repository using rsync.
-    The destination is a folder inside the local repository.
+    """copy the remote files from the given server/source_path to the collect point using rsync.
+    The destination is a folder inside the collect point.
     """
     parameters = Source.parameters + [
         Parameter('source_url', required=True, help_str='synchronize data from this URL. Must ends by a folder name'),
@@ -393,14 +393,14 @@ class RemoteFiles(Source):
                   help_str='absolute path of the keytab file (for Kerberos authentication)'),
     ]
 
-    def __init__(self, name, local_repository, source_url='', destination_path='', keytab=None, private_key=None,
+    def __init__(self, name, collect_point, source_url='', destination_path='', keytab=None, private_key=None,
                  ca_cert=None, ssh_options=None, **kwargs):
         """
-        :param local_repository: local repository where files are stored
-        :param source_url: remote folders to add to the local repository
+        :param collect_point: collect point where files are stored
+        :param source_url: remote folders to add to the collect point
         :param destination_path: relative path of the backup destination (must be a directory name, e.g. "data")
         """
-        super(RemoteFiles, self).__init__(name, local_repository, **kwargs)
+        super(RemoteFiles, self).__init__(name, collect_point, **kwargs)
         self.destination_path = destination_path
         self.source_url = source_url
         self.keytab = keytab
@@ -410,15 +410,15 @@ class RemoteFiles(Source):
 
     def backup(self):
         backend = self._get_backend()
-        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
         backend.sync_dir_to_local(dirname)
 
     def _get_backend(self):
-        backend = get_backend(self.local_repository, self.source_url, keytab=self.keytab, private_key=self.private_key,
+        backend = get_backend(self.collect_point, self.source_url, keytab=self.keytab, private_key=self.private_key,
                               ca_cert=self.ca_cert, ssh_options=self.ssh_options)
         return backend
 
     def restore(self):
         backend = self._get_backend()
-        dirname = os.path.join(self.local_repository.import_data_path, self.destination_path)
+        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
         backend.sync_dir_from_local(dirname)

@@ -7,7 +7,7 @@ import tempfile
 
 import subprocess
 
-from polyarchiv.locals import FileRepository
+from polyarchiv.collect_points import FileRepository
 from polyarchiv.remotes import Synchronize, RemoteRepository, GitRepository, TarArchive, RollingTarArchive
 from polyarchiv.sources import LocalFiles
 from polyarchiv.tests.test_base import FileTestCase
@@ -16,35 +16,35 @@ from polyarchiv.tests.test_base import FileTestCase
 class RemoteTestCase(FileTestCase):
 
     def test_remote_repository(self):
-        original_dir_path, copy_dir_path, local_repository_path = self.prepare()
+        original_dir_path, copy_dir_path, collect_point_path = self.prepare()
         # 1) backup
-        local_repository = self.get_local_repository(original_dir_path, local_repository_path)
+        collect_point = self.get_collect_point(original_dir_path, collect_point_path)
         remote_repository = self.get_remote_repository()
         if remote_repository is None:
             return
-        local_repository.backup()
+        collect_point.backup()
         assert isinstance(remote_repository, RemoteRepository)
-        remote_repository.backup(local_repository, force=True)
+        remote_repository.backup(collect_point, force=True)
         # 2) local remove and restore
         shutil.rmtree(copy_dir_path)
         os.rename(original_dir_path, copy_dir_path)
-        local_repository.restore()
+        collect_point.restore()
         self.assertEqualPaths(copy_dir_path, original_dir_path)
         # 3) remote remove and restore
         shutil.rmtree(original_dir_path)
-        shutil.rmtree(local_repository_path)
-        remote_repository.restore(local_repository)
-        local_repository.restore()
+        shutil.rmtree(collect_point_path)
+        remote_repository.restore(collect_point)
+        collect_point.restore()
         self.assertEqualPaths(copy_dir_path, original_dir_path)
 
     @staticmethod
-    def get_local_repository(original_dir_path, local_repository_path):
-        local_repository = FileRepository('test_repo', local_path=local_repository_path, command_display=True,
+    def get_collect_point(original_dir_path, collect_point_path):
+        collect_point = FileRepository('test_repo', local_path=collect_point_path, command_display=True,
                                           command_keep_output=True)
-        local_repository.variables.update(RemoteRepository.constant_format_values)
-        source = LocalFiles('rsync', local_repository, original_dir_path, destination_path='rsync')
-        local_repository.add_source(source)
-        return local_repository
+        collect_point.variables.update(RemoteRepository.constant_format_values)
+        source = LocalFiles('rsync', collect_point, original_dir_path, destination_path='rsync')
+        collect_point.add_source(source)
+        return collect_point
 
     def get_remote_repository(self):
         return None

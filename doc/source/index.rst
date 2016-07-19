@@ -3,11 +3,11 @@
 Polyarchiv
 ==========
 
-Backup data from multiple local sources (organized in local repositories) and send them to one or more remote repositories.
+Backup data from multiple local sources (organized in collect points) and send them to one or more remote repositories.
 
 .. code-block:: bash
 
-       local repository 1: /var/backups/local1          /--------------------------\
+       collect point 1: /var/backups/local1             /--------------------------\
        data of www.github.com               ________\__ | remote repository 1: git |
     /------------------------\             /        /   |   data of local 1        |
     |     source 1: files    |---->-------/             \--------------------------/
@@ -15,14 +15,14 @@ Backup data from multiple local sources (organized in local repositories) and se
     |     source 3: mysql    |---->-------\
     \------------------------/             \________\___ /-------------------------------\
                                                     /    | remote repository 2: tar+curl |
-     local repository 2: : /var/backups/local2           |   data of local 1             |
+     collect point 2: : /var/backups/local2              |   data of local 1             |
      data of www.example.com                ________\___ |   data of local 2             |
     /------------------------\             /        /    \-------------------------------/
     |     source 1: files    |---->-------/             * ftp://server/backups/local1/2016-01-01.tar.gz
     |     source 2: mysql    |                          * ftp://server/backups/local2/2016-01-01.tar.gz
     \------------------------/
 
-     local repository 3: : /var/backups/local3
+     collect point 3: : /var/backups/local3
      data of nothing.example.com
     /-----------------------------\
     |     source 1: files         |
@@ -30,13 +30,13 @@ Backup data from multiple local sources (organized in local repositories) and se
     |     source 3: mysql         |
     \-----------------------------/
 
-You should organize your data in local repositories, each local repository having its own backup policy.
-Think local repositories as projects (a website) or services (Ldap, Kerberos, …), but of course, you can organize your data as you want.
+You should organize your data in collect points, each collect point having its own backup policy.
+Think collect points as projects (a website) or services (Ldap, Kerberos, …), but of course, you can organize your data as you want.
 
 
-The complete backup operation is split into three steps for each local repository:
+The complete backup operation is split into three steps for each collect point:
 
-  1. collect all data from sources (databases, files, config files, …) to the local repositories,
+  1. collect all data from sources (databases, files, config files, …) to the collect points,
   2. perform the local backup operation (maybe a local `git` archive, or just raw files),
   3. send all these data to distant servers (you can of course skip this step).
 
@@ -49,7 +49,7 @@ The complete backup operation is split into three steps for each local repositor
    options
    configuration
    examples
-   locals
+   collect_points
    remotes
    sources
    filters
