@@ -4,5 +4,5 @@ remote_tags=
 remote_url=http://gitlab.example.org/group/TestsPolyarchiv.git
 remote_branch=master
 user=mgallet
-included_local_tags=*
-excluded_local_tags=local
+included_collect_point_tags=*
+excluded_collect_point_tags=local

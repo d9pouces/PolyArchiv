@@ -3,7 +3,7 @@ Configuration
 
 Configuration is based on standard `.ini <https://docs.python.org/3/library/configparser.html>`_ files, each file corresponding to one repository:
 
-  * `my-local-repo.local` defines a collect point named `my-local-repo`,
+  * `my-collect-point.collect` defines a collect point named `my-collect-point`,
   * `my-remote-repo.remote` defines a remote repository named `my-remote-repo`.
 
 All these files are expected in the config directory `/etc/polyarchiv`. If you installed PolyArchiv in a virtualenv, this folder
@@ -11,7 +11,7 @@ is inside your virtualenv. You can also use `polyarchiv config` to display the a
 the `-C` option.
 
 
-Each collect point defines a base folder and one or more data sources, all of them being defined in the `my-local-repo.local` file:
+Each collect point defines a base folder and one or more data sources, all of them being defined in the `my-collect-point.collect` file:
 
   * directory with files,
   * MySQL or PostgreSQL database to dump,
@@ -36,14 +36,14 @@ There are also several kinds of remote repositories:
 These remote repositories are optional and you can of course use only local backups.
 Several remote parameters (especially the remote location) can depend on the date/time or the hostname (check the remote doc for more information).
 
-Each repository (either local or remote) can be associated to a backup frequency:
+Any collect/backup point can be associated to a backup frequency:
 if a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
 If no frequency is set, then the backup is performed every time you launch polyarchiv.
 
 collect points
-------------------
+--------------
 
-As said before, a collect point is defined by a `ini` file in the configuration directory and with a name ending by `.local`.
+As said before, a collect point is defined by a `ini` file in the configuration directory and with a name ending by `.collect`.
 
 The collect point is defined in a mandatory section `[repository]`. This collect point can a bunch of plain files, a local git repo or even an tar archive.
 The main option is `engine`, defining the kind of collect point. The complete list of the available kinds is here: :ref:`collect_points`.
@@ -54,12 +54,12 @@ Again, you must set the `engine` option, defining the kind of source. Please che
 You can also define some filters for transforming files (please check the :ref:`filters` section).
 
 .. code-block::  ini
-  :caption: /etc/polyarchiv/my-local.local
+  :caption: /etc/polyarchiv/my-collect-point.collect
 
   [repository]
   engine=git
   local_path=/tmp/local
-  local_tags=local
+  collect_point_tags=local
   included_remote_tags=*
   excluded_remote_tags=
   frequency=daily
@@ -135,12 +135,12 @@ So, if your remote parameters depend on such variables, you should use the `meta
 store (and retrieve!) these data to a predictible location.
 This URL should either depend on the `name` variable or ends by `/` (allowing to append `{name}.json`).
 
-Associating local and remote repositories
------------------------------------------
+Associating collect and backup points
+-------------------------------------
 
 All remote repositories apply to all collect points but you can change this behaviour by applying tags to repositories.
 By default, a collect point has the tag `local` and include all existing remote repositories: `included_remote_tags=*`.
-A remote repository has the tag `remote` and include all collect points: `included_local_tags=*`.
+A remote repository has the tag `remote` and include all collect points: `included_collect_point_tags=*`.
 
 If large collect points should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
 
@@ -150,20 +150,20 @@ If large collect points should not be sent to a given remote repository, you can
 
   [repository]
   engine=git
-  excluded_local_tags=*large,huge
+  excluded_collect_point_tags=*large,huge
 
 and add the `large` tag to the local configuration you want to avoid
 (traditionnal shell expansion with ? and * is used for comparing included and excluded tags, so you can put `extra-large`
 instead of simply `large`):
 
 .. code-block:: ini
-  :caption: /etc/polyarchiv/my-local.local
-  :name: tags1:/etc/polyarchiv/my-local.local
+  :caption: /etc/polyarchiv/my-collect-point.collect
+  :name: tags1:/etc/polyarchiv/my-collect-point.collect
 
   [repository]
   engine=git
   local_path=/tmp/local
-  local_tags=local,extra-large
+  collect_point_tags=local,extra-large
 
 
 Tags can also be applied to remote repositories:
@@ -179,8 +179,8 @@ Tags can also be applied to remote repositories:
 and add the "large" tag to the local configuration:
 
 .. code-block::  ini
-  :caption: /etc/polyarchiv/my-local.local
-  :name: tags:/etc/polyarchiv/my-local.local
+  :caption: /etc/polyarchiv/my-collect-point.collect
+  :name: tags:/etc/polyarchiv/my-collect-point.collect
 
   [repository]
   engine=git

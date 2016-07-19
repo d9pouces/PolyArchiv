@@ -1,7 +1,7 @@
 [repository]
 engine=git
 local_path=/var/backups/locals/local1
-local_tags=local
+collect_point_tags=local
 included_remote_tags=*
 excluded_remote_tags=
 frequency=daily

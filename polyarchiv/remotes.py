@@ -42,22 +42,22 @@ class RemoteRepository(Repository):
     parameters = Repository.parameters + [
         Parameter('remote_tags', converter=strip_split,
                   help_str='list of tags (comma-separated) associated to this remote repository'),
-        Parameter('included_local_tags', converter=strip_split,
+        Parameter('included_collect_point_tags', converter=strip_split,
                   help_str='any collect point with one of these tags (comma-separated) will be associated '
                            'to this remote repo. You can use ? or * as jokers in these tags.'),
-        Parameter('excluded_local_tags', converter=strip_split,
+        Parameter('excluded_collect_point_tags', converter=strip_split,
                   help_str='any collect point with one of these tags (comma-separated) will not be associated'
                            ' to this remote repo. You can use ? or * as jokers in these tags. Have precedence over '
-                           'included_local_tags and included_remote_tags.'),
+                           'included_collect_point_tags and included_remote_tags.'),
     ]
 
-    def __init__(self, name, remote_tags=None, included_local_tags=None, excluded_local_tags=None, **kwargs):
+    def __init__(self, name, remote_tags=None, included_collect_point_tags=None, excluded_collect_point_tags=None, **kwargs):
         super(RemoteRepository, self).__init__(name, **kwargs)
         self.remote_tags = ['remote'] if remote_tags is None else remote_tags
-        self.included_local_tags = ['*'] if included_local_tags is None else included_local_tags
-        self.excluded_local_tags = excluded_local_tags or []
-        self.local_variables = {}
-        # values specific to a local: self.local_values[collect_point.name][key] = value
+        self.included_collect_point_tags = ['*'] if included_collect_point_tags is None else included_collect_point_tags
+        self.excluded_collect_point_tags = excluded_collect_point_tags or []
+        self.collect_point_variables = {}
+        # values specific to a collect_point: self.collect_point_variables[collect_point.name][key] = value
         # used to override remote parameters
 
     def format_value(self, value, collect_point, use_constant_values=False):
@@ -67,8 +67,8 @@ class RemoteRepository(Repository):
         variables = {}
         variables.update(self.variables)
         variables.update(collect_point.variables)
-        if collect_point.name in self.local_variables:
-            variables.update(self.local_variables[collect_point.name])
+        if collect_point.name in self.collect_point_variables:
+            variables.update(self.collect_point_variables[collect_point.name])
         if use_constant_values:
             variables.update(self.constant_format_values)
         try:

@@ -28,8 +28,8 @@ by adding a new section, specific to this collect point.
 Check the example below, made of two collect points and a single remote one:
 
 .. code-block:: ini
-  :caption: /etc/polyarchiv/my-local-1.local
-  :name: variables:/etc/polyarchiv/my-local-1.local
+  :caption: /etc/polyarchiv/my-collect-point-1.collect
+  :name: variables:/etc/polyarchiv/my-collect-point-1.collect
 
   [repository]
   engine=git
@@ -37,15 +37,15 @@ Check the example below, made of two collect points and a single remote one:
   group=MyGroup1
 
 .. code-block:: ini
-  :caption: /etc/polyarchiv/my-local-2.local
-  :name: variables:/etc/polyarchiv/my-local-2.local
+  :caption: /etc/polyarchiv/my-collect-point-2.collect
+  :name: variables:/etc/polyarchiv/my-collect-point-2.collect
 
   [repository]
   engine=archive
   archive_name={name}-{Y}-{m}-{d}.tar.gz  <-- this is a customizable parameter
   [variables]
   group=MyGroup2
-  name=MY-LOCAL-2
+  name=my-collect-point-2
   ; you can override the default `name` variable
 
 .. code-block:: ini
@@ -60,10 +60,10 @@ Check the example below, made of two collect points and a single remote one:
   [variables]
   host=gitlab.example.org
 
-  [variables "my-local-2"]
+  [variables "my-collect-point-2"]
   group=MY-GROUP-2
-  ; you can override the `group` variable of `my-local-2` only in the `my-remote` remote repository.
+  ; you can override the `group` variable of `my-collect-point-2` only in the `my-remote` remote repository.
 
 
-With this configuration, `my-local-1` is sent to `remote_url=http://gitlab.example.org/MyGroup1/my-local-1.git` and
-`my-local-2` is sent to `remote_url=http://gitlab.example.org/MY-GROUP-2/MY-LOCAL-2.git`.
+With this configuration, `my-collect-point-1` is sent to `remote_url=http://gitlab.example.org/MyGroup1/my-collect-point-1.git` and
+`my-collect-point-2` is sent to `remote_url=http://gitlab.example.org/MY-GROUP-2/my-collect-point-2.git`.

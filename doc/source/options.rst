@@ -19,8 +19,8 @@ There are some optional arguments, mainly for backup operations:
   * `-D` or `--dry` (backup or restore): do not perform any write operation (can lead to errors if a read action requires a previous write),
   * `--show-commands` (backup or restore): display all actions as a Bash command,
   * `--confirm-commands` (backup or restore): ask the user to confirm each command
-  * `--only-locals` (backup or restore): only apply to the collect points with these tags (can be used several times, and ? or * jokers are valid)
+  * `--only-collect-points` (backup or restore): only apply to the collect points with these tags (can be used several times, and ? or * jokers are valid)
   * `--only-remotes` (backup or restore): only apply to the remote repositories with these tags (can be used several times, and ? or * jokers are valid)
-  * `--skip-local` (backup only): skip the local step during a backup
+  * `--skip-collect` (backup only): skip the collect step during a backup
   * `--skip-remote` (backup only): skip the remote step during a backup
 

@@ -44,7 +44,7 @@ class Source(ParameterizedObject):
         raise NotImplementedError
 
     def restore(self):
-        """Restore data from the local backup """
+        """Restore data from the collect point """
         raise NotImplementedError
 
 

@@ -29,7 +29,7 @@ class CollectPoint(Repository):
      Each source is run and contribute to new
     """
     parameters = Repository.parameters + [
-        Parameter('local_tags', converter=strip_split,
+        Parameter('collect_point_tags', converter=strip_split,
                   help_str='list of tags (comma-separated) associated to this collect point. Default: "local"'),
         Parameter('included_remote_tags', converter=strip_split,
                   help_str='any remote repository with one of these tags (comma-separated) will be associated '
@@ -37,13 +37,13 @@ class CollectPoint(Repository):
         Parameter('excluded_remote_tags', converter=strip_split,
                   help_str='any remote repository with one of these tags (comma-separated) will not be associated'
                            ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
-                           'included_local_tags and included_remote_tags.'),
+                           'included_collect_point_tags and included_remote_tags.'),
     ]
 
-    def __init__(self, name, local_tags=None, included_remote_tags=None, excluded_remote_tags=None,
+    def __init__(self, name, collect_point_tags=None, included_remote_tags=None, excluded_remote_tags=None,
                  **kwargs):
         super(CollectPoint, self).__init__(name=name, **kwargs)
-        self.local_tags = ['local'] if local_tags is None else local_tags
+        self.collect_point_tags = ['local'] if collect_point_tags is None else collect_point_tags
         self.included_remote_tags = ['*'] if included_remote_tags is None else included_remote_tags
         self.excluded_remote_tags = excluded_remote_tags or []
         self.sources = []
@@ -235,7 +235,7 @@ class FileRepository(CollectPoint):
 
     @cached_property
     def metadata_path(self):
-        path = os.path.join(self.local_path, self.METADATA_FOLDER, 'local')
+        path = os.path.join(self.local_path, self.METADATA_FOLDER, 'collect_point')
         path = self.format_value(path)
         self.ensure_dir(path)
         return path

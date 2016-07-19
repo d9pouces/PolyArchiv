@@ -5,16 +5,16 @@ Filters
 
 By default, a collect point gather some files from its sources and expose them to all remote repositories.
 You can apply some changes on these files, before sending them to the remote repositories.
-These operation can happen after the local backup, or only before a given remote backup.
+These operation can happen after the collect, or only before a given remote backup.
 Imagine you want to encrypt your backup files, and you have two remote and two collect points.
 
 .. code-block:: bash
 
-                               collect point                                                   remote repository 1
+                               collect point                                                   backup point 1
   /------------------------------------------------------------------------\        /-----------------------------------------------\
   | /------------------\     /----------\     /----------\     /---------\ |        | /----------\     /----------\     /---------\ |
   | | source 1: files  | --> |          | --> |          | --> |         | |        | |          | --> |          | --> |         | |
-  | \------------------/     |          |     |          |     |  local  | |        | |          |     |          |     | remote  | |
+  | \------------------/     |          |     |          |     | collect | |        | |          |     |          |     | backup  | |
   |                          | filter 1 |     | filter 2 |     | storage | | ---+-> | | filter 3 |     | filter 4 |     | storage | |
   | /------------------\     |          |     |          |     |         | |    |   | |          |     |          |     |         | |
   | | source 2: MySQL  | --> |          | --> |          | --> |         | |    |   | |          | --> |          | --> |         | |
@@ -22,7 +22,7 @@ Imagine you want to encrypt your backup files, and you have two remote and two c
   \------------------------------------------------------------------------/    |   \-----------------------------------------------/
                                                                                 |
                                                                                 |
-                                                                                v   remote repository 2
+                                                                                v   backup point 2
                                                                         /------------------------------\
                                                                         | /----------\     /---------\ |
                                                                         | |          | --> |         | |
@@ -53,7 +53,7 @@ You only have to add a `[filter "name_of_the_filter"]` section to your config fi
 Of course, you can use several filters, there are applied in the order of apparition in the config file.
 
 .. code-block:: ini
-  :caption: /etc/polyarchiv/my-local-1.local
+  :caption: /etc/polyarchiv/my-collect-point-1.collect
 
   [repository]
   engine=git

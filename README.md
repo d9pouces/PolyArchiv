@@ -1,20 +1,20 @@
 PolyArchiv
 ==========
 
-Backup data from multiple local sources (organized in collect points) and send them to one or more remote repositories.
+Backup data from multiple sources (organized in collect points) and backup them to one or more points.
 The complete doc is available here: http://polyarchiv.readthedocs.io/en/latest/ 
 
-       collect point 1: /var/backups/local1             /--------------------------\
-       data of www.github.com               ________\__ | remote repository 1: git |
-    /------------------------\             /        /   |   data of local 1        |
-    |     source 1: files    |---->-------/             \--------------------------/
+       collect point 1: /var/backups/local1             /----------------------\
+       data of www.github.com               ________\__ | backup point 1: git  |
+    /------------------------\             /        /   |   data of local 1    |
+    |     source 1: files    |---->-------/             \----------------------/
     |     source 2: mysql    |                          * http://mygit/backups/local1.git
     |     source 3: mysql    |---->-------\
-    \------------------------/             \________\___ /-------------------------------\
-                                                    /    | remote repository 2: tar+curl |
-     collect point 2: : /var/backups/local2              |   data of local 1             | 
-     data of www.example.com                ________\___ |   data of local 2             |
-    /------------------------\             /        /    \-------------------------------/
+    \------------------------/             \________\___ /--------------------------\
+                                                    /    | backup point 2: tar+curl |
+     collect point 2: : /var/backups/local2              |   data of local 1        | 
+     data of www.example.com                ________\___ |   data of local 2        |
+    /------------------------\             /        /    \--------------------------/
     |     source 1: files    |---->-------/             * ftp://server/backups/local1/2016-01-01.tar.gz
     |     source 2: mysql    |                          * ftp://server/backups/local2/2016-01-01.tar.gz
     \------------------------/          
@@ -29,10 +29,10 @@ The complete doc is available here: http://polyarchiv.readthedocs.io/en/latest/
                                     
 Configuration is based on standard `.ini` files, each file corresponding to one repository: 
     
-  * `my-local-repo.local` defines a collect point named `my-local-repo`,
-  * `my-remote-repo.remote` defines a remote repository named `my-remote-repo`.
+  * `my-collect-point.collect` defines a collect point named `my-collect-point`,
+  * `my-backup-point.remote` defines a backup point named `my-backup-point`.
 
-Each collect point defines a base folder and one or more data sources, all of them being defined in the `my-local-repo.local` file:
+Each collect point must define a base folder and one or more data sources, all of them being defined in the `my-collect-point.collect` file:
 
   * directory with files,
   * MySQL or PostgreSQL database to dump,
@@ -45,24 +45,24 @@ There are several kinds of collect points:
   * local git repository: after each backup, files that have been gathered from the different sources are added and locally commited.
   * archive: all collected files are merged into a single .tar.(gz/bz2/xz) archive.
   
-There are also several kinds of remote repositories:
+There are also several kinds of backup points:
 
   * git: the whole collect point is pushed to this remote git repository, 
   * gitlab: almost identical to the previous one, but able to automatically create the remote repository,
-  * synchronize: uses rsync to copy all files to a remote location,
+  * synchronize: uses rsync to copy all files to a new, probably remote, location,
   * archive: creates an archive (.tar.gz/bz2/xz) and pushes it to a remote location, 
   * rolling_archive: creates an archive, pushes it to a remote location. Deletes some previous archives 
     (say, one per day during six days, then one per week during three weeks, then one per month during 12 months) 
 
 These remote repositories are optional and you can of course use only local backups. All parameters (especially the remote location) can depend on the date and time, and on the hostname.
 
-Each backup point (either collect ones or push ones) is associated to a backup frequency. 
+Each backup point (either collect ones or backup ones) is associated to a backup frequency. 
 If a given point has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
 
 Installation
 ------------
 
-PolyArchiv uses Python, with no extra dependency.
+PolyArchiv uses plain Python, with no extra dependency.
 The simplest way is to use `pip`, if it is installed on your system:
 
     $ pip install polyarchiv
@@ -86,25 +86,25 @@ Several commands are available:
  
 #### available engines
 
-Display all available engines, for remote or collect points, filters and sources (and their options if you specified `--verbose`)
+Display all available engines, for collect/backup points, filters and sources (and their options if you specified `--verbose`)
 
     $ polyarchiv plugins [--verbose]
 
 #### displaying configuration
 
-Display the current configuration, remote or collect points, sources and backup status
+Display the current configuration, collect/backup points, sources and backup status
 
     $ polyarchiv config [-C /my/config/dir] [--verbose]
 
 #### backup
  
-Backup all data sources. If you set a frequency, backup points that are not out-of-date are not run (unless you specified `--force`)
+Backup all data sources. If you set a frequency, collect and backup points that are not out-of-date are not run (unless you specified `--force`)
 
     $ polyarchiv backup [-C /my/config/dir] [--force]
     
 #### restore 
 
-Restore the last version of your collect point
+First fetch data from the most recent backup point to the collect point, then restore data to each source. 
 
     $ polyarchiv restore [-C /my/config/dir] [--force]
 
@@ -123,13 +123,13 @@ Restore the last version of your collect point
   * `--show-commands`: display all write actions as a bash operation
   * `--confirm-commands`: require a validation of each action
   * `--config`: specify another config dir
-  * `--only-locals`: limit operations to the collect points with this tags (can be used several times)
+  * `--only-collect-points`: limit operations to the collect points corresponding to this tags (can be used several times)
   * `--only-remotes`: limit operations to the remote repositories with this tags (can be used several times)
     
 Next steps
 ----------
 
-  * run `polyarchiv plugins -v` to check available sources and repositories
+  * run `polyarchiv plugins -v` to check available kinds of sources and collect/backup points
   * create config files for your collect points (you should organize all your backups in several collect point, maybe one per service)
   * create config files for your remote servers (one config file per server)
   * run `polyarchiv config -v` to check your configuration
@@ -144,7 +144,7 @@ The default configuration directory is `/etc/polyarchiv` unless you installed it
 Otherwise, you can specify another config dir with `polyarchiv -C /my/config/dir`.
 
 This directory should contain configuration files for collect points 
-(like `my-local.local`) as well as remote repositories (like `my-remote.remote`).
+(like `my_collect_point.collect`) as well as remote repositories (like `my_backup_point.remote`).
 
 Here is an example of collect point, gathering data from three sources:
 
@@ -152,14 +152,14 @@ Here is an example of collect point, gathering data from three sources:
   * MySQL database
   * a directory
 
-Its name must end by `.local`. 
-The `[repository]` section defines options for the collect point (the engine that powers the local backup, the frequency, …), and other sections define the three sources:
+Its name must end by `.collect`. 
+The `[repository]` section defines options for the collect point (the engine that powers the local backup, the frequency, …), while other sections define the three sources:
 
-    $ cat /etc/polyarchiv/my-local.local
+    $ cat /etc/polyarchiv/my-collect-point.collect
     [repository]
     engine=git
     local_path=/tmp/local
-    local_tags=local
+    collect_point_tags=local
     included_remote_tags=*
     excluded_remote_tags=
     frequency=daily
@@ -187,10 +187,10 @@ The `[repository]` section defines options for the collect point (the engine tha
     source_path=/tmp/source/files
     destination_path=./files
 
-The kind of repository (either local or remote) and of each source is defined by the `engine` option.
+The kind of points (collect or backup) and of each source is defined by the `engine` option.
 You can define as many collect points (each of them with one or more sources) as you want.
 
-Remote repositories are simpler and by default only have a `[repository]` section.
+Backup points are simpler and by default only have a `[repository]` section.
 Their names must end by `.remote`.
 Here is a gitlab acting as remote storage for git local repo: 
 
@@ -202,31 +202,28 @@ Here is a gitlab acting as remote storage for git local repo:
     remote_url=http://gitlab.example.org/group/{name}.git
     remote_branch=master
     user=mgallet
-    included_local_tags=*
+    included_collect_point_tags=*
 
-`{name}` will be replaced by the name of the collect point; for example the name of the `my-local.local` collect point is 
-obviously `my-local`). You can specify (a bit) more complex replacement rules (see below).
+`{name}` will be replaced by the name of the collect point; for example the name of the `my-collect-point.collect` collect point is 
+obviously `my-collect-point`). You can use (a bit) more complex replacement rules (see the doc).
 
-Maybe you also want a full backup (as an archive) uploaded monthly (the tenth day of each month) to a FTP server:
+Maybe you also want a full backup (as an archive) uploaded the tenth day of each month, to a HTTP server:
 
     $ cat /etc/polyarchiv/my-remote2.remote
     [repository]
     engine=archive
     frequency=monthly:10
     remote_tags=
-    remote_url=ftp://myftp.example.org/backups/{name}/
-    remote_branch=master
-    user=mgallet
-    password=p@ssw0rd
+    remote_url=http://user:p@ssw0rd@myserver.example.org/backups/{name}/
     tar_format=tar.xz
-    included_local_tags=*
+    included_collect_point_tags=*
 
-Configuration files can be owned by different users: files that are unreadable by the current user are ignored.
+Configuration files can be owned by different users: files that are unreadable by the current user are simply ignored.
 
 Available engines
 -----------------
 
-Several engines for sources and remote or collect points are available.
+Several engines for sources or collect/backup points are available.
 Use `polyarchiv plugins` to display the full list, and `polyarchiv plugins -v` to display all their configuration options.
  
 Extra backup options
@@ -238,7 +235,7 @@ Extra backup options
   * `--show-commands`: display all operations as a plain Bash script
   * `--confirm-commands`: display all operations and ask for a manual confirmation before running them
   * `--dry`: does not actually perform operations
-  * `--only-locals`: limit used collect points to these tags
+  * `--only-collect-points`: limit used collect points to these tags
   * `--only-remotes`: limit used remote repositories to these tags
 
 Adding your engines
@@ -254,7 +251,7 @@ PolyArchiv is designed to be extensible. You can add your own engines for all ki
 To use them, they must be installed in the current PYTHONPATH.
 You can either directly use the dotted path in the configuration files:
 
-    $ cat /etc/polyarchiv/my-local.local
+    $ cat /etc/polyarchiv/my-collect.collect
     [repository]
     engine=mypackage.myengines.MyCollectPoint
     local_path=/tmp/local

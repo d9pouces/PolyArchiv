@@ -46,14 +46,14 @@ def show_collect_point(collect_point, engines_file=None):
         return
     assert isinstance(info, RepositoryInfo)
     if info.last_success is None:
-        cprint('No successful local backup', RED)
+        cprint('No successful local collect', RED)
     else:
         now = datetime.datetime.now()
         out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
         if out_of_date:
-            cprint('Last local backup is out of date: %s' % info.last_success, YELLOW, BOLD)
+            cprint('Last local collect is out of date: %s' % info.last_success, YELLOW, BOLD)
         else:
-            cprint('Last local backup is recent enough: %s' % info.last_success, GREEN)
+            cprint('Last local collect is recent enough: %s' % info.last_success, GREEN)
     if info.last_state_valid is False:
         cprint('The last backup has failed. %s' % info.last_message, RED)
 
@@ -88,9 +88,9 @@ def show_remote_collect_point(collect_point, remote_repository):
         now = datetime.datetime.now()
         out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
         if out_of_date:
-            cprint('Last local backup is out of date on %s: %s' % (remote_repository.name, info.last_success), YELLOW,
+            cprint('Last local collect is out of date on %s: %s' % (remote_repository.name, info.last_success), YELLOW,
                    BOLD)
         else:
-            cprint('Last local backup is recent enough on %s: %s' % (remote_repository.name, info.last_success), GREEN)
+            cprint('Last local collect is recent enough on %s: %s' % (remote_repository.name, info.last_success), GREEN)
     if info.last_state_valid is False:
-        cprint('The last backup has failed on %s. %s' % (remote_repository.name, info.last_message), RED)
+        cprint('The last collect has failed on %s. %s' % (remote_repository.name, info.last_message), RED)

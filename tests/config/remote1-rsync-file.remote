@@ -2,5 +2,5 @@
 engine=synchronize
 metadata_url=file:///home/vagrant/metadata/rsync/{name}.json
 remote_url=/var/backups/remotes/remote1
-included_local_tags=*
-excluded_local_tags=
+included_collect_point_tags=*
+excluded_collect_point_tags=

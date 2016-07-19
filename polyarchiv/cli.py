@@ -52,9 +52,9 @@ def main(engines_file=None):
                         default=False)
     parser.add_argument('--confirm-commands', action='store_true', help='ask the user to confirm each command',
                         default=False)
-    parser.add_argument('--only-collect-points', nargs='+', help='limit to these local tags', default=[])
+    parser.add_argument('--only-collect-points', nargs='+', help='limit to these collect point tags', default=[])
     parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
-    parser.add_argument('--skip-collect', action='store_true', help='skip the local step during a backup', default=False)
+    parser.add_argument('--skip-collect', action='store_true', help='skip the collect step during a backup', default=False)
     parser.add_argument('--skip-remote', action='store_true', help='skip the remote step during a backup',
                         default=False)
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
@@ -82,7 +82,7 @@ def main(engines_file=None):
                                                                   force=args.force, skip_collect=args.skip_collect,
                                                                   skip_remote=args.skip_remote)
             collect_point_failures = ['collect_point:%s' % x for (x, y) in collect_point_results.items() if not y]
-            remote_failures = ['local:%s/remote:%s' % x for (x, y) in remote_results.items() if not y]
+            remote_failures = ['collect_point:%s/remote:%s' % x for (x, y) in remote_results.items() if not y]
             if collect_point_failures or remote_failures:
                 if args.nrpe:
                     cprint('CRITICAL - failed backups: %s ' % ' '.join(collect_point_failures + remote_failures))
@@ -103,17 +103,17 @@ def main(engines_file=None):
             if not verbose:
                 cprint('you can display more info with --verbose', CYAN)
             from polyarchiv.show import show_collect_point, show_remote_collect_point, show_remote_repository
-            runner.apply_commands(local_command=show_collect_point, remote_command=show_remote_repository,
-                                  local_remote_command=show_remote_collect_point,
+            runner.apply_commands(collect_point_command=show_collect_point, remote_command=show_remote_repository,
+                                  collect_point_remote_command=show_remote_collect_point,
                                   only_collect_points=args.only_collect_points, only_remotes=args.only_remotes)
     elif command == 'check':
         if runner.load():
             from polyarchiv.show import show_collect_point, show_remote_collect_point, \
                 show_remote_repository
             values = {'return_text': [], 'return_code': 0}
-            local_command = functools.partial(check_collect_point, values)
+            collect_point_command = functools.partial(check_collect_point, values)
             remote_command = functools.partial(check_remote_collect_point, values)
-            runner.apply_commands(local_command=local_command, local_remote_command=remote_command,
+            runner.apply_commands(collect_point_command=collect_point_command, collect_point_remote_command=remote_command,
                                   only_collect_points=args.only_collect_points, only_remotes=args.only_remotes)
             return_code = values['return_code']
             msg = ', '.join(values['return_text'])

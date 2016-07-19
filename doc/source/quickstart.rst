@@ -13,7 +13,7 @@ Then you can add a collect point, indicating the data to backup:
 .. code-block:: bash
 
   mkdir -p /var/backups/my-project
-  cat << EOF | sudo tee /etc/polyarchiv/my-project.local
+  cat << EOF | sudo tee /etc/polyarchiv/my-project.collect
   [repository]
   frequency=daily
   engine=files
