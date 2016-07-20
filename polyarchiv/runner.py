@@ -235,7 +235,7 @@ class Runner(ParameterizedObject):
             self.collect_points[collect_point_name] = collect_point
 
     def _find_backup_points(self):
-        for config_file, parser in self._iter_config_parsers('*.remote'):
+        for config_file, parser in self._iter_config_parsers('*.backup'):
             # noinspection PyTypeChecker
             backup_point_name = os.path.basename(config_file).rpartition('.')[0]
             backup_point = self._load_engine(config_file, parser, self.repository_section, [backup_point_name],
