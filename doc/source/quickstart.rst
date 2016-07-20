@@ -38,11 +38,11 @@ And then we want to synchronize these data to a remote server using `rsync`.
 
 .. code-block:: bash
 
-  cat << EOF | sudo tee /etc/polyarchiv/my-server.remote
+  cat << EOF | sudo tee /etc/polyarchiv/my-server.backup
   [repository]
   frequency=daily
   engine=synchronize
-  remote_url=ssh://backupuser@my-server/var/backups/remotes/{name}/
+  remote_url=ssh://backupuser@my-server/var/backups/backup_points/{name}/
   private_key=/home/backupuser/.ssh/id_rsa
   EOF
 

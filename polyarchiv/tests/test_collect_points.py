@@ -5,7 +5,7 @@ import os
 import shutil
 
 from polyarchiv.collect_points import FileRepository, CollectPoint, GitRepository, ArchiveRepository
-from polyarchiv.remotes import RemoteRepository
+from polyarchiv.backup_points import BackupPoint
 from polyarchiv.sources import LocalFiles
 from polyarchiv.tests.test_base import FileTestCase
 
@@ -17,7 +17,7 @@ class TestCollectPoint(FileTestCase):
         if collect_point is None:
             return
         assert isinstance(collect_point, CollectPoint)
-        collect_point.variables.update(RemoteRepository.constant_format_values)
+        collect_point.variables.update(BackupPoint.constant_format_values)
         source = LocalFiles('rsync', collect_point, self.original_dir_path, destination_path='rsync')
         collect_point.add_source(source)
         collect_point.backup()

@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 
-from polyarchiv.check import check_collect_point, check_remote_collect_point
+from polyarchiv.check import check_collect_point, check_backup_collect_points
 from polyarchiv.conf import Parameter
 from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN, GREY, RED
 
@@ -53,9 +53,10 @@ def main(engines_file=None):
     parser.add_argument('--confirm-commands', action='store_true', help='ask the user to confirm each command',
                         default=False)
     parser.add_argument('--only-collect-points', nargs='+', help='limit to these collect point tags', default=[])
-    parser.add_argument('--only-remotes', nargs='+', help='limit to these remote tags', default=[])
-    parser.add_argument('--skip-collect', action='store_true', help='skip the collect step during a backup', default=False)
-    parser.add_argument('--skip-remote', action='store_true', help='skip the remote step during a backup',
+    parser.add_argument('--only-backup-points', nargs='+', help='limit to these remote tags', default=[])
+    parser.add_argument('--skip-collect', action='store_true', help='skip the collect step during a backup',
+                        default=False)
+    parser.add_argument('--skip-backup', action='store_true', help='skip the remote step during a backup',
                         default=False)
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
     parser.add_argument('command', help='backup|restore|config|plugins')
@@ -77,15 +78,17 @@ def main(engines_file=None):
                     command_keep_output=verbose)
     if command == 'backup':
         if runner.load():
-            collect_point_results, remote_results = runner.backup(only_collect_points=args.only_collect_points,
-                                                                  only_remotes=args.only_remotes,
-                                                                  force=args.force, skip_collect=args.skip_collect,
-                                                                  skip_remote=args.skip_remote)
+            collect_point_results, backup_point_results = runner.backup(only_collect_points=args.only_collect_points,
+                                                                        only_backup_points=args.only_backup_points,
+                                                                        force=args.force,
+                                                                        skip_collect=args.skip_collect,
+                                                                        skip_backup=args.skip_backup)
             collect_point_failures = ['collect_point:%s' % x for (x, y) in collect_point_results.items() if not y]
-            remote_failures = ['collect_point:%s/remote:%s' % x for (x, y) in remote_results.items() if not y]
-            if collect_point_failures or remote_failures:
+            backup_point_failures = ['collect_point:%s/backup_point:%s' % x for (x, y) in backup_point_results.items()
+                                     if not y]
+            if collect_point_failures or backup_point_failures:
                 if args.nrpe:
-                    cprint('CRITICAL - failed backups: %s ' % ' '.join(collect_point_failures + remote_failures))
+                    cprint('CRITICAL - failed backups: %s ' % ' '.join(collect_point_failures + backup_point_failures))
                 return_code = 2
             elif args.nrpe:
                 cprint('OK - all backups are valid')
@@ -96,25 +99,28 @@ def main(engines_file=None):
             return_code = 1
     elif command == 'restore':
         if runner.load():
-            runner.restore(args.only_collect_points, args.only_remotes)
+            runner.restore(args.only_collect_points, args.only_backup_points)
     elif command == 'config':
         cprint('configuration directory: %s (you can change it with -C /other/directory)' % args.config, YELLOW)
         if runner.load():
             if not verbose:
                 cprint('you can display more info with --verbose', CYAN)
-            from polyarchiv.show import show_collect_point, show_remote_collect_point, show_remote_repository
-            runner.apply_commands(collect_point_command=show_collect_point, remote_command=show_remote_repository,
-                                  collect_point_remote_command=show_remote_collect_point,
-                                  only_collect_points=args.only_collect_points, only_remotes=args.only_remotes)
+            from polyarchiv.show import show_collect_point, show_remote_collect_point, show_backup_point
+            runner.apply_commands(collect_point_command=show_collect_point, backup_point_command=show_backup_point,
+                                  collect_point_backup_point_command=show_remote_collect_point,
+                                  only_collect_points=args.only_collect_points,
+                                  only_backup_points=args.only_backup_points)
     elif command == 'check':
         if runner.load():
             from polyarchiv.show import show_collect_point, show_remote_collect_point, \
-                show_remote_repository
+                show_backup_point
             values = {'return_text': [], 'return_code': 0}
             collect_point_command = functools.partial(check_collect_point, values)
-            remote_command = functools.partial(check_remote_collect_point, values)
-            runner.apply_commands(collect_point_command=collect_point_command, collect_point_remote_command=remote_command,
-                                  only_collect_points=args.only_collect_points, only_remotes=args.only_remotes)
+            backup_point_command = functools.partial(check_backup_collect_points, values)
+            runner.apply_commands(collect_point_command=collect_point_command,
+                                  collect_point_backup_point_command=backup_point_command,
+                                  only_collect_points=args.only_collect_points,
+                                  only_backup_points=args.only_backup_points)
             return_code = values['return_code']
             msg = ', '.join(values['return_text'])
             if return_code == 0:

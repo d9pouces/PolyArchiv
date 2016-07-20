@@ -25,7 +25,7 @@ Of course, the name of the option is the name of the variable.
 
 In the remote config, you can also override some variables defined in collect points,
 by adding a new section, specific to this collect point.
-Check the example below, made of two collect points and a single remote one:
+Check the example below, made of two collect points and a single backup one:
 
 .. code-block:: ini
   :caption: /etc/polyarchiv/my-collect-point-1.collect
@@ -49,8 +49,8 @@ Check the example below, made of two collect points and a single remote one:
   ; you can override the default `name` variable
 
 .. code-block:: ini
-  :caption: /etc/polyarchiv/my-remote.remote
-  :name: variables:/etc/polyarchiv/my-remote.remote
+  :caption: /etc/polyarchiv/my-backup-point.backup
+  :name: variables:/etc/polyarchiv/my-backup-point.backup
 
   [repository]
   engine=git
@@ -62,7 +62,7 @@ Check the example below, made of two collect points and a single remote one:
 
   [variables "my-collect-point-2"]
   group=MY-GROUP-2
-  ; you can override the `group` variable of `my-collect-point-2` only in the `my-remote` remote repository.
+  ; you can override the `group` variable of `my-collect-point-2` only in the `my-backup-point` backup point.
 
 
 With this configuration, `my-collect-point-1` is sent to `remote_url=http://gitlab.example.org/MyGroup1/my-collect-point-1.git` and

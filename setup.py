@@ -24,7 +24,7 @@ for line in codecs.open(os.path.join('polyarchiv', '__init__.py'), 'r', encoding
 with codecs.open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as fd:
     long_description = fd.read()
 
-sources, remotes, collect_points, filters = [], [], [], []
+sources, backup_points, collect_points, filters = [], [], [], []
 engines_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'engines.ini')
 
 if os.path.isfile(engines_file):
@@ -32,8 +32,8 @@ if os.path.isfile(engines_file):
     parser.read([engines_file])
     if parser.has_section('sources'):
         sources = ['%s = %s' % (key, value) for key, value in parser.items('sources')]
-    if parser.has_section('remotes'):
-        remotes = ['%s = %s' % (key, value) for key, value in parser.items('remotes')]
+    if parser.has_section('backup_points'):
+        backup_points = ['%s = %s' % (key, value) for key, value in parser.items('backup_points')]
     if parser.has_section('collect_points'):
         collect_points = ['%s = %s' % (key, value) for key, value in parser.items('collect_points')]
     if parser.has_section('filters'):
@@ -50,7 +50,7 @@ setup(
     license='CeCILL-B',
     url='https://github.com/d9pouces/Polyarchiv',
     entry_points={'console_scripts': ['polyarchiv%s = polyarchiv.cli:main' % command_suffix],
-                  'polyarchiv.sources': sources, 'polyarchiv.remotes': remotes,
+                  'polyarchiv.sources': sources, 'polyarchiv.backup_points': backup_points,
                   'polyarchiv.collect_points': collect_points, 'polyarchiv.filters': filters, },
     packages=[x for x in find_packages() if 'tests' not in x],
     include_package_data=True,

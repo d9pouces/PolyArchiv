@@ -3,10 +3,10 @@
 Filters
 =======
 
-By default, a collect point gather some files from its sources and expose them to all remote repositories.
-You can apply some changes on these files, before sending them to the remote repositories.
+By default, a collect point gather some files from its sources and expose them to all backup points.
+You can apply some changes on these files, before sending them to the backup points.
 These operation can happen after the collect, or only before a given remote backup.
-Imagine you want to encrypt your backup files, and you have two remote and two collect points.
+Imagine you want to encrypt your backup files, and you have two backup points and two collect points.
 
 .. code-block:: bash
 
@@ -37,13 +37,13 @@ First case
 ----------
 
 Example: you must apply the encryption filter to all collect points you wan to protect.
-Original (not crypted!) data are still available on the disk but not used by remote repositories.
+Original (not crypted!) data are still available on the disk but not used by backup points.
 
 Second case
 -----------
 
-Example: all collect points that are processed by the remote repositories are encrypted.
-However, if you use several remote repositories, the encryption process is performed several times.
+Example: all collect points that are processed by the backup points are encrypted.
+However, if you use several backup points, the encryption process is performed several times.
 Moreover, clear-text data are still available on the disk.
 
 Applying filters

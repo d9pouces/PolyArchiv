@@ -5,8 +5,8 @@ import datetime
 import logging
 
 from polyarchiv.collect_points import CollectPoint
-from polyarchiv.remotes import RemoteRepository
-from polyarchiv.repository import RepositoryInfo
+from polyarchiv.backup_points import BackupPoint
+from polyarchiv.repository import PointInfo
 
 __author__ = 'Matthieu Gallet'
 
@@ -22,7 +22,7 @@ def check_collect_point(values, collect_point):
         values['return_code'] = 2
         values['return_text'] += ['unable to check status of %s: %s' % (name, e)]
         return
-    assert isinstance(info, RepositoryInfo)
+    assert isinstance(info, PointInfo)
     if info.last_success is None:
         values['return_code'] = 2
         values['return_text'] += ['no successful backup of %s' % name]
@@ -37,17 +37,17 @@ def check_collect_point(values, collect_point):
         values['return_text'] += ['the last backup of %s has failed. %s' % (name, info.last_message)]
 
 
-def check_remote_collect_point(values, collect_point, remote_repository):
+def check_backup_collect_points(values, collect_point, backup_point):
     assert isinstance(collect_point, CollectPoint)
-    assert isinstance(remote_repository, RemoteRepository)
-    name = '%s:%s' % (collect_point.name, remote_repository.name)
+    assert isinstance(backup_point, BackupPoint)
+    name = '%s:%s' % (collect_point.name, backup_point.name)
     try:
-        info = remote_repository.get_info(collect_point)
+        info = backup_point.get_info(collect_point)
     except ValueError as e:
         values['return_code'] = 2
         values['return_text'] += ['unable to check status of %s: %s' % (name, e)]
         return
-    assert isinstance(info, RepositoryInfo)
+    assert isinstance(info, PointInfo)
     if info.last_success is None:
         values['return_code'] = 2
         values['return_text'] += ['no successful backup of %s' % name]

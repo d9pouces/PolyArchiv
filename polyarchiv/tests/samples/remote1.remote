@@ -1,6 +1,6 @@
 [repository]
-engine=polyarchiv.remotes.GitRepository
-remote_tags=
+engine=polyarchiv.backup_points.GitRepository
+backup_point_tags=
 remote_url=http://gitlab.example.org/group/TestsPolyarchiv.git
 remote_branch=master
 user=mgallet

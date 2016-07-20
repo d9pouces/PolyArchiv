@@ -4,7 +4,7 @@ Configuration
 Configuration is based on standard `.ini <https://docs.python.org/3/library/configparser.html>`_ files, each file corresponding to one repository:
 
   * `my-collect-point.collect` defines a collect point named `my-collect-point`,
-  * `my-remote-repo.remote` defines a remote repository named `my-remote-repo`.
+  * `my-backup-point.backup` defines a backup point named `my-backup-point`.
 
 All these files are expected in the config directory `/etc/polyarchiv`. If you installed PolyArchiv in a virtualenv, this folder
 is inside your virtualenv. You can also use `polyarchiv config` to display the actual configuration directory, and you can change it with
@@ -24,7 +24,7 @@ There are several kinds of collect points:
   * git repository: after each backup, files that have been gathered from the different sources are added and locally commited.
   * archive: all collected files are merged into a single .tar.(gz/bz2/xz) archive.
 
-There are also several kinds of remote repositories:
+There are also several kinds of backup points:
 
   * git: the local backup is pushed to this remote git repository,
   * gitlab: almost identical to the previous one, but able to automatically create the remote repository,
@@ -33,8 +33,7 @@ There are also several kinds of remote repositories:
   * rolling_archive: creates an archive, pushes it to a remote location. Deletes some previous archives
     (say, one per day during six days, then one per week during three weeks, then one per month during 12 months)
 
-These remote repositories are optional and you can of course use only local backups.
-Several remote parameters (especially the remote location) can depend on the date/time or the hostname (check the remote doc for more information).
+These backup points are optional and you can of course use only local collect points, for example when your collect point is stored on a NFS share. All parameters (especially the remote location) can depend on the date and time, and on the hostname.
 
 Any collect/backup point can be associated to a backup frequency:
 if a given repository has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
@@ -60,8 +59,8 @@ You can also define some filters for transforming files (please check the :ref:`
   engine=git
   local_path=/tmp/local
   collect_point_tags=local
-  included_remote_tags=*
-  excluded_remote_tags=
+  included_backup_point_tags=*
+  excluded_backup_point_tags=
   frequency=daily
 
   [source "source_1"]
@@ -87,15 +86,15 @@ You can also define some filters for transforming files (please check the :ref:`
   source_path=/tmp/source/files
   destination_path=./files
 
-Remote repositories
--------------------
+Backup points
+-------------
 
-As said before, a remote repository is defined by a `ini` file in the configuration directory and with a name ending by `.remote`.
+As said before, a backup point is defined by a `ini` file in the configuration directory and with a name ending by `.backup`.
 This config file requires a mandatory section `[repository]`.
-The main option is `engine`, defining the kind of remote repository. Please check the list of available remote repositories: :ref:`remotes`.
+The main option is `engine`, defining the kind of backup points. Please check the list of available backup points: :ref:`backup_points`.
 
-By default, all remote repositories are used with all collect points. Therefore, you should use at least the `name`
-variable (the  name of the collect point) to backup several collect points with the same remote repository.
+By default, all backup points are used with all collect points. Therefore, you should use at least the `name`
+variable (the  name of the collect point) to backup several collect points with the same backup point.
 Please check the section :ref:`variables` for a more detailed explanation.
 
 .. _urls:
@@ -111,7 +110,7 @@ Excepting git URLs, valid URLs must look like one of these examples:
 
 Of course, `http`-like URLs require a WebDAV-compliant server (you can use Apache or Nginx).
 
-URLs for git remotes must look like:
+Git remote URLs must look like:
   * `file:///foo/bar/baz.git`,
   * `git@hostname/foo/bar/baz.git` (and `private_key` must be set),
   * `http(s)://username:password@hostname/foo/bar/baz.git`,
@@ -127,7 +126,7 @@ URLs for git remotes must look like:
 Remote metadata storage
 -----------------------
 
-Most parameters for remote repositories can rely on time-based, or host-based, variables: for example,
+Most parameters for backup points can rely on time-based, or host-based, variables: for example,
 `remote_url = ssh://example.org/backups/{hostname}/{name}-{Y}-{m}.tar.gz`.
 If you restore your data on a brand new machine, there is no way to determine the previous `hostname`, nor
 the time of the last backup (the `Y` and `m` values).
@@ -138,15 +137,15 @@ This URL should either depend on the `name` variable or ends by `/` (allowing to
 Associating collect and backup points
 -------------------------------------
 
-All remote repositories apply to all collect points but you can change this behaviour by applying tags to repositories.
-By default, a collect point has the tag `local` and include all existing remote repositories: `included_remote_tags=*`.
-A remote repository has the tag `remote` and include all collect points: `included_collect_point_tags=*`.
+All backup points apply to all collect points but you can change this behaviour by applying tags to repositories.
+By default, a collect point has the tag `collect` and include all existing backup points: `included_backup_point_tags=*`.
+A backup point has the tag `backup` and include all collect points: `included_collect_point_tags=*`.
 
-If large collect points should not be sent to a given remote repository, you can exclude the "large" tags from the remote configuration:
+If large collect points should not be sent to a given backup point, you can exclude the "large" tags from the backup configuration:
 
 .. code-block::  ini
-  :caption: /etc/polyarchiv/my-remote.remote
-  :name: tags1:/etc/polyarchiv/my-remote.remote
+  :caption: /etc/polyarchiv/my-backup-point.backup
+  :name: tags1:/etc/polyarchiv/my-backup-point.backup
 
   [repository]
   engine=git
@@ -166,15 +165,15 @@ instead of simply `large`):
   collect_point_tags=local,extra-large
 
 
-Tags can also be applied to remote repositories:
+Tags can also be applied to backup points:
 
 .. code-block:: ini
-  :caption: /etc/polyarchiv/my-remote.remote
-  :name: tags:/etc/polyarchiv/my-remote.remote
+  :caption: /etc/polyarchiv/my-backup-point.backup
+  :name: tags:/etc/polyarchiv/my-backup-point.backup
 
   [repository]
   engine=git
-  remote_tags=small-only
+  backup_point_tags=small-only
 
 and add the "large" tag to the local configuration:
 
@@ -185,6 +184,6 @@ and add the "large" tag to the local configuration:
   [repository]
   engine=git
   local_path=/tmp/local
-  included_remote_tags=huge,large
+  included_backup_point_tags=huge,large
 
-Since the remote repository does not present either the `huge` tag or the `large` tag, it will not be applied.
+Since the backup point does not present either the `huge` tag or the `large` tag, it will not be applied.

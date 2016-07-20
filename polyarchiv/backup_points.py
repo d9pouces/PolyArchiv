@@ -28,32 +28,32 @@ import os
 
 from polyarchiv.conf import Parameter, strip_split, check_executable, check_file
 from polyarchiv.collect_points import CollectPoint
-from polyarchiv.repository import Repository, RepositoryInfo
+from polyarchiv.repository import Repository, PointInfo
 from polyarchiv.utils import text_type
 
 __author__ = 'Matthieu Gallet'
-logger = logging.getLogger('polyarchiv.remotes')
+logger = logging.getLogger('polyarchiv.backup_points')
 constant_time = datetime.datetime(2016, 1, 1, 0, 0, 0)
 
 
-class RemoteRepository(Repository):
+class BackupPoint(Repository):
     constant_format_values = {x: constant_time.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'}
     constant_format_values.update({'fqdn': 'localhost', 'hostname': 'localhost'})
     parameters = Repository.parameters + [
-        Parameter('remote_tags', converter=strip_split,
-                  help_str='list of tags (comma-separated) associated to this remote repository'),
+        Parameter('backup_point_tags', converter=strip_split,
+                  help_str='list of tags (comma-separated) associated to this backup point (default: "backup")'),
         Parameter('included_collect_point_tags', converter=strip_split,
                   help_str='any collect point with one of these tags (comma-separated) will be associated '
-                           'to this remote repo. You can use ? or * as jokers in these tags.'),
+                           'to this backup point. You can use ? or * as jokers in these tags.'),
         Parameter('excluded_collect_point_tags', converter=strip_split,
                   help_str='any collect point with one of these tags (comma-separated) will not be associated'
-                           ' to this remote repo. You can use ? or * as jokers in these tags. Have precedence over '
-                           'included_collect_point_tags and included_remote_tags.'),
+                           ' to this backup point. You can use ? or * as jokers in these tags. Have precedence over '
+                           'included_collect_point_tags and included_backup_point_tags.'),
     ]
 
-    def __init__(self, name, remote_tags=None, included_collect_point_tags=None, excluded_collect_point_tags=None, **kwargs):
-        super(RemoteRepository, self).__init__(name, **kwargs)
-        self.remote_tags = ['remote'] if remote_tags is None else remote_tags
+    def __init__(self, name, backup_point_tags=None, included_collect_point_tags=None, excluded_collect_point_tags=None, **kwargs):
+        super(BackupPoint, self).__init__(name, **kwargs)
+        self.backup_point_tags = ['backup'] if backup_point_tags is None else backup_point_tags
         self.included_collect_point_tags = ['*'] if included_collect_point_tags is None else included_collect_point_tags
         self.excluded_collect_point_tags = excluded_collect_point_tags or []
         self.collect_point_variables = {}
@@ -81,9 +81,9 @@ class RemoteRepository(Repository):
     def backup(self, collect_point, force=False):
         """ perform the backup and log all errors
         """
-        logger.info('remote backup %s of collect point %s' % (self.name, collect_point.name))
+        logger.info('backup point %s of collect point %s' % (self.name, collect_point.name))
         info = self.get_info(collect_point)
-        assert isinstance(info, RepositoryInfo)
+        assert isinstance(info, PointInfo)
         assert isinstance(collect_point, CollectPoint)
         out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(),
                                                     previous_time=info.last_success)
@@ -93,7 +93,7 @@ class RemoteRepository(Repository):
             logger.debug('last backup (%s) is still valid. No backup to do.' % info.last_success)
             return True
         elif info.last_success is None:
-            logger.info('no previous remote backup: a new backup is required.')
+            logger.info('no previous backup: a new backup is required.')
         elif out_of_date:
             logger.info('last backup (%s) is out-of-date.' % str(info.last_success))
         elif force:
@@ -126,7 +126,7 @@ class RemoteRepository(Repository):
                     collect_point.release_lock(lock_)
             except Exception as e:
                 cprint('unable to release lock. %s' % text_type(e), RED)
-        if self.can_execute_command('# register this remote state'):
+        if self.can_execute_command('# register this backup point state'):
             self.set_info(collect_point, info)
         return info.last_state_valid
 
@@ -134,7 +134,7 @@ class RemoteRepository(Repository):
         """send backup data from the collect point
         :param collect_point: the collect point
         :param export_data_path: where all data are stored (path)
-        :param info: RepositoryInfo object. its attribute `data` can be freely updated
+        :param info: PointInfo object. its attribute `data` can be freely updated
         """
         raise NotImplementedError
 
@@ -162,20 +162,20 @@ class RemoteRepository(Repository):
                             allow_in_place=False)
 
     # noinspection PyMethodMayBeStatic
-    def get_info(self, collect_point, force_remote=False):
+    def get_info(self, collect_point, force_backup=False):
         assert isinstance(collect_point, CollectPoint)
         path = os.path.join(self.private_path(collect_point), '%s.json' % self.name)
         if os.path.isfile(path):
             with codecs.open(path, 'r', encoding='utf-8') as fd:
                 content = fd.read()
-            return RepositoryInfo.from_str(content)
+            return PointInfo.from_str(content)
         else:
-            return RepositoryInfo()
+            return PointInfo()
 
     # noinspection PyMethodMayBeStatic
     def set_info(self, collect_point, info):
         assert isinstance(collect_point, CollectPoint)
-        assert isinstance(info, RepositoryInfo)
+        assert isinstance(info, PointInfo)
         path = os.path.join(self.private_path(collect_point), '%s.json' % self.name)
         self.ensure_dir(path, parent=True)
         content = info.to_str()
@@ -183,9 +183,9 @@ class RemoteRepository(Repository):
             fd.write(content)
 
     def restore(self, collect_point):
-        info = self.get_info(collect_point, force_remote=True)
+        info = self.get_info(collect_point, force_backup=True)
         assert isinstance(collect_point, CollectPoint)
-        assert isinstance(info, RepositoryInfo)
+        assert isinstance(info, PointInfo)
         collect_point.variables.update(info.variables)
         next_path = collect_point.export_data_path
         for filter_ in self.filters:
@@ -201,18 +201,18 @@ class RemoteRepository(Repository):
     @lru_cache()
     def private_path(self, collect_point):
         assert isinstance(collect_point, CollectPoint)
-        return os.path.join(collect_point.remote_private_path(self), 'remote')
+        return os.path.join(collect_point.backup_point_private_path(self), 'remote')
 
     @lru_cache()
     def filter_private_path(self, collect_point, filter_):
         assert isinstance(collect_point, CollectPoint)
         assert isinstance(filter_, FileFilter)
-        return os.path.join(collect_point.remote_private_path(self), 'filter-%s' % filter_.name)
+        return os.path.join(collect_point.backup_point_private_path(self), 'filter-%s' % filter_.name)
 
 
-class CommonRemoteRepository(RemoteRepository):
-    """A RemoteRepository with meaningful implementations pour set_info/get_info"""
-    parameters = RemoteRepository.parameters + [
+class CommonBackupPoint(BackupPoint):
+    """A BackupPoint with meaningful implementations pour set_info/get_info"""
+    parameters = BackupPoint.parameters + [
         Parameter('metadata_url', required=False,
                   help_str='send metadata (about the successful last backup) to this URL.'
                            'Should end by "/" or use the {name} variable [**]'),
@@ -228,7 +228,7 @@ class CommonRemoteRepository(RemoteRepository):
 
     def __init__(self, name, metadata_url=None, metadata_private_key=None, metadata_ca_cert=None,
                  metadata_keytab=None, metadata_ssh_options=None, **kwargs):
-        super(CommonRemoteRepository, self).__init__(name, **kwargs)
+        super(CommonBackupPoint, self).__init__(name, **kwargs)
         self.metadata_url = metadata_url
         self.metadata_private_key = metadata_private_key
         self.metadata_ca_cert = metadata_ca_cert
@@ -240,9 +240,9 @@ class CommonRemoteRepository(RemoteRepository):
     def format_value(self, value, collect_point, use_constant_values=False):
         """Check if the metadata_url is required: at least one formatted value uses non-constant values"""
         if use_constant_values:
-            return super(CommonRemoteRepository, self).format_value(value, collect_point, use_constant_values)
-        result = super(CommonRemoteRepository, self).format_value(value, collect_point, False)
-        constant_result = super(CommonRemoteRepository, self).format_value(value, collect_point, True)
+            return super(CommonBackupPoint, self).format_value(value, collect_point, use_constant_values)
+        result = super(CommonBackupPoint, self).format_value(value, collect_point, False)
+        constant_result = super(CommonBackupPoint, self).format_value(value, collect_point, True)
         if constant_result != result:
             self.metadata_url_requirements.append(value)
         return result
@@ -276,10 +276,10 @@ class CommonRemoteRepository(RemoteRepository):
         return backend
 
     @lru_cache()
-    def get_info(self, collect_point, force_remote=False):
+    def get_info(self, collect_point, force_backup=False):
         assert isinstance(collect_point, CollectPoint)
         path = os.path.join(self.private_path(collect_point), '%s.json' % self.name)
-        if not os.path.isfile(path) or force_remote:
+        if not os.path.isfile(path) or force_backup:
             self.ensure_dir(path, parent=True)
             backend = self._get_metadata_backend(collect_point)
             if backend is not None:
@@ -288,15 +288,15 @@ class CommonRemoteRepository(RemoteRepository):
                     backend.sync_file_to_local(path)
                 except:  # happens on the first sync (no remote data available)
                     pass
-        if os.path.isfile(path) and not force_remote:
+        if os.path.isfile(path) and not force_backup:
             with codecs.open(path, 'r', encoding='utf-8') as fd:
                 content = fd.read()
-            return RepositoryInfo.from_str(content)
-        return RepositoryInfo()
+            return PointInfo.from_str(content)
+        return PointInfo()
 
     def set_info(self, collect_point, info):
         assert isinstance(collect_point, CollectPoint)
-        assert isinstance(info, RepositoryInfo)
+        assert isinstance(info, PointInfo)
         path = os.path.join(self.private_path(collect_point), '%s.json' % self.name)
         self.ensure_dir(path, parent=True)
         content = info.to_str()
@@ -307,13 +307,13 @@ class CommonRemoteRepository(RemoteRepository):
             backend.sync_file_from_local(path)
 
 
-class GitRepository(CommonRemoteRepository):
+class GitRepository(CommonBackupPoint):
     """Add a remote to a collect point and push local modification to this remote.
-    Can use https (with password or kerberos auth) or git+ssh remotes (with private key authentication).
+    Can use https (with password or kerberos auth) or git+ssh remote URLs (with private key authentication).
     local and remote branches are always named 'master'.
     """
 
-    parameters = CommonRemoteRepository.parameters + [
+    parameters = CommonBackupPoint.parameters + [
         Parameter('git_executable', converter=check_executable, common=True,
                   help_str='path of the git executable (default: "git")'),
         Parameter('keytab', converter=check_file,
@@ -446,8 +446,8 @@ class GitlabRepository(GitRepository):
         return True
 
 
-class Synchronize(CommonRemoteRepository):
-    parameters = CommonRemoteRepository.parameters + [
+class Synchronize(CommonBackupPoint):
+    parameters = CommonBackupPoint.parameters + [
         Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must ends by a folder name [*]'),
         Parameter('private_key', help_str='private key or certificate associated to \'remote_url\' [*]'),
         Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
@@ -484,14 +484,14 @@ class Synchronize(CommonRemoteRepository):
         backend.sync_dir_to_local(export_data_path)
 
 
-class TarArchive(CommonRemoteRepository):
+class TarArchive(CommonBackupPoint):
     """Collect all files of your collect point into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
     to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
 
     """
 
     excluded_files = {'.git', '.gitignore'}
-    parameters = CommonRemoteRepository.parameters + [
+    parameters = CommonBackupPoint.parameters + [
         Parameter('remote_url', required=True, help_str='synchronize data to this URL, like '
                                                         '\'ssh://user@hostname/folder/archive.tar.gz\'. '
                                                         'Must end by ".tar.gz", "tar.bz2", "tar.xz" [*]'),

@@ -23,8 +23,8 @@ except ImportError:
 
 from polyarchiv.conf import Parameter
 from polyarchiv.collect_points import CollectPoint
-from polyarchiv.remotes import RemoteRepository
-from polyarchiv.repository import ParameterizedObject, RepositoryInfo
+from polyarchiv.backup_points import BackupPoint
+from polyarchiv.repository import ParameterizedObject, PointInfo
 from polyarchiv.termcolor import cprint, RED, GREEN, YELLOW
 from polyarchiv.utils import import_string, text_type
 
@@ -77,7 +77,7 @@ class Runner(ParameterizedObject):
                 return result
 
             available_collect_point_engines.update(import_points('polyarchiv.collect_points'))
-            available_remote_engines.update(import_points('polyarchiv.remotes'))
+            available_remote_engines.update(import_points('polyarchiv.backup_points'))
             available_source_engines.update(import_points('polyarchiv.sources'))
             available_filter_engines.update(import_points('polyarchiv.filters'))
         if engines_file is not None:
@@ -89,7 +89,7 @@ class Runner(ParameterizedObject):
                     if parser.has_section(name) else {}
 
             available_source_engines.update(import_items('sources'))
-            available_remote_engines.update(import_items('remotes'))
+            available_remote_engines.update(import_items('backup_points'))
             available_collect_point_engines.update(import_items('collect_points'))
             available_filter_engines.update(import_items('filters'))
         return available_collect_point_engines, available_source_engines, available_remote_engines, available_filter_engines
@@ -239,8 +239,8 @@ class Runner(ParameterizedObject):
             # noinspection PyTypeChecker
             remote_name = os.path.basename(config_file).rpartition('.')[0]
             remote = self._load_engine(config_file, parser, self.repository_section, [remote_name],
-                                       self.available_remote_engines, RemoteRepository)
-            assert isinstance(remote, RemoteRepository)
+                                       self.available_remote_engines, BackupPoint)
+            assert isinstance(remote, BackupPoint)
             # load variables applying to the whole remote repository
             if parser.has_section(self.variables_section):
                 remote.variables.update({opt: parser.get(self.variables_section, opt)
@@ -266,75 +266,75 @@ class Runner(ParameterizedObject):
         :param remote:
         """
         assert isinstance(collect_point, CollectPoint)
-        assert isinstance(remote, RemoteRepository)
+        assert isinstance(remote, BackupPoint)
         for collect_point_tag in collect_point.collect_point_tags:
             for remote_pattern in remote.excluded_collect_point_tags:
                 if fnmatch.fnmatch(collect_point_tag, remote_pattern):
                     return False
-        for remote_tag in remote.remote_tags:
-            for collect_point_pattern in collect_point.excluded_remote_tags:
+        for remote_tag in remote.backup_point_tags:
+            for collect_point_pattern in collect_point.excluded_backup_point_tags:
                 if fnmatch.fnmatch(remote_tag, collect_point_pattern):
                     return False
         for collect_point_tag in collect_point.collect_point_tags:
             for remote_pattern in remote.included_collect_point_tags:
                 if fnmatch.fnmatch(collect_point_tag, remote_pattern):
                     return True
-        for remote_tag in remote.remote_tags:
-            for collect_point_pattern in collect_point.included_remote_tags:
+        for remote_tag in remote.backup_point_tags:
+            for collect_point_pattern in collect_point.included_backup_point_tags:
                 if fnmatch.fnmatch(remote_tag, collect_point_pattern):
                     return True
         return False
 
-    def apply_commands(self, collect_point_command=None, remote_command=None, collect_point_remote_command=None,
-                       only_collect_points=None, only_remotes=None):
+    def apply_commands(self, collect_point_command=None, backup_point_command=None, collect_point_backup_point_command=None,
+                       only_collect_points=None, only_backup_points=None):
         """ Apply the given commands to the available collect/backup points.
 
         :param collect_point_command: callable(collect_point) -> None
         :type collect_point_command: `callable`
-        :param collect_point_remote_command: callable(collect_point, remote_repository) -> None
-        :type collect_point_remote_command: `callable`
-        :param remote_command: callable(remote_repository) -> None
-        :type remote_command: `callable`
+        :param collect_point_backup_point_command: callable(collect_point, backup_point) -> None
+        :type collect_point_backup_point_command: `callable`
+        :param backup_point_command: callable(backup_point) -> None
+        :type backup_point_command: `callable`
         :param only_collect_points: list of selected collect points (all if not specified)
         :type only_collect_points: :class:`list`
-        :param only_remotes: list of selected remote repositories (all if not specified)
-        :type only_remotes: :class:`list`
+        :param only_backup_points: list of selected remote repositories (all if not specified)
+        :type only_backup_points: :class:`list`
         :return:
         :rtype:
         """
-        if remote_command:
+        if backup_point_command:
             for remote_name, remote in self.remote_repositories.items():
-                if only_remotes and remote_name not in only_remotes:
+                if only_backup_points and remote_name not in only_backup_points:
                     continue
-                assert isinstance(remote, RemoteRepository)
-                remote_command(remote)
+                assert isinstance(remote, BackupPoint)
+                backup_point_command(remote)
         for collect_point_name, collect_point in self.collect_points.items():
             if only_collect_points and collect_point_name not in only_collect_points:
                 continue
             assert isinstance(collect_point, CollectPoint)
             if collect_point_command is not None:
                 collect_point_command(collect_point)
-            if collect_point_remote_command is None:
+            if collect_point_backup_point_command is None:
                 continue
             for remote_name, remote in self.remote_repositories.items():
-                if only_remotes and remote_name not in only_remotes:
+                if only_backup_points and remote_name not in only_backup_points:
                     continue
-                assert isinstance(remote, RemoteRepository)
+                assert isinstance(remote, BackupPoint)
                 if self.can_associate(collect_point, remote):
-                    collect_point_remote_command(collect_point, remote)
+                    collect_point_backup_point_command(collect_point, remote)
 
-    def backup(self, force=False, only_collect_points=None, only_remotes=None, skip_collect=False, skip_remote=False):
+    def backup(self, force=False, only_collect_points=None, only_backup_points=None, skip_collect=False, skip_backup=False):
         """Run a backup operation. return two dicts
         first result is {collect_point.name: bool}  (dict["my-collect_repo"] = True if successful)
-        second result is {(collect_point.name, remote_repository.name): bool}
+        second result is {(collect_point.name, backup_point.name): bool}
 
         :param force: force backup even if not out-of-date
         :param only_collect_points: limit to the selected collect points
         :type only_collect_points: :class:`list` of `str`
-        :param only_remotes: limit to the selected remote repositories
-        :type only_remotes: :class:`list` of `str`
+        :param only_backup_points: limit to the selected remote repositories
+        :type only_backup_points: :class:`list` of `str`
         :param skip_collect: do not execute the collect point phase
-        :param skip_remote: do not execute the backup point phase
+        :param skip_backup: do not execute the backup point phase
         :return:
         """
         collect_point_results = {}
@@ -353,9 +353,9 @@ class Runner(ParameterizedObject):
                     collect_point_results[collect_point.name] = False
                     continue
             for remote_name, remote in self.remote_repositories.items():
-                if only_remotes and remote_name not in only_remotes and not skip_remote:
+                if only_backup_points and remote_name not in only_backup_points and not skip_backup:
                     continue
-                assert isinstance(remote, RemoteRepository)
+                assert isinstance(remote, BackupPoint)
                 if not self.can_associate(collect_point, remote):
                     continue
                 result = remote.backup(collect_point, force=force)
@@ -367,14 +367,14 @@ class Runner(ParameterizedObject):
                     remote_results[(remote.name, collect_point.name)] = False
         return collect_point_results, remote_results
 
-    def restore(self, only_collect_points=None, only_remotes=None, no_remote=False):
+    def restore(self, only_collect_points=None, only_backup_points=None, no_remote=False):
         """Run a backup operation
 
         :param no_remote: do not use remote repositories
         :param only_collect_points: limit to the selected collect points
         :type only_collect_points: :class:`list` of `str`
-        :param only_remotes: limit to the selected remote repositories
-        :type only_remotes: :class:`list` of `str`
+        :param only_backup_points: limit to the selected remote repositories
+        :type only_backup_points: :class:`list` of `str`
         :return:
         """
         for collect_point_name, collect_point in self.collect_points.items():
@@ -385,13 +385,13 @@ class Runner(ParameterizedObject):
             best_remote = None
             if not no_remote:
                 for remote_name, remote in self.remote_repositories.items():
-                    assert isinstance(remote, RemoteRepository)
-                    if only_remotes and remote_name not in only_remotes:
+                    assert isinstance(remote, BackupPoint)
+                    if only_backup_points and remote_name not in only_backup_points:
                         continue
                     elif not self.can_associate(collect_point, remote):
                         continue
                     remote_info = remote.get_info(collect_point)
-                    assert isinstance(remote_info, RepositoryInfo)
+                    assert isinstance(remote_info, PointInfo)
                     if remote_info.last_success is None:
                         continue
                     if best_remote_date is None or best_remote_date < remote_info.last_success:

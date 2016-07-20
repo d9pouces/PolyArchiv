@@ -1,7 +1,7 @@
 PolyArchiv
 ==========
 
-Backup data from multiple sources (organized in collect points) and backup them to one or more points.
+Backup data from multiple 'sources' (organized in 'collect points') and copy them to one or more 'backup points'.
 The complete doc is available here: http://polyarchiv.readthedocs.io/en/latest/ 
 
        collect point 1: /var/backups/local1             /----------------------\
@@ -27,10 +27,10 @@ The complete doc is available here: http://polyarchiv.readthedocs.io/en/latest/
     |     source 3: mysql         |     
     \-----------------------------/     
                                     
-Configuration is based on standard `.ini` files, each file corresponding to one repository: 
+Configuration is based on standard `.ini` files, each file corresponding to one collect or backup point: 
     
   * `my-collect-point.collect` defines a collect point named `my-collect-point`,
-  * `my-backup-point.remote` defines a backup point named `my-backup-point`.
+  * `my-backup-point.backup` defines a backup point named `my-backup-point`.
 
 Each collect point must define a base folder and one or more data sources, all of them being defined in the `my-collect-point.collect` file:
 
@@ -54,7 +54,7 @@ There are also several kinds of backup points:
   * rolling_archive: creates an archive, pushes it to a remote location. Deletes some previous archives 
     (say, one per day during six days, then one per week during three weeks, then one per month during 12 months) 
 
-These remote repositories are optional and you can of course use only local backups. All parameters (especially the remote location) can depend on the date and time, and on the hostname.
+These backup points are optional and you can of course use only local collect points, for example when your collect point is stored on a NFS share. All parameters (especially the remote location) can depend on the date and time, and on the hostname.
 
 Each backup point (either collect ones or backup ones) is associated to a backup frequency. 
 If a given point has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
@@ -104,7 +104,7 @@ Backup all data sources. If you set a frequency, collect and backup points that 
     
 #### restore 
 
-First fetch data from the most recent backup point to the collect point, then restore data to each source. 
+First fetch data from the most recent backup point to the collect point, then restore each source. 
 
     $ polyarchiv restore [-C /my/config/dir] [--force]
 
@@ -124,7 +124,7 @@ First fetch data from the most recent backup point to the collect point, then re
   * `--confirm-commands`: require a validation of each action
   * `--config`: specify another config dir
   * `--only-collect-points`: limit operations to the collect points corresponding to this tags (can be used several times)
-  * `--only-remotes`: limit operations to the remote repositories with this tags (can be used several times)
+  * `--only-backup-points`: limit operations to the backup points with this tags (can be used several times)
     
 Next steps
 ----------
@@ -144,7 +144,7 @@ The default configuration directory is `/etc/polyarchiv` unless you installed it
 Otherwise, you can specify another config dir with `polyarchiv -C /my/config/dir`.
 
 This directory should contain configuration files for collect points 
-(like `my_collect_point.collect`) as well as remote repositories (like `my_backup_point.remote`).
+(like `my_collect_point.collect`) as well as backup points (like `my_backup_point.backup`).
 
 Here is an example of collect point, gathering data from three sources:
 
@@ -160,8 +160,8 @@ The `[repository]` section defines options for the collect point (the engine tha
     engine=git
     local_path=/tmp/local
     collect_point_tags=local
-    included_remote_tags=*
-    excluded_remote_tags=
+    included_backup_point_tags=*
+    excluded_backup_point_tags=
     frequency=daily
     
     [source "source_1"]
@@ -191,14 +191,14 @@ The kind of points (collect or backup) and of each source is defined by the `eng
 You can define as many collect points (each of them with one or more sources) as you want.
 
 Backup points are simpler and by default only have a `[repository]` section.
-Their names must end by `.remote`.
+Their names must end by `.backup`.
 Here is a gitlab acting as remote storage for git local repo: 
 
-    $ cat /etc/polyarchiv/my-remote1.remote
+    $ cat /etc/polyarchiv/my-backup-point1.backup
     [repository]
     engine=git
     frequency=daily
-    remote_tags=
+    backup_point_tags=
     remote_url=http://gitlab.example.org/group/{name}.git
     remote_branch=master
     user=mgallet
@@ -209,11 +209,11 @@ obviously `my-collect-point`). You can use (a bit) more complex replacement rule
 
 Maybe you also want a full backup (as an archive) uploaded the tenth day of each month, to a HTTP server:
 
-    $ cat /etc/polyarchiv/my-remote2.remote
+    $ cat /etc/polyarchiv/my-backup-point2.backup
     [repository]
     engine=archive
     frequency=monthly:10
-    remote_tags=
+    backup_point_tags=
     remote_url=http://user:p@ssw0rd@myserver.example.org/backups/{name}/
     tar_format=tar.xz
     included_collect_point_tags=*
@@ -235,15 +235,17 @@ Extra backup options
   * `--show-commands`: display all operations as a plain Bash script
   * `--confirm-commands`: display all operations and ask for a manual confirmation before running them
   * `--dry`: does not actually perform operations
-  * `--only-collect-points`: limit used collect points to these tags
-  * `--only-remotes`: limit used remote repositories to these tags
+  * `--only-collect-points` (backup or restore): only apply to the collect points with these tags (can be used several times, and ? or * jokers are valid)
+  * `--only-backup-points` (backup or restore): only apply to the backup points with these tags (can be used several times, and ? or * jokers are valid)
+  * `--skip-collect` (backup only): skip the collect step during a backup
+  * `--skip-backup` (backup only): skip the backup step during a backup
 
 Adding your engines
 -------------------
 
 PolyArchiv is designed to be extensible. You can add your own engines for all kinds of engines:
 
-  * remote repositories (must inherit from `polyarchiv.remotes.RemoteRepository`),
+  * backup points (must inherit from `polyarchiv.backup_points.BackupPoint`),
   * collect points (must inherit from `polyarchiv.collect_points.CollectPoint`),
   * filters (must inherit from `polyarchiv.sources.Source`),
   * sources (must inherit from `polyarchiv.filters.FileFilter`).
@@ -262,7 +264,7 @@ You can either directly use the dotted path in the configuration files:
 You can also register them as new setuptools entry points:
 
   * `polyarchiv.sources`,
-  * `polyarchiv.remotes`,
+  * `polyarchiv.backup_points`,
   * `polyarchiv.collect_points`,
   * `polyarchiv.filters`. 
 

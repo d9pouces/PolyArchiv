@@ -3,8 +3,8 @@ import datetime
 import logging
 
 from polyarchiv.collect_points import CollectPoint
-from polyarchiv.remotes import RemoteRepository
-from polyarchiv.repository import RepositoryInfo
+from polyarchiv.backup_points import BackupPoint
+from polyarchiv.repository import PointInfo
 from polyarchiv.runner import Runner
 from polyarchiv.sources import Source
 from polyarchiv.termcolor import cprint, RED, YELLOW, GREEN, BOLD, CYAN
@@ -44,7 +44,7 @@ def show_collect_point(collect_point, engines_file=None):
     except ValueError as e:
         cprint('Unable to retrieve more information from the collect point: %s' % e, RED)
         return
-    assert isinstance(info, RepositoryInfo)
+    assert isinstance(info, PointInfo)
     if info.last_success is None:
         cprint('No successful local collect', RED)
     else:
@@ -58,39 +58,39 @@ def show_collect_point(collect_point, engines_file=None):
         cprint('The last backup has failed. %s' % info.last_message, RED)
 
 
-def show_remote_repository(remote_repository, engines_file=None):
+def show_backup_point(backup_point, engines_file=None):
     __, __, available_remote_engines, __ = Runner.find_available_engines(engines_file)
-    assert isinstance(remote_repository, RemoteRepository)
-    cprint('remote repository %s selected' % remote_repository.name, CYAN)
-    if remote_repository.__class__ in available_remote_engines:
-        engine = available_remote_engines[remote_repository.__class__]
+    assert isinstance(backup_point, BackupPoint)
+    cprint('remote repository %s selected' % backup_point.name, CYAN)
+    if backup_point.__class__ in available_remote_engines:
+        engine = available_remote_engines[backup_point.__class__]
     else:
-        engine = '%s.%s' % (remote_repository.__class__.__module__, remote_repository.__class__.__name__)
+        engine = '%s.%s' % (backup_point.__class__.__module__, backup_point.__class__.__name__)
     logger.debug('engine: %s' % engine)
-    if remote_repository.__doc__:
-        logger.debug(remote_repository.__doc__)
+    if backup_point.__doc__:
+        logger.debug(backup_point.__doc__)
 
 
-def show_remote_collect_point(collect_point, remote_repository):
+def show_remote_collect_point(collect_point, backup_point):
     assert isinstance(collect_point, CollectPoint)
-    assert isinstance(remote_repository, RemoteRepository)
-    cprint('  * remote repository %s selected on collect point %s' % (remote_repository.name, collect_point.name),
+    assert isinstance(backup_point, BackupPoint)
+    cprint('  * remote repository %s selected on collect point %s' % (backup_point.name, collect_point.name),
            CYAN)
     try:
-        info = remote_repository.get_info(collect_point)
+        info = backup_point.get_info(collect_point)
     except ValueError as e:
         cprint('Unable to retrieve more information from the remote repository: %s' % e, RED)
         return
-    assert isinstance(info, RepositoryInfo)
+    assert isinstance(info, PointInfo)
     if info.last_success is None:
-        cprint('No successful remote backup for %s' % remote_repository.name, RED)
+        cprint('No successful remote backup for %s' % backup_point.name, RED)
     else:
         now = datetime.datetime.now()
         out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
         if out_of_date:
-            cprint('Last local collect is out of date on %s: %s' % (remote_repository.name, info.last_success), YELLOW,
+            cprint('Last local collect is out of date on %s: %s' % (backup_point.name, info.last_success), YELLOW,
                    BOLD)
         else:
-            cprint('Last local collect is recent enough on %s: %s' % (remote_repository.name, info.last_success), GREEN)
+            cprint('Last local collect is recent enough on %s: %s' % (backup_point.name, info.last_success), GREEN)
     if info.last_state_valid is False:
-        cprint('The last collect has failed on %s. %s' % (remote_repository.name, info.last_message), RED)
+        cprint('The last collect has failed on %s. %s' % (backup_point.name, info.last_message), RED)

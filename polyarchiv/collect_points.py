@@ -15,7 +15,7 @@ from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.conf import Parameter, strip_split, check_directory, check_executable
 from polyarchiv.filelocks import Lock
 from polyarchiv.param_checks import check_archive
-from polyarchiv.repository import Repository, RepositoryInfo
+from polyarchiv.repository import Repository, PointInfo
 from polyarchiv.termcolor import RED
 from polyarchiv.termcolor import cprint
 from polyarchiv.utils import text_type, cached_property
@@ -30,22 +30,22 @@ class CollectPoint(Repository):
     """
     parameters = Repository.parameters + [
         Parameter('collect_point_tags', converter=strip_split,
-                  help_str='list of tags (comma-separated) associated to this collect point. Default: "local"'),
-        Parameter('included_remote_tags', converter=strip_split,
+                  help_str='list of tags (comma-separated) associated to this collect point. Default: "collect"'),
+        Parameter('included_backup_point_tags', converter=strip_split,
                   help_str='any remote repository with one of these tags (comma-separated) will be associated '
                            'to this local repo. You can use ? or * as jokers in these tags. Default: "*"'),
-        Parameter('excluded_remote_tags', converter=strip_split,
+        Parameter('excluded_backup_point_tags', converter=strip_split,
                   help_str='any remote repository with one of these tags (comma-separated) will not be associated'
                            ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
-                           'included_collect_point_tags and included_remote_tags.'),
+                           'included_collect_point_tags and included_backup_point_tags.'),
     ]
 
-    def __init__(self, name, collect_point_tags=None, included_remote_tags=None, excluded_remote_tags=None,
+    def __init__(self, name, collect_point_tags=None, included_backup_point_tags=None, excluded_backup_point_tags=None,
                  **kwargs):
         super(CollectPoint, self).__init__(name=name, **kwargs)
-        self.collect_point_tags = ['local'] if collect_point_tags is None else collect_point_tags
-        self.included_remote_tags = ['*'] if included_remote_tags is None else included_remote_tags
-        self.excluded_remote_tags = excluded_remote_tags or []
+        self.collect_point_tags = ['collect'] if collect_point_tags is None else collect_point_tags
+        self.included_backup_point_tags = ['*'] if included_backup_point_tags is None else included_backup_point_tags
+        self.excluded_backup_point_tags = excluded_backup_point_tags or []
         self.sources = []
         # self.last_backup_file = last_backup_file
 
@@ -54,7 +54,7 @@ class CollectPoint(Repository):
         """
         logger.info('backup of collect point %s' % self.name)
         info = self.get_info()
-        assert isinstance(info, RepositoryInfo)
+        assert isinstance(info, PointInfo)
         out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(),
                                                     previous_time=info.last_success)
         if not (force or out_of_date):
@@ -187,9 +187,9 @@ class CollectPoint(Repository):
         """Release the lock object provided by the above method"""
         raise NotImplementedError
 
-    def remote_private_path(self, remote_repository):
-        from polyarchiv.remotes import RemoteRepository
-        assert isinstance(remote_repository, RemoteRepository)
+    def backup_point_private_path(self, backup_point):
+        from polyarchiv.backup_points import BackupPoint
+        assert isinstance(backup_point, BackupPoint)
         raise NotImplementedError
 
     def filter_private_path(self, filter_):
@@ -245,8 +245,8 @@ class FileRepository(CollectPoint):
         return os.path.join(self.metadata_path, 'lock')
 
     @lru_cache()
-    def remote_private_path(self, remote_repository):
-        path = os.path.join(self.local_path, self.METADATA_FOLDER, 'remote-%s' % remote_repository.name)
+    def backup_point_private_path(self, backup_point):
+        path = os.path.join(self.local_path, self.METADATA_FOLDER, 'remote-%s' % backup_point.name)
         return self.format_value(path)
 
     @lru_cache()
@@ -260,12 +260,12 @@ class FileRepository(CollectPoint):
         if os.path.isfile(path):
             with codecs.open(path, 'r', encoding='utf-8') as fd:
                 content = fd.read()
-            return RepositoryInfo.from_str(content)
+            return PointInfo.from_str(content)
         else:
-            return RepositoryInfo()
+            return PointInfo()
 
     def set_info(self, info):
-        assert isinstance(info, RepositoryInfo)
+        assert isinstance(info, PointInfo)
         path = os.path.join(self.metadata_path, '%s.json' % self.name)
         self.ensure_dir(path, parent=True)
         content = info.to_str()

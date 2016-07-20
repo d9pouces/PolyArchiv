@@ -3,18 +3,18 @@
 Polyarchiv
 ==========
 
-Backup data from multiple local sources (organized in collect points) and send them to one or more remote repositories.
+Backup data from multiple local "sources" (organized in "collect points") and send them to one or more "backup points".
 
 .. code-block:: bash
 
        collect point 1: /var/backups/local1             /---------------------------\
-       data of www.github.com               ________\__ | remote repository 1: git  |
+       data of www.github.com               ________\__ |   backup point 1: git     |
     /------------------------\             /        /   |   data of collect point 1 |
     |     source 1: files    |---->-------/             \---------------------------/
     |     source 2: mysql    |                          * http://mygit/backups/local1.git
     |     source 3: mysql    |---->-------\
     \------------------------/             \________\___ /-------------------------------\
-                                                    /    | remote repository 2: tar+curl |
+                                                    /    |   backup point 2: tar+curl    |
      collect point 2: : /var/backups/local2              |   data of collect point 1     |
      data of www.example.com                ________\___ |   data of collect point 2     |
     /------------------------\             /        /    \-------------------------------/
@@ -50,7 +50,7 @@ The complete backup operation is split into three steps for each collect point:
    configuration
    examples
    collect_points
-   remotes
+   backup_points
    sources
    filters
    variables

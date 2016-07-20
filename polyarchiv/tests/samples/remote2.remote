@@ -1,6 +1,6 @@
 [repository]
-engine=polyarchiv.remotes.TarArchive
-remote_tags=
+engine=polyarchiv.backup_points.TarArchive
+backup_point_tags=
 remote_url=file:///tmp/remote/archives/
 included_collect_point_tags=*
 excluded_collect_point_tags=

@@ -98,7 +98,7 @@ MaxConnectionsPerChild   0
 User vagrant
 Group vagrant
 
-DocumentRoot "/var/www/remotes"
+DocumentRoot "/var/www/backup_points"
 ErrorLog "/var/www/error.log"
 LogLevel warn
 <Location />
@@ -111,7 +111,7 @@ Require valid-user
 </Limit>
 </Location>
 EOF
-sudo mkdir -p /var/www/backends /var/www/remotes
+sudo mkdir -p /var/www/backends /var/www/backup_points
 sudo chown -R vagrant:vagrant /var/www
 sudo apachectl start
 
@@ -119,8 +119,8 @@ sudo apachectl start
 # install gitlab
 #-----------------------------------------------------------------------------------------------------------------------
 # create a simple git remote repo
-mkdir -p $HOME/remotes/remote-git/local1.git
-pushd $HOME/remotes/remote-git/local1.git
+mkdir -p $HOME/backup_points/remote-git/local1.git
+pushd $HOME/backup_points/remote-git/local1.git
 git init
 git config --bool core.bare true
 popd
@@ -141,11 +141,11 @@ curl -X POST -H 'PRIVATE-TOKEN:4utHentic4ti0n_token' ${URL}
 #-----------------------------------------------------------------------------------------------------------------------
 # prepare remote folder (rsync over ssh)
 #-----------------------------------------------------------------------------------------------------------------------
-mkdir -p $HOME/remotes/ssh
+mkdir -p $HOME/backup_points/ssh
 #-----------------------------------------------------------------------------------------------------------------------
 # prepare remote folder (direct rsync)
 #-----------------------------------------------------------------------------------------------------------------------
-mkdir -p $HOME/remotes/files
+mkdir -p $HOME/backup_points/files
 #-----------------------------------------------------------------------------------------------------------------------
 # prepare metadata folder
 #-----------------------------------------------------------------------------------------------------------------------
@@ -166,5 +166,5 @@ mkdir -p $HOME/backends/files
 #-----------------------------------------------------------------------------------------------------------------------
 sudo mkdir -p /var/backups/locals/
 sudo chown -R vagrant:vagrant /var/backups/locals/
-mkdir -p $HOME/remotes/remote-git/
-git init --bare $HOME/remotes/remote-git/local2.git
+mkdir -p $HOME/backup_points/remote-git/
+git init --bare $HOME/backup_points/remote-git/local2.git

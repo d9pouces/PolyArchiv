@@ -2,8 +2,8 @@
 engine=polyarchiv.collect_points.GitRepository
 local_path=/tmp/local
 collect_point_tags=local
-included_remote_tags=*
-excluded_remote_tags=
+included_backup_point_tags=*
+excluded_backup_point_tags=
 frequency=daily
 
 [source_1]

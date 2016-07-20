@@ -130,7 +130,7 @@ class ParameterizedObject(object):
             os.remove(path)
 
 
-class RepositoryInfo(object):
+class PointInfo(object):
     def __init__(self, last_state_valid=None, last_success=None, last_fail=None, success_count=0, fail_count=0,
                  total_size=0, last_message='', config_hash=None, variables=None, data=None):
         self.last_state_valid = last_state_valid  # None, True, False
@@ -187,7 +187,7 @@ class RepositoryInfo(object):
             kwargs['config_hash'] = data['config_hash']
         kwargs['variables'] = data.get('variables')
         kwargs['data'] = data.get('data')
-        return RepositoryInfo(**kwargs)
+        return PointInfo(**kwargs)
 
     @staticmethod
     def datetime_to_str(value=None):
@@ -212,7 +212,7 @@ class RepositoryInfo(object):
         return cls.from_dict(data)
 
     def __le__(self, other):
-        assert isinstance(other, RepositoryInfo)
+        assert isinstance(other, PointInfo)
         self_last = self.last
         other_last = other.last
         if self_last is None:
@@ -222,7 +222,7 @@ class RepositoryInfo(object):
         return self_last <= other_last
 
     def __lt__(self, other):
-        assert isinstance(other, RepositoryInfo)
+        assert isinstance(other, PointInfo)
         self_last = self.last
         other_last = other.last
         if self_last is None and other_last is None:
@@ -234,7 +234,7 @@ class RepositoryInfo(object):
         return self_last < other_last
 
     def __ge__(self, other):
-        assert isinstance(other, RepositoryInfo)
+        assert isinstance(other, PointInfo)
         self_last = self.last
         other_last = other.last
         if self_last is None:
@@ -244,7 +244,7 @@ class RepositoryInfo(object):
         return self_last >= other_last
 
     def __gt__(self, other):
-        assert isinstance(other, RepositoryInfo)
+        assert isinstance(other, PointInfo)
         self_last = self.last
         other_last = other.last
         if self_last is None and other_last is None:
@@ -256,11 +256,11 @@ class RepositoryInfo(object):
         return self_last > other_last
 
     def __eq__(self, other):
-        assert isinstance(other, RepositoryInfo)
+        assert isinstance(other, PointInfo)
         return self.last == other.last
 
     def __ne__(self, other):
-        assert isinstance(other, RepositoryInfo)
+        assert isinstance(other, PointInfo)
         return self.last != other.last
 
 

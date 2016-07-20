@@ -43,7 +43,7 @@ class EngineDirective(Directive):
         engines_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'engines.ini')
         available_collect_point_engines, available_source_engines, available_remote_engines, available_filter_engines = \
             Runner.find_available_engines(engines_file)
-        values = {'collect_points': available_collect_point_engines, 'remotes': available_remote_engines,
+        values = {'collect_points': available_collect_point_engines, 'backup_points': available_remote_engines,
                   'sources': available_source_engines, 'filters': available_filter_engines}
         engines = values[self.arguments[0]]
 

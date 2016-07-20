@@ -2,8 +2,8 @@
 engine=git
 local_path=/var/backups/locals/local1
 collect_point_tags=local
-included_remote_tags=*
-excluded_remote_tags=
+included_backup_point_tags=*
+excluded_backup_point_tags=
 frequency=daily
 
 [source "source_1"]
