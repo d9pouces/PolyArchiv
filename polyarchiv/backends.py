@@ -1,8 +1,5 @@
 # coding=utf-8
-"""Storage backend for two kinds of remote repositories:
-
-    * RollingArchive
-    * Synchronize
+"""Storage backends
 
 These backends are based on ssh, webdav, ftp and file
 

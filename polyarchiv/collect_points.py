@@ -32,10 +32,10 @@ class CollectPoint(Repository):
         Parameter('collect_point_tags', converter=strip_split,
                   help_str='list of tags (comma-separated) associated to this collect point. Default: "collect"'),
         Parameter('included_backup_point_tags', converter=strip_split,
-                  help_str='any remote repository with one of these tags (comma-separated) will be associated '
+                  help_str='any backup point with one of these tags (comma-separated) will be associated '
                            'to this local repo. You can use ? or * as jokers in these tags. Default: "*"'),
         Parameter('excluded_backup_point_tags', converter=strip_split,
-                  help_str='any remote repository with one of these tags (comma-separated) will not be associated'
+                  help_str='any backup point with one of these tags (comma-separated) will not be associated'
                            ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_collect_point_tags and included_backup_point_tags.'),
     ]

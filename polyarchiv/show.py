@@ -59,11 +59,11 @@ def show_collect_point(collect_point, engines_file=None):
 
 
 def show_backup_point(backup_point, engines_file=None):
-    __, __, available_remote_engines, __ = Runner.find_available_engines(engines_file)
+    __, __, available_backup_point_engines, __ = Runner.find_available_engines(engines_file)
     assert isinstance(backup_point, BackupPoint)
-    cprint('remote repository %s selected' % backup_point.name, CYAN)
-    if backup_point.__class__ in available_remote_engines:
-        engine = available_remote_engines[backup_point.__class__]
+    cprint('backup point %s selected' % backup_point.name, CYAN)
+    if backup_point.__class__ in available_backup_point_engines:
+        engine = available_backup_point_engines[backup_point.__class__]
     else:
         engine = '%s.%s' % (backup_point.__class__.__module__, backup_point.__class__.__name__)
     logger.debug('engine: %s' % engine)
@@ -71,15 +71,15 @@ def show_backup_point(backup_point, engines_file=None):
         logger.debug(backup_point.__doc__)
 
 
-def show_remote_collect_point(collect_point, backup_point):
+def show_backup_collect_point(collect_point, backup_point):
     assert isinstance(collect_point, CollectPoint)
     assert isinstance(backup_point, BackupPoint)
-    cprint('  * remote repository %s selected on collect point %s' % (backup_point.name, collect_point.name),
+    cprint('  * backup point %s selected on collect point %s' % (backup_point.name, collect_point.name),
            CYAN)
     try:
         info = backup_point.get_info(collect_point)
     except ValueError as e:
-        cprint('Unable to retrieve more information from the remote repository: %s' % e, RED)
+        cprint('Unable to retrieve more information from the backup point: %s' % e, RED)
         return
     assert isinstance(info, PointInfo)
     if info.last_success is None:

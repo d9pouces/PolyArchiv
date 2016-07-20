@@ -379,7 +379,7 @@ class Dovecot(Source):
 
 
 class RemoteFiles(Source):
-    """copy the remote files from the given server/source_path to the collect point using rsync.
+    """copy the remote files from the given server/source_path to the collect point.
     The destination is a folder inside the collect point.
     """
     parameters = Source.parameters + [

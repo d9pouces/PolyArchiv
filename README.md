@@ -48,7 +48,7 @@ There are several kinds of collect points:
 There are also several kinds of backup points:
 
   * git: the whole collect point is pushed to this remote git repository, 
-  * gitlab: almost identical to the previous one, but able to automatically create the remote repository,
+  * gitlab: almost identical to the previous one, but able to automatically create the backup point,
   * synchronize: uses rsync to copy all files to a new, probably remote, location,
   * archive: creates an archive (.tar.gz/bz2/xz) and pushes it to a remote location, 
   * rolling_archive: creates an archive, pushes it to a remote location. Deletes some previous archives 

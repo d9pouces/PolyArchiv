@@ -53,10 +53,10 @@ def main(engines_file=None):
     parser.add_argument('--confirm-commands', action='store_true', help='ask the user to confirm each command',
                         default=False)
     parser.add_argument('--only-collect-points', nargs='+', help='limit to these collect point tags', default=[])
-    parser.add_argument('--only-backup-points', nargs='+', help='limit to these remote tags', default=[])
+    parser.add_argument('--only-backup-points', nargs='+', help='limit to these backup point tags', default=[])
     parser.add_argument('--skip-collect', action='store_true', help='skip the collect step during a backup',
                         default=False)
-    parser.add_argument('--skip-backup', action='store_true', help='skip the remote step during a backup',
+    parser.add_argument('--skip-backup', action='store_true', help='skip the backup step during a backup',
                         default=False)
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
     parser.add_argument('command', help='backup|restore|config|plugins')
@@ -105,14 +105,14 @@ def main(engines_file=None):
         if runner.load():
             if not verbose:
                 cprint('you can display more info with --verbose', CYAN)
-            from polyarchiv.show import show_collect_point, show_remote_collect_point, show_backup_point
+            from polyarchiv.show import show_collect_point, show_backup_collect_point, show_backup_point
             runner.apply_commands(collect_point_command=show_collect_point, backup_point_command=show_backup_point,
-                                  collect_point_backup_point_command=show_remote_collect_point,
+                                  collect_point_backup_point_command=show_backup_collect_point,
                                   only_collect_points=args.only_collect_points,
                                   only_backup_points=args.only_backup_points)
     elif command == 'check':
         if runner.load():
-            from polyarchiv.show import show_collect_point, show_remote_collect_point, \
+            from polyarchiv.show import show_collect_point, show_backup_collect_point, \
                 show_backup_point
             values = {'return_text': [], 'return_code': 0}
             collect_point_command = functools.partial(check_collect_point, values)
@@ -147,7 +147,7 @@ def main(engines_file=None):
         if not verbose:
             cprint('display available options for each engine with --verbose', CYAN)
 
-        available_collect_point_engines, available_source_engines, available_remote_engines, available_filter_engines = \
+        available_collect_point_engines, available_source_engines, available_backup_point_engines, available_filter_engines = \
             Runner.find_available_engines(engines_file)
         cprint('available collect point engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
@@ -155,9 +155,9 @@ def main(engines_file=None):
         cprint('available source engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
         display_classes(available_source_engines, verbose=verbose, width=width)
-        cprint('available remote repository engines:', YELLOW, BOLD)
+        cprint('available backup point engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
-        display_classes(available_remote_engines, verbose=verbose, width=width)
+        display_classes(available_backup_point_engines, verbose=verbose, width=width)
         cprint('available filter engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
         display_classes(available_filter_engines, verbose=verbose, width=width)

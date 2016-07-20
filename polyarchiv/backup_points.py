@@ -308,7 +308,7 @@ class CommonBackupPoint(BackupPoint):
 
 
 class GitRepository(CommonBackupPoint):
-    """Add a remote to a collect point and push local modification to this remote.
+    """Use a remote git repository and push local modifications to it.
     Can use https (with password or kerberos auth) or git+ssh remote URLs (with private key authentication).
     local and remote branches are always named 'master'.
     """
@@ -327,7 +327,7 @@ class GitRepository(CommonBackupPoint):
                                          'git@mygitlab.example.org/project.git, file:///foo/bar/project.git or '
                                          'https://username:password@mygitlab.example.org/username/project.git). '
                                          'The password is not required for SSH connections (you should use SSH keys).'
-                                         'The remote repository must already exists. If you created it by hand, do not '
+                                         'The backup point must already exists. If you created it by hand, do not '
                                          'forget to set \'git config --bool core.bare true\'. [*]',
                   required=True, converter=check_git_url),
     ]
@@ -363,7 +363,7 @@ class GitRepository(CommonBackupPoint):
 
         remote_url = self.format_value(self.remote_url, collect_point)
         if not self.check_remote_url(collect_point):
-            raise ValueError('Invalid remote repository: %s' % remote_url)
+            raise ValueError('Invalid backup point: %s' % remote_url)
         cmd = []
         if self.keytab:
             cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, collect_point), '-U', '--']
@@ -396,11 +396,11 @@ class GitRepository(CommonBackupPoint):
 
 
 class GitlabRepository(GitRepository):
-    """Add a remote to a collect point and push local modification to this remote.
+    """Use a remote git repository and push local modifications to it.
     If the 'private_key' is set, then git+ssh is used for pushing data.
     Otherwise, use password or kerberos auth with git+http.
 
-    The remote repository is automatically created if required using the HTTP API provided by Gitlab.
+    The backup point is automatically created if required using the HTTP API provided by Gitlab.
     """
     parameters = GitRepository.parameters[:-1] + [
         Parameter('gitlab_url', help_str='HTTP URL of the gitlab server (e.g.: \'https://mygitlab.example.org/\') [*]',
@@ -485,8 +485,7 @@ class Synchronize(CommonBackupPoint):
 
 
 class TarArchive(CommonBackupPoint):
-    """Collect all files of your collect point into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
-    to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
+    """Gather all files of your collect point into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it to the remote URL.
 
     """
 
@@ -582,8 +581,7 @@ class TarArchive(CommonBackupPoint):
 
 
 class RollingTarArchive(TarArchive):
-    """Collect all files of your collect point into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it
-    to a remote server with 'cURL'. If the remote URL begins by 'file://', then the 'cp' command is used instead.
+    """Gather all files of your collect point into a .tar archive (.tar.gz, .tar.bz2 or .tar.xz) and copy it to the remote URL.
 
     Also tracks previous archives to only keep a given number of hourly/daily/weekly/yearly backups,
     deleting unneeded ones.
@@ -621,7 +619,7 @@ class RollingTarArchive(TarArchive):
             info.data = []
             # info.data must be a list of dict (old values)
         info.data.append(info.variables)
-        if self.can_execute_command('# register this remote state'):
+        if self.can_execute_command('# register this backup point state'):
             info.last_state_valid = True
             info.last_success = datetime.datetime.now()
             self.set_info(collect_point, info)
