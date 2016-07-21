@@ -1,4 +1,4 @@
-[repository]
+[point]
 engine=gitlab
 metadata_url=file:///home/vagrant/metadata/gitlab/{name}.json
 remote_url=git@localhost:backup_points/remote-git/{name}.git

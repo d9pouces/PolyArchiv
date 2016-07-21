@@ -44,7 +44,7 @@ collect points
 
 As said before, a collect point is defined by a `ini` file in the configuration directory and with a name ending by `.collect`.
 
-The collect point is defined in a mandatory section `[repository]`. This collect point can a bunch of plain files, a local git repo or even an tar archive.
+The collect point is defined in a mandatory section `[point]`. This collect point can a bunch of plain files, a local git repo or even an tar archive.
 The main option is `engine`, defining the kind of collect point. The complete list of the available kinds is here: :ref:`collect_points`.
 
 You must define each source of this collect point in a `[source "name_of_the_source"]` section.
@@ -55,7 +55,7 @@ You can also define some filters for transforming files (please check the :ref:`
 .. code-block::  ini
   :caption: /etc/polyarchiv/my-collect-point.collect
 
-  [repository]
+  [point]
   engine=git
   local_path=/tmp/local
   collect_point_tags=local
@@ -90,7 +90,7 @@ Backup points
 -------------
 
 As said before, a backup point is defined by a `ini` file in the configuration directory and with a name ending by `.backup`.
-This config file requires a mandatory section `[repository]`.
+This config file requires a mandatory section `[point]`.
 The main option is `engine`, defining the kind of backup points. Please check the list of available backup points: :ref:`backup_points`.
 
 By default, all backup points are used with all collect points. Therefore, you should use at least the `name`
@@ -147,7 +147,7 @@ If large collect points should not be sent to a given backup point, you can excl
   :caption: /etc/polyarchiv/my-backup-point.backup
   :name: tags1:/etc/polyarchiv/my-backup-point.backup
 
-  [repository]
+  [point]
   engine=git
   excluded_collect_point_tags=*large,huge
 
@@ -159,7 +159,7 @@ instead of simply `large`):
   :caption: /etc/polyarchiv/my-collect-point.collect
   :name: tags1:/etc/polyarchiv/my-collect-point.collect
 
-  [repository]
+  [point]
   engine=git
   local_path=/tmp/local
   collect_point_tags=local,extra-large
@@ -171,7 +171,7 @@ Tags can also be applied to backup points:
   :caption: /etc/polyarchiv/my-backup-point.backup
   :name: tags:/etc/polyarchiv/my-backup-point.backup
 
-  [repository]
+  [point]
   engine=git
   backup_point_tags=small-only
 
@@ -181,7 +181,7 @@ and add the "large" tag to the local configuration:
   :caption: /etc/polyarchiv/my-collect-point.collect
   :name: tags:/etc/polyarchiv/my-collect-point.collect
 
-  [repository]
+  [point]
   engine=git
   local_path=/tmp/local
   included_backup_point_tags=huge,large

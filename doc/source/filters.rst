@@ -55,7 +55,7 @@ Of course, you can use several filters, there are applied in the order of appari
 .. code-block:: ini
   :caption: /etc/polyarchiv/my-collect-point-1.collect
 
-  [repository]
+  [point]
   engine=git
   [filter "hash"]
   engine=hashes

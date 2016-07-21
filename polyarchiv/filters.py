@@ -10,7 +10,7 @@ import shutil
 import subprocess
 
 from polyarchiv.conf import Parameter, check_executable, CheckOption
-from polyarchiv.repository import ParameterizedObject
+from polyarchiv.points import ParameterizedObject
 from polyarchiv.utils import copytree
 
 
@@ -48,9 +48,11 @@ class FileFilter(ParameterizedObject):
 class SymmetricCrypt(FileFilter):
     """Encrypt all files with symmetric encryption and a password (using GPG).
      The only required parameter is the password.
+
+     Require 'gpg' to be installed and in $PATH.
     """
     parameters = FileFilter.parameters + [
-        Parameter('gpg_executable', converter=check_executable, help_str='path of the gpg executable (default: "gpg")'),
+        Parameter('gpg_executable', converter=check_executable, help_str='path of the gpg executable (default: "gpg")', common=True),
         Parameter('password', help_str='password to encrypt data'),
     ]
     work_in_place = False

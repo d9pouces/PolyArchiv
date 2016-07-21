@@ -89,8 +89,8 @@ def force_dirname(path):
 
 class StorageBackend(object):
     def __init__(self, repository):
-        from polyarchiv.repository import Repository
-        assert isinstance(repository, Repository)
+        from polyarchiv.points import Point
+        assert isinstance(repository, Point)
         self.repository = repository
 
     def can_execute_command(self, text):

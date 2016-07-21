@@ -14,7 +14,7 @@ Then you can add a collect point, indicating the data to backup:
 
   mkdir -p /var/backups/my-project
   cat << EOF | sudo tee /etc/polyarchiv/my-project.collect
-  [repository]
+  [point]
   frequency=daily
   engine=files
   local_path=/var/backups/my-project
@@ -23,7 +23,7 @@ Then you can add a collect point, indicating the data to backup:
   engine=postgressql
   host=localhost
   user=test
-  password=testtest
+  password=p@ssw0rd
   database=testdb
   destination_path=./database.sql
 
@@ -39,7 +39,7 @@ And then we want to synchronize these data to a remote server using `rsync`.
 .. code-block:: bash
 
   cat << EOF | sudo tee /etc/polyarchiv/my-server.backup
-  [repository]
+  [point]
   frequency=daily
   engine=synchronize
   remote_url=ssh://backupuser@my-server/var/backups/backup_points/{name}/

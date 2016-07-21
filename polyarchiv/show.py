@@ -4,7 +4,7 @@ import logging
 
 from polyarchiv.collect_points import CollectPoint
 from polyarchiv.backup_points import BackupPoint
-from polyarchiv.repository import PointInfo
+from polyarchiv.points import PointInfo
 from polyarchiv.runner import Runner
 from polyarchiv.sources import Source
 from polyarchiv.termcolor import cprint, RED, YELLOW, GREEN, BOLD, CYAN

@@ -153,10 +153,10 @@ Here is an example of collect point, gathering data from three sources:
   * a directory
 
 Its name must end by `.collect`. 
-The `[repository]` section defines options for the collect point (the engine that powers the local backup, the frequency, …), while other sections define the three sources:
+The `[point]` section defines options for the collect point (the engine that powers the local backup, the frequency, …), while other sections define the three sources:
 
     $ cat /etc/polyarchiv/my-collect-point.collect
-    [repository]
+    [point]
     engine=git
     local_path=/tmp/local
     collect_point_tags=local
@@ -190,12 +190,12 @@ The `[repository]` section defines options for the collect point (the engine tha
 The kind of points (collect or backup) and of each source is defined by the `engine` option.
 You can define as many collect points (each of them with one or more sources) as you want.
 
-Backup points are simpler and by default only have a `[repository]` section.
+Backup points are simpler and by default only have a `[point]` section.
 Their names must end by `.backup`.
 Here is a gitlab acting as remote storage for git local repo: 
 
     $ cat /etc/polyarchiv/my-backup-point1.backup
-    [repository]
+    [point]
     engine=git
     frequency=daily
     backup_point_tags=
@@ -210,7 +210,7 @@ obviously `my-collect-point`). You can use (a bit) more complex replacement rule
 Maybe you also want a full backup (as an archive) uploaded the tenth day of each month, to a HTTP server:
 
     $ cat /etc/polyarchiv/my-backup-point2.backup
-    [repository]
+    [point]
     engine=archive
     frequency=monthly:10
     backup_point_tags=
@@ -254,7 +254,7 @@ To use them, they must be installed in the current PYTHONPATH.
 You can either directly use the dotted path in the configuration files:
 
     $ cat /etc/polyarchiv/my-collect.collect
-    [repository]
+    [point]
     engine=mypackage.myengines.MyCollectPoint
     local_path=/tmp/local
 

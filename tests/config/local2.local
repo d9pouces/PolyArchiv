@@ -1,4 +1,4 @@
-[repository]
+[point]
 engine=files
 frequency=daily
 local_path=/var/backups/locals/local1

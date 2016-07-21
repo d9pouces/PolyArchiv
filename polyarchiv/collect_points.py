@@ -15,7 +15,7 @@ from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.conf import Parameter, strip_split, check_directory, check_executable
 from polyarchiv.filelocks import Lock
 from polyarchiv.param_checks import check_archive
-from polyarchiv.repository import Repository, PointInfo
+from polyarchiv.points import Point, PointInfo
 from polyarchiv.termcolor import RED
 from polyarchiv.termcolor import cprint
 from polyarchiv.utils import text_type, cached_property
@@ -24,11 +24,11 @@ __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv')
 
 
-class CollectPoint(Repository):
+class CollectPoint(Point):
     """Collect point, made of one or more sources.
      Each source is run and contribute to new
     """
-    parameters = Repository.parameters + [
+    parameters = Point.parameters + [
         Parameter('collect_point_tags', converter=strip_split,
                   help_str='list of tags (comma-separated) associated to this collect point. Default: "collect"'),
         Parameter('included_backup_point_tags', converter=strip_split,
@@ -303,7 +303,8 @@ class GitRepository(FileRepository):
     """Create a local git repository. Collect files from all sources and commit them locally.
     """
     parameters = FileRepository.parameters + [
-        Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
+        Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")',
+                  common=True),
         Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net") '
                                            '[*]'),
         Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv") [*]'),

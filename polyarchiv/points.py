@@ -264,7 +264,7 @@ class PointInfo(object):
         return self.last != other.last
 
 
-class Repository(ParameterizedObject):
+class Point(ParameterizedObject):
     parameters = ParameterizedObject.parameters + [
         Parameter('check_out_of_date_backup', 'frequency', converter=get_is_time_elapsed,
                   help_str='frequency of backup operations. Can be an integer (number of seconds),\n'
@@ -275,7 +275,7 @@ class Repository(ParameterizedObject):
     ]
 
     def __init__(self, name, check_out_of_date_backup=None, **kwargs):
-        super(Repository, self).__init__(name, **kwargs)
+        super(Point, self).__init__(name, **kwargs)
         self.check_out_of_date_backup = check_out_of_date_backup or get_is_time_elapsed(None)
         self.filters = []
         # list of `polyarchiv.filters.FileFilter`

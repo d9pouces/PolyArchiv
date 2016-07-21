@@ -1,4 +1,4 @@
-[repository]
+[point]
 engine=git
 metadata_url=file:///home/vagrant/metadata/gitssh/{name}.json
 remote_url=vagrant@localhost:backup_points/remote-git/{name}.git

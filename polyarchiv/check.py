@@ -6,7 +6,7 @@ import logging
 
 from polyarchiv.collect_points import CollectPoint
 from polyarchiv.backup_points import BackupPoint
-from polyarchiv.repository import PointInfo
+from polyarchiv.points import PointInfo
 
 __author__ = 'Matthieu Gallet'
 

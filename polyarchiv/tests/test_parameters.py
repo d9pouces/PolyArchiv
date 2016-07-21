@@ -5,7 +5,7 @@ import os
 from unittest import TestCase
 
 from polyarchiv.conf import Parameter
-from polyarchiv.repository import ParameterizedObject
+from polyarchiv.points import ParameterizedObject
 from polyarchiv.runner import Runner
 
 

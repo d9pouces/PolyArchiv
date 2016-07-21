@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 from unittest import TestCase
 import datetime
-from polyarchiv.repository import PointInfo
+from polyarchiv.points import PointInfo
 
 __author__ = 'Matthieu Gallet'
 

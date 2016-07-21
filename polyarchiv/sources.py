@@ -23,7 +23,7 @@ from polyarchiv._vendor.ldif3 import LDIFParser
 from polyarchiv.backends import get_backend
 from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable, check_username, check_file
 from polyarchiv.collect_points import CollectPoint
-from polyarchiv.repository import ParameterizedObject
+from polyarchiv.points import ParameterizedObject
 from polyarchiv.termcolor import YELLOW
 from polyarchiv.termcolor import cprint
 
@@ -49,13 +49,14 @@ class Source(ParameterizedObject):
 
 
 class LocalFiles(Source):
-    """copy all files from the given source_path to the collect point using rsync.
+    """copy all files from the given source_path to the collect point using 'rsync'.
     The destination is a folder inside the collect point.
     """
     parameters = Source.parameters + [
         Parameter('source_path', converter=check_directory, help_str='original folder to backup', required=True),
         Parameter('destination_path', help_str='destination folder (relative path, e.g. "./files")', required=True),
-        Parameter('rsync_executable', converter=check_executable, help_str='rsync executable (default: rsync)'),
+        Parameter('rsync_executable', common=True, converter=check_executable,
+                  help_str='rsync executable (default: rsync)'),
         Parameter('exclude', help_str='exclude files matching PATTERN (see --exclude option from rsync). '
                                       'If PATTERN startswith @, then it should be the absolute path of a file '
                                       '(see --exclude-from option from rsync)'),
@@ -127,7 +128,8 @@ class LocalFiles(Source):
 
 
 class MySQL(Source):
-    """Dump the content of a MySQL database with the mysqldump utility to a filename in the collect point"""
+    """Dump the content of a MySQL database with the mysqldump utility to a filename in the collect point.
+    Require the 'mysql' and 'mysqldump' utilities. """
     parameters = Source.parameters + [
         Parameter('host', help_str='database host'),
         Parameter('port', converter=int, help_str='database port'),
@@ -136,9 +138,9 @@ class MySQL(Source):
         Parameter('password', help_str='database password'),
         Parameter('database', help_str='name of the backuped database', required=True),
         Parameter('destination_path', help_str='relative path of the backup destination (e.g. "database.sql")'),
-        Parameter('dump_executable', converter=check_executable,
+        Parameter('dump_executable', converter=check_executable, common=True,
                   help_str='path of the mysqldump executable (default: "mysqldump")'),
-        Parameter('restore_executable', converter=check_executable,
+        Parameter('restore_executable', converter=check_executable, common=True,
                   help_str='path of the mysql executable (default: "mysql")'),
     ]
 
@@ -221,11 +223,12 @@ class MySQL(Source):
 
 
 class PostgresSQL(MySQL):
-    """Dump the content of a PostgresSQL database with the pg_dump utility to a filename in the collect point"""
+    """Dump the content of a PostgresSQL database with the pg_dump utility to a filename in the collect point.
+    Require the 'pg_dump' and 'psql' utilities."""
     parameters = MySQL.parameters[:-2] + [
-        Parameter('dump_executable', converter=check_executable,
+        Parameter('dump_executable', converter=check_executable, common=True,
                   help_str='path of the pg_dump executable (default: "pg_dump")'),
-        Parameter('restore_executable', converter=check_executable,
+        Parameter('restore_executable', converter=check_executable,  common=True,
                   help_str='path of the psql executable (default: "psql")'),
     ]
 
@@ -254,7 +257,7 @@ class PostgresSQL(MySQL):
 
 class Ldap(Source):
     """Dump a OpenLDAP database using slapcat to a filename in the collect point.
-    Must be run on the LDAP server."""
+    Must be run on the LDAP server with a sudoer account (or 'root'). Require the 'slapcat' and 'slapadd' utilities. """
     parameters = Source.parameters + [
         Parameter('destination_path', help_str='filename of the dump (not an absolute path)'),
         Parameter('use_sudo', help_str='use sudo to perform the dump (yes/no)', converter=bool_setting),
@@ -332,8 +335,7 @@ class Ldap(Source):
 
 
 class Dovecot(Source):
-    """Dump a OpenLDAP database using slapcat to a filename in the collect point.
-    Must be run on the LDAP server."""
+    """Dump a OpenLDAP database using slapcat to a filename in the collect point. Require the 'doveadm' utility."""
     parameters = Source.parameters + [
         Parameter('destination_path', help_str='dirname of the dump (not an absolute path)'),
         Parameter('mailbox', help_str='only sync this mailbox name'),
@@ -342,7 +344,7 @@ class Dovecot(Source):
                                      ' TCP socket.'),
         Parameter('user_mask', help_str='only sync this user ("*" and "?" wildcards can be used).'),
         Parameter('dump_executable', converter=check_executable,
-                  help_str='path of the doveadm executable (default: "doveadm")'),
+                  help_str='path of the doveadm executable (default: "doveadm")', common=True),
     ]
 
     def __init__(self, name, collect_point, destination_path='dovecot', dump_executable='doveadm',
@@ -381,6 +383,7 @@ class Dovecot(Source):
 class RemoteFiles(Source):
     """copy the remote files from the given server/source_path to the collect point.
     The destination is a folder inside the collect point.
+    Require 'rsync'.
     """
     parameters = Source.parameters + [
         Parameter('source_url', required=True, help_str='synchronize data from this URL. Must ends by a folder name'),

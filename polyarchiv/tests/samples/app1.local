@@ -1,4 +1,4 @@
-[repository]
+[point]
 engine=polyarchiv.collect_points.GitRepository
 local_path=/tmp/local
 collect_point_tags=local

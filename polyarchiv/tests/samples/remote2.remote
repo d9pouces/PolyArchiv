@@ -1,4 +1,4 @@
-[repository]
+[point]
 engine=polyarchiv.backup_points.TarArchive
 backup_point_tags=
 remote_url=file:///tmp/remote/archives/

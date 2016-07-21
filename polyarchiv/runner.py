@@ -24,7 +24,7 @@ except ImportError:
 from polyarchiv.conf import Parameter
 from polyarchiv.collect_points import CollectPoint
 from polyarchiv.backup_points import BackupPoint
-from polyarchiv.repository import ParameterizedObject, PointInfo
+from polyarchiv.points import ParameterizedObject, PointInfo
 from polyarchiv.termcolor import cprint, RED, GREEN, YELLOW
 from polyarchiv.utils import import_string, text_type
 
@@ -42,7 +42,7 @@ logger = logging.getLogger('polyarchiv.runner')
 class Runner(ParameterizedObject):
     """Run backup and restore operations for all specified configurations
     """
-    repository_section = 'repository'
+    point_section = 'point'
     variables_section = 'variables'
     engine_option = 'engine'
     source_section = 'source '
@@ -203,8 +203,8 @@ class Runner(ParameterizedObject):
         for config_file, parser in self._iter_config_parsers('*.collect'):
             # noinspection PyTypeChecker
             collect_point_name = os.path.basename(config_file).rpartition('.')[0]
-            collect_point = self._load_engine(config_file, parser, self.repository_section, [collect_point_name],
-                                      self.available_collect_point_engines, CollectPoint)
+            collect_point = self._load_engine(config_file, parser, self.point_section, [collect_point_name],
+                                              self.available_collect_point_engines, CollectPoint)
             assert isinstance(collect_point, CollectPoint)
             # noinspection PyTypeChecker
             collect_point.variables = {'name': collect_point_name}
@@ -214,7 +214,7 @@ class Runner(ParameterizedObject):
                 collect_point.variables.update({opt: parser.get(self.variables_section, opt)
                                         for opt in parser.options(self.variables_section)})
             for section in parser.sections():
-                if section == self.repository_section or section == self.variables_section:
+                if section == self.point_section or section == self.variables_section:
                     continue
                 used = False
                 source_name = self._decompose_section_name(config_file, section, self.source_section)
@@ -238,8 +238,8 @@ class Runner(ParameterizedObject):
         for config_file, parser in self._iter_config_parsers('*.backup'):
             # noinspection PyTypeChecker
             backup_point_name = os.path.basename(config_file).rpartition('.')[0]
-            backup_point = self._load_engine(config_file, parser, self.repository_section, [backup_point_name],
-                                       self.available_backup_point_engines, BackupPoint)
+            backup_point = self._load_engine(config_file, parser, self.point_section, [backup_point_name],
+                                             self.available_backup_point_engines, BackupPoint)
             assert isinstance(backup_point, BackupPoint)
             # load variables applying to the whole backup point
             if parser.has_section(self.variables_section):

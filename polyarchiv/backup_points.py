@@ -28,7 +28,7 @@ import os
 
 from polyarchiv.conf import Parameter, strip_split, check_executable, check_file
 from polyarchiv.collect_points import CollectPoint
-from polyarchiv.repository import Repository, PointInfo
+from polyarchiv.points import Point, PointInfo
 from polyarchiv.utils import text_type
 
 __author__ = 'Matthieu Gallet'
@@ -36,10 +36,10 @@ logger = logging.getLogger('polyarchiv.backup_points')
 constant_time = datetime.datetime(2016, 1, 1, 0, 0, 0)
 
 
-class BackupPoint(Repository):
+class BackupPoint(Point):
     constant_format_values = {x: constant_time.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'}
     constant_format_values.update({'fqdn': 'localhost', 'hostname': 'localhost'})
-    parameters = Repository.parameters + [
+    parameters = Point.parameters + [
         Parameter('backup_point_tags', converter=strip_split,
                   help_str='list of tags (comma-separated) associated to this backup point (default: "backup")'),
         Parameter('included_collect_point_tags', converter=strip_split,

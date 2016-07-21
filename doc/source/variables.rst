@@ -31,7 +31,7 @@ Check the example below, made of two collect points and a single backup one:
   :caption: /etc/polyarchiv/my-collect-point-1.collect
   :name: variables:/etc/polyarchiv/my-collect-point-1.collect
 
-  [repository]
+  [point]
   engine=git
   [variables]
   group=MyGroup1
@@ -40,7 +40,7 @@ Check the example below, made of two collect points and a single backup one:
   :caption: /etc/polyarchiv/my-collect-point-2.collect
   :name: variables:/etc/polyarchiv/my-collect-point-2.collect
 
-  [repository]
+  [point]
   engine=archive
   archive_name={name}-{Y}-{m}-{d}.tar.gz  <-- this is a customizable parameter
   [variables]
@@ -52,7 +52,7 @@ Check the example below, made of two collect points and a single backup one:
   :caption: /etc/polyarchiv/my-backup-point.backup
   :name: variables:/etc/polyarchiv/my-backup-point.backup
 
-  [repository]
+  [point]
   engine=git
   remote_url=http://{host}/{group}/{name}.git  <-- another one
   ; requires a `group` variable in each collect point
