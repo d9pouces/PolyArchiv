@@ -92,7 +92,8 @@ class Runner(ParameterizedObject):
             available_backup_point_engines.update(import_items('backup_points'))
             available_collect_point_engines.update(import_items('collect_points'))
             available_filter_engines.update(import_items('filters'))
-        return available_collect_point_engines, available_source_engines, available_backup_point_engines, available_filter_engines
+        return (available_collect_point_engines, available_source_engines, available_backup_point_engines,
+                available_filter_engines)
 
     def load(self, show_errors=True):
         result = True
@@ -212,7 +213,7 @@ class Runner(ParameterizedObject):
             # load variables applying to the whole collect point
             if parser.has_section(self.variables_section):
                 collect_point.variables.update({opt: parser.get(self.variables_section, opt)
-                                        for opt in parser.options(self.variables_section)})
+                                                for opt in parser.options(self.variables_section)})
             for section in parser.sections():
                 if section == self.point_section or section == self.variables_section:
                     continue
@@ -244,7 +245,7 @@ class Runner(ParameterizedObject):
             # load variables applying to the whole backup point
             if parser.has_section(self.variables_section):
                 backup_point.variables.update({opt: parser.get(self.variables_section, opt)
-                                         for opt in parser.options(self.variables_section)})
+                                               for opt in parser.options(self.variables_section)})
 
             for section in parser.sections():
                 filter_name = self._decompose_section_name(config_file, section, self.filter_section)
@@ -252,10 +253,11 @@ class Runner(ParameterizedObject):
                     filter_ = self._load_engine(config_file, parser, section, [filter_name],
                                                 self.available_filter_engines, FileFilter)
                     backup_point.add_filter(filter_)
-                collect_point_name = self._decompose_section_name(config_file, section, self.collect_point_variables_section)
+                collect_point_name = self._decompose_section_name(config_file, section,
+                                                                  self.collect_point_variables_section)
                 if collect_point_name:  # section looks like [variables "collect point"]
                     backup_point.collect_point_variables[collect_point_name] = {opt: parser.get(section, opt)
-                                                          for opt in parser.options(section)}
+                                                                                for opt in parser.options(section)}
             self.backup_point_config_files.append(config_file)
             self.backup_points[backup_point_name] = backup_point
 
@@ -285,8 +287,8 @@ class Runner(ParameterizedObject):
                     return True
         return False
 
-    def apply_commands(self, collect_point_command=None, backup_point_command=None, collect_point_backup_point_command=None,
-                       only_collect_points=None, only_backup_points=None):
+    def apply_commands(self, collect_point_command=None, backup_point_command=None,
+                       collect_point_backup_point_command=None, only_collect_points=None, only_backup_points=None):
         """ Apply the given commands to the available collect/backup points.
 
         :param collect_point_command: callable(collect_point) -> None
@@ -323,7 +325,8 @@ class Runner(ParameterizedObject):
                 if self.can_associate(collect_point, backup_point):
                     collect_point_backup_point_command(collect_point, backup_point)
 
-    def backup(self, force=False, only_collect_points=None, only_backup_points=None, skip_collect=False, skip_backup=False):
+    def backup(self, force=False, only_collect_points=None, only_backup_points=None, skip_collect=False,
+               skip_backup=False):
         """Run a backup operation. return two dicts
         first result is {collect_point.name: bool}  (dict["my-collect_repo"] = True if successful)
         second result is {(collect_point.name, backup_point.name): bool}

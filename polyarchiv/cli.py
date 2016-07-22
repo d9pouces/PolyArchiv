@@ -147,8 +147,8 @@ def main(engines_file=None):
         if not verbose:
             cprint('display available options for each engine with --verbose', CYAN)
 
-        available_collect_point_engines, available_source_engines, available_backup_point_engines, available_filter_engines = \
-            Runner.find_available_engines(engines_file)
+        available_collect_point_engines, available_source_engines, available_backup_point_engines, \
+            available_filter_engines = Runner.find_available_engines(engines_file)
         cprint('available collect point engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
         display_classes(available_collect_point_engines, verbose=verbose, width=width)

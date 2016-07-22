@@ -26,7 +26,7 @@ class TestSources(FileTestCase):
     def setUp(self):
         super(TestSources, self).setUp()
         self.collect_point = FileRepository('test_repo', local_path=self.collect_point_path, command_display=True,
-                                               command_keep_output=True)
+                                            command_keep_output=True)
 
     def test_local_files(self):
         source = LocalFiles('local_files', self.collect_point, destination_path='local_files',
