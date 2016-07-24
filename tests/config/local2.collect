@@ -1,7 +1,7 @@
 [point]
 engine=files
 frequency=daily
-local_path=/var/backups/locals/local1
+local_path=/var/backups/locals/local2
 
 [source "sql"]
 engine=mysql

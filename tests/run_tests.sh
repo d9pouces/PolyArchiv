@@ -7,7 +7,7 @@ bash /vagrant/tests/prepare_tests.sh
 ########################################################################################################################
 
 # create the backup paths (both local and remote ones)
-sudo mkdir -p /var/backups/locals/local1 /var/backups/locals/local2 /var/backups/backup_points/remote1 /var/backups/backup_points/remote2
+sudo mkdir -p /var/backups/locals/local1 /var/backups/locals/local2 /var/backups/backup_points/remote1 /var/backups/backup_points/remote2 /var/backups/locals/local1/backups
 
 # locally install polyarchiv
 cd /vagrant

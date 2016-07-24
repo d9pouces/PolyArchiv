@@ -2,7 +2,7 @@
 engine=git
 local_path=/var/backups/locals/local1
 collect_point_tags=local
-included_backup_point_tags=*
+included_backup_point_tags=*2
 excluded_backup_point_tags=
 frequency=daily
 
@@ -25,7 +25,7 @@ database=testdb
 destination_path=mysql.sql
 
 [source "source_3"]
-engine=rsync
+engine=local_files
 source_path=/var/input/some-files/
 destination_path=files
 

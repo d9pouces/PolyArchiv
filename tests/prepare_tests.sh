@@ -4,6 +4,8 @@ mkdir -p $HOME/.ssh
 ssh-keygen -N "" -f $HOME/.ssh/id_rsa
 cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
 echo "StrictHostKeyChecking no" > $HOME/.ssh/config
+sudo mkdir -p /root/.ssh
+echo "StrictHostKeyChecking no" | sudo tee /root/.ssh/config
 
 ########################################################################################################################
 # prepare all services to backup

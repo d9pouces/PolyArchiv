@@ -33,7 +33,7 @@ Thus, we need to define a single collect point and a single backup points.
   destination_path=./database.sql
 
   [source "files"]
-  engine=rsync
+  engine=local_files
   source_path=/var/www-data/files
   destination_path=files
   EOF
