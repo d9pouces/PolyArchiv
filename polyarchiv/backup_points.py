@@ -258,9 +258,10 @@ class CommonBackupPoint(BackupPoint):
         if self.metadata_url is None:
             p1 = 's' if len(self.metadata_url_requirements) > 1 else ''
             p2 = '' if len(self.metadata_url_requirements) > 1 else ''
-            cprint('value%s "%s" use%s time/host-dependent variables. '
-                   'You should define the "metadata_url" parameter to ease restore operation' %
-                   (p1, ', '.join(self.metadata_url_requirements), p2), RED)
+            if self.metadata_url_requirements:
+                cprint('value%s "%s" use%s time/host-dependent variables. '
+                       'You should define the "metadata_url" parameter to ease restore operation' %
+                       (p1, ', '.join(self.metadata_url_requirements), p2), RED)
             return None
         metadata_url = self.format_value(self.metadata_url, collect_point, use_constant_values=True)
         if metadata_url.endswith('/'):
