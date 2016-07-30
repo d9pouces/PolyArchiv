@@ -237,14 +237,15 @@ class CommonBackupPoint(BackupPoint):
         self.metadata_url_requirements = []
         # list of values using non-constant values
 
-    def format_value(self, value, collect_point, use_constant_values=False):
+    def format_value(self, value, collect_point, use_constant_values=False, check_metadata_requirement=True):
         """Check if the metadata_url is required: at least one formatted value uses non-constant values"""
         if use_constant_values:
             return super(CommonBackupPoint, self).format_value(value, collect_point, use_constant_values)
         result = super(CommonBackupPoint, self).format_value(value, collect_point, False)
-        constant_result = super(CommonBackupPoint, self).format_value(value, collect_point, True)
-        if constant_result != result:
-            self.metadata_url_requirements.append(value)
+        if check_metadata_requirement:
+            constant_result = super(CommonBackupPoint, self).format_value(value, collect_point, True)
+            if constant_result != result:
+                self.metadata_url_requirements.append(value)
         return result
 
     def do_restore(self, collect_point, export_data_path):
@@ -358,20 +359,21 @@ class GitRepository(CommonBackupPoint):
         self.execute_command([self.git_executable, 'config', '--global', 'user.name', self.commit_name],
                              env={'HOME': git_dir})
         self.execute_command(git_command + ['add', '.'])
+        commit_message = self.format_value(self.commit_message, collect_point, check_metadata_requirement=False)
         # noinspection PyTypeChecker
-        self.execute_command(git_command + ['commit', '-am', self.format_value(self.commit_message, collect_point)],
-                             ignore_errors=True, env={'HOME': git_dir})
+        self.execute_command(git_command + ['commit', '-am', commit_message], ignore_errors=True, env={'HOME': git_dir})
 
         remote_url = self.format_value(self.remote_url, collect_point)
         if not self.check_remote_url(collect_point):
             raise ValueError('Invalid backup point: %s' % remote_url)
         cmd = []
         if self.keytab:
-            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, collect_point), '-U', '--']
+            keytab = self.format_value(self.keytab, collect_point, check_metadata_requirement=False)
+            cmd += ['k5start', '-q', '-f', keytab, '-U', '--']
         cmd += git_command + ['push', remote_url, 'master:master']
         # noinspection PyTypeChecker
         if self.private_key and not remote_url.startswith('http'):
-            private_key = self.format_value(self.private_key, collect_point)
+            private_key = self.format_value(self.private_key, collect_point, check_metadata_requirement=False)
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
         self.execute_command(cmd, cwd=worktree, env={'HOME': git_dir})
 
@@ -389,9 +391,10 @@ class GitRepository(CommonBackupPoint):
         remote_url = self.format_value(self.remote_url, collect_point)
         cmd = [self.git_executable, 'clone', '--separate-git-dir', git_dir, remote_url, worktree]
         if self.keytab:
-            cmd += ['k5start', '-q', '-f', self.format_value(self.keytab, collect_point), '-U', '--']
+            keytab = self.format_value(self.keytab, collect_point, check_metadata_requirement=False)
+            cmd += ['k5start', '-q', '-f', keytab, '-U', '--']
         if self.private_key and not remote_url.startswith('http'):
-            private_key = self.format_value(self.private_key, collect_point)
+            private_key = self.format_value(self.private_key, collect_point, check_metadata_requirement=False)
             cmd = ['ssh-agent', 'bash', '-c', 'ssh-add %s ; %s' % (private_key, ' '.join(cmd))]
         self.execute_command(cmd, cwd=os.path.dirname(worktree))
 
