@@ -20,6 +20,7 @@ from xml.dom.minidom import parseString
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor import requests
+from polyarchiv.points import Config
 
 try:
     # noinspection PyCompatibility
@@ -33,30 +34,28 @@ except ImportError:
 DOWNLOAD_CHUNK_SIZE_BYTES = 1 * 1024 * 1024
 
 
-def get_backend(repository, root_url, keytab=None, private_key=None, ca_cert=None, rsync_executable='rsync',
-                curl_executable='curl', scp_executable='scp', ssh_executable='ssh', ssh_options=''):
+def get_backend(repository, root_url, keytab=None, private_key=None, ca_cert=None, ssh_options='', config=None):
     """
 
+    :param config:
     :param repository:
     :param root_url:
     :param keytab:
     :param private_key:
     :param ca_cert: `None`, 'any' (no check) or cert path
-    :param rsync_executable:
-    :param curl_executable:
-    :param scp_executable:
     :param ssh_options:
-    :param ssh_executable:
     :return:
     """
-    # noinspection PyUnusedLocal
-    curl_executable = curl_executable
+    if config is not None:
+        assert isinstance(config, Config)
+    else:
+        config = Config()
     parsed_url = urlparse(root_url)
     scheme = parsed_url.scheme
     if parsed_url.netloc == '' and scheme == '':  # root_url = "/foo/bar/baz/'
-        return FileStorageBackend(repository, parsed_url.path, rsync_executable=rsync_executable)
+        return FileStorageBackend(repository, parsed_url.path, rsync_executable=config.rsync_executable)
     elif scheme == 'file':
-        return FileStorageBackend(repository, parsed_url.path, rsync_executable=rsync_executable)
+        return FileStorageBackend(repository, parsed_url.path, rsync_executable=config.rsync_executable)
     elif scheme in ('http', 'https'):
         url = '%s://%s' % (parsed_url.scheme, parsed_url.hostname)
         if parsed_url.port:
@@ -78,8 +77,8 @@ def get_backend(repository, root_url, keytab=None, private_key=None, ca_cert=Non
     elif scheme == 'ssh':
         return SShStorageBackend(repository, parsed_url.path, hostname=parsed_url.hostname, port=parsed_url.port or 22,
                                  username=parsed_url.username, private_key=private_key,
-                                 rsync_executable=rsync_executable, ssh_executable=ssh_executable,
-                                 scp_executable=scp_executable, ssh_options=ssh_options)
+                                 rsync_executable=config.rsync_executable, ssh_executable=config.ssh_executable,
+                                 scp_executable=config.scp_executable, ssh_options=ssh_options)
     raise ValueError('Unknown protocol %s' % root_url)
 
 

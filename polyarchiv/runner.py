@@ -24,7 +24,7 @@ except ImportError:
 from polyarchiv.conf import Parameter
 from polyarchiv.collect_points import CollectPoint
 from polyarchiv.backup_points import BackupPoint
-from polyarchiv.points import ParameterizedObject, PointInfo
+from polyarchiv.points import ParameterizedObject, PointInfo, Config
 from polyarchiv.termcolor import cprint, RED, GREEN, YELLOW
 from polyarchiv.utils import import_string, text_type
 
@@ -46,6 +46,7 @@ class Runner(ParameterizedObject):
     variables_section = 'variables'
     engine_option = 'engine'
     source_section = 'source '
+    global_section = 'global'
     filter_section = 'filter '
     collect_point_variables_section = 'variables '
 
@@ -56,6 +57,7 @@ class Runner(ParameterizedObject):
             self.available_filter_engines = self.find_available_engines(engines_file)
         self.collect_points = {}
         self.backup_points = {}
+        self.global_config_parameters = {}
         self.collect_point_config_files = []
         self.backup_point_config_files = []
 
@@ -97,6 +99,7 @@ class Runner(ParameterizedObject):
 
     def load(self, show_errors=True):
         result = True
+        self._load_global_config()
         try:
             self._find_collect_points()
             self._find_backup_points()
@@ -113,10 +116,17 @@ class Runner(ParameterizedObject):
     def _get_args_from_parser(self, config_file, parser, section, engine_cls):
         assert isinstance(parser, RawConfigParser)
         assert issubclass(engine_cls, ParameterizedObject)
-        result = {'command_display': self.command_display, 'command_confirm': self.command_confirm,
-                  'command_execute': self.command_execute, 'command_keep_output': self.command_keep_output}
+        available_parameters = engine_cls.parameters
+        result = self._get_available_args_from_parser(config_file, parser, section, available_parameters)
+        result.update({'command_display': self.command_display, 'command_confirm': self.command_confirm,
+                       'command_execute': self.command_execute, 'command_keep_output': self.command_keep_output})
+        return result
+
+    # noinspection PyMethodMayBeStatic
+    def _get_available_args_from_parser(self, config_file, parser, section, available_parameters):
+        result = {}
         missing_parameters = []
-        for parameter in engine_cls.parameters:
+        for parameter in available_parameters:
             assert isinstance(parameter, Parameter)
             option = parameter.option_name
             if not parser.has_option(section, option):
@@ -155,13 +165,15 @@ class Runner(ParameterizedObject):
         if not issubclass(engine_cls, expected_cls):
             raise ValueError('In file \'%s\', section \'%s\': engine \'%s\' is not a subclass of \'%s\'' %
                              (config_file, section, engine, expected_cls.__name__))
-        source = engine_cls(*args, **parameters)
+        source = engine_cls(*args, config=self.config, **parameters)
         return source
 
     def _iter_config_parsers(self, pattern):
         for path in self.config_directories:
             count = 0
-            for config_file in glob.glob(os.path.join(path, pattern)):
+            file_list = glob.glob(os.path.join(path, pattern))
+            file_list.sort()
+            for config_file in file_list:
                 count += 1
                 parser = RawConfigParser()
                 try:
@@ -189,6 +201,14 @@ class Runner(ParameterizedObject):
         if len(values) != 1:
             raise ValueError('Ambiguous section name in file %s: \'%s\'' % (config_file, section_name))
         return values[0]
+
+    def _load_global_config(self):
+        global_result = {}
+        for config_file, parser in self._iter_config_parsers('*.global'):
+            file_result = self._get_available_args_from_parser(config_file, parser, self.global_section,
+                                                               Config.parameters)
+            global_result.update(file_result)
+        self.config = Config(**global_result)
 
     def _find_collect_points(self):
         now = datetime.datetime.now()

@@ -92,7 +92,7 @@ class Parameter(object):
     """class that maps an option in a .ini file to a argument name."""
 
     def __init__(self, arg_name, option_name=None, converter=str, to_str=str_or_blank, help_str=None, required=False,
-                 common=False, default_str_value=None):
+                 default_str_value=None, check_fn=None):
         """:param arg_name: the name of parameter passed to the engine
         :type arg_name: `str` or `unicode`
         :param option_name: option name in a .ini file
@@ -106,17 +106,18 @@ class Parameter(object):
             If None, then `settings.%s_HELP % setting_name` will be used as help text.
         :type help_str: `str` or `unicode`
         :param required: this parameter is required
-        :param common: this parameter is globally defined and has the same value for all ParameterizedObjects
         :param default_str_value: default value (string value)
+        :param check_fn: if not None, must bien a check function(Runner, Point|Source|Filter|Config|…)
         """
+        self.advised_variables = check_fn
         self.arg_name = arg_name
         self.option_name = option_name or arg_name
         self.converter = converter
         self.to_str = to_str
         self.help_str = help_str
         self.required = required
-        self.common = common
         self.default_str_value = default_str_value
+        self.suggested_variables = check_fn
 
     def __str__(self):
         return self.option_name

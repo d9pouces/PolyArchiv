@@ -17,12 +17,41 @@ __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv')
 
 
+class Config(object):
+    parameters = [
+        Parameter('rsync_executable'),
+        Parameter('curl_executable'),
+        Parameter('scp_executable'),
+        Parameter('ssh_executable'),
+        Parameter('tar_executable'),
+        Parameter('log_file')
+    ]
+
+    def __init__(self, command_display=True, command_confirm=False, command_execute=True,
+                 command_keep_output=False,
+                 rsync_executable='rsync',
+                 curl_executable='curl',
+                 scp_executable='scp',
+                 ssh_executable='ssh',
+                 tar_executable='tar'):
+        self.command_display = command_display  # display each command before running it
+        self.command_confirm = command_confirm  # ask the user to confirm each command
+        self.command_execute = command_execute  # actually run commands (if False: 'dry' mode)
+        self.command_keep_output = command_keep_output  # display all command outputs on stderr/stdout
+        self.rsync_executable = rsync_executable
+        self.curl_executable = curl_executable
+        self.scp_executable = scp_executable
+        self.ssh_executable = ssh_executable
+        self.tar_executable = tar_executable
+
+
 class ParameterizedObject(object):
     parameters = []
 
     def __init__(self, name, command_display=True, command_confirm=False, command_execute=True,
-                 command_keep_output=False):
+                 command_keep_output=False, config=None):
         self.name = name
+        self.config = config
         self.command_display = command_display  # display each command before running it
         self.command_confirm = command_confirm  # ask the user to confirm each command
         self.command_execute = command_execute  # actually run commands (if False: 'dry' mode)

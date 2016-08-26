@@ -181,9 +181,7 @@ def display_classes(engines, verbose=False, width=80):
         # noinspection PyUnresolvedReferences
         for parameter in engine_cls.parameters:
             assert isinstance(parameter, Parameter)
-            if parameter.common:
-                continue
-            elif parameter.help_str:
+            if parameter.help_str:
                 txt = '%s: %s' % (parameter.option_name, parameter.help_str)
                 lines = []
                 w = width - 8

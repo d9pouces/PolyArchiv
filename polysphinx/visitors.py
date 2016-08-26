@@ -56,9 +56,7 @@ def render_engines_html(self, node, engines, options):
                     style = 'style="color: #C55;"'
                 else:
                     style = 'style="color: #555;"'
-                if parameter.common:
-                    continue
-                elif parameter.help_str:
+                if parameter.help_str:
                     help_str = format_help(parameter.option_name, parameter.help_str)
                     content += '<li><b %s>%s</b>: %s</li>' % (style, parameter.option_name, help_str)
                 else:

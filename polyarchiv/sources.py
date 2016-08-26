@@ -55,8 +55,6 @@ class LocalFiles(Source):
     parameters = Source.parameters + [
         Parameter('source_path', converter=check_directory, help_str='original folder to backup', required=True),
         Parameter('destination_path', help_str='destination folder (relative path, e.g. "./files")', required=True),
-        Parameter('rsync_executable', common=True, converter=check_executable,
-                  help_str='rsync executable (default: rsync)'),
         Parameter('exclude', help_str='exclude files matching PATTERN (see --exclude option from rsync). '
                                       'If PATTERN startswith @, then it should be the absolute path of a file '
                                       '(see --exclude-from option from rsync)'),
@@ -66,13 +64,12 @@ class LocalFiles(Source):
         Parameter('preserve_hard_links', converter=bool_setting, help_str='true|false: preserve hard links'),
     ]
 
-    def __init__(self, name, collect_point, source_path='', destination_path='', rsync_executable='rsync',
+    def __init__(self, name, collect_point, source_path='', destination_path='',
                  exclude='', include='', preserve_hard_links='', **kwargs):
         """
         :param collect_point: collect point where files are stored
         :param source_path: absolute path of a directory to backup
         :param destination_path: relative path of the backup destination (must be a directory name, e.g. "data")
-        :param rsync_executable: path of the rsync executable
         :param exclude: exclude files matching PATTERN. If PATTERN starts with '@', it must be the absolute path of
             a file (cf. the --exclude-from option from rsync)
         :param include: don't exclude files matching PATTERN. If PATTERN starts with '@', it must be the absolute path
@@ -82,13 +79,12 @@ class LocalFiles(Source):
         super(LocalFiles, self).__init__(name, collect_point, **kwargs)
         self.source_path = source_path
         self.destination_path = destination_path
-        self.rsync_executable = rsync_executable
         self.exclude = exclude
         self.include = include
         self.preserve_hard_links = preserve_hard_links.lower().strip() in ('yes', 'true', 'on', '1')
 
     def backup(self):
-        cmd = [self.rsync_executable, '-a', '--delete', '-S', ]
+        cmd = [self.config.rsync_executable, '-a', '--delete', '-S', ]
         if self.preserve_hard_links:
             cmd.append('-H')
         # noinspection PyTypeChecker
@@ -112,7 +108,7 @@ class LocalFiles(Source):
         self.execute_command(cmd)
 
     def restore(self):
-        cmd = [self.rsync_executable, '-a', '--delete', '-S', ]
+        cmd = [self.config.rsync_executable, '-a', '--delete', '-S', ]
         if self.preserve_hard_links:
             cmd.append('-H')
         dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
@@ -138,9 +134,9 @@ class MySQL(Source):
         Parameter('password', help_str='database password'),
         Parameter('database', help_str='name of the backuped database', required=True),
         Parameter('destination_path', help_str='relative path of the backup destination (e.g. "database.sql")'),
-        Parameter('dump_executable', converter=check_executable, common=True,
+        Parameter('dump_executable', converter=check_executable,
                   help_str='path of the mysqldump executable (default: "mysqldump")'),
-        Parameter('restore_executable', converter=check_executable, common=True,
+        Parameter('restore_executable', converter=check_executable,
                   help_str='path of the mysql executable (default: "mysql")'),
     ]
 
@@ -226,9 +222,9 @@ class PostgresSQL(MySQL):
     """Dump the content of a PostgresSQL database with the pg_dump utility to a filename in the collect point.
     Require the 'pg_dump' and 'psql' utilities."""
     parameters = MySQL.parameters[:-2] + [
-        Parameter('dump_executable', converter=check_executable, common=True,
+        Parameter('dump_executable', converter=check_executable,
                   help_str='path of the pg_dump executable (default: "pg_dump")'),
-        Parameter('restore_executable', converter=check_executable,  common=True,
+        Parameter('restore_executable', converter=check_executable,
                   help_str='path of the psql executable (default: "psql")'),
     ]
 
@@ -344,7 +340,7 @@ class Dovecot(Source):
                                      ' TCP socket.'),
         Parameter('user_mask', help_str='only sync this user ("*" and "?" wildcards can be used).'),
         Parameter('dump_executable', converter=check_executable,
-                  help_str='path of the doveadm executable (default: "doveadm")', common=True),
+                  help_str='path of the doveadm executable (default: "doveadm")'),
     ]
 
     def __init__(self, name, collect_point, destination_path='dovecot', dump_executable='doveadm',
@@ -418,7 +414,8 @@ class RemoteFiles(Source):
 
     def _get_backend(self):
         backend = get_backend(self.collect_point, self.source_url, keytab=self.keytab, private_key=self.private_key,
-                              ca_cert=self.ca_cert, ssh_options=self.ssh_options)
+                              ca_cert=self.ca_cert, ssh_options=self.ssh_options,
+                              config=self.config)
         return backend
 
     def restore(self):

@@ -52,7 +52,7 @@ class SymmetricCrypt(FileFilter):
      Require 'gpg' to be installed and in $PATH.
     """
     parameters = FileFilter.parameters + [
-        Parameter('gpg_executable', converter=check_executable, help_str='path of the gpg executable (default: "gpg")', common=True),
+        Parameter('gpg_executable', converter=check_executable, help_str='path of the gpg executable (default: "gpg")'),
         Parameter('password', help_str='password to encrypt data'),
     ]
     work_in_place = False

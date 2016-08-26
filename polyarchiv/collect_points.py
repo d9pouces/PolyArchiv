@@ -303,8 +303,7 @@ class GitRepository(FileRepository):
     """Create a local git repository. Collect files from all sources and commit them locally.
     """
     parameters = FileRepository.parameters + [
-        Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")',
-                  common=True),
+        Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
         Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net") '
                                            '[*]'),
         Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv") [*]'),

@@ -272,8 +272,7 @@ class CommonBackupPoint(BackupPoint):
         metadata_keytab = self.format_value(self.metadata_keytab, collect_point, use_constant_values=True)
         metadata_ssh_options = self.format_value(self.metadata_ssh_options, collect_point, use_constant_values=True)
         backend = get_backend(self, metadata_url, keytab=metadata_keytab, private_key=metadata_private_key,
-                              ca_cert=metadata_ca_cert, ssh_options=metadata_ssh_options, rsync_executable='rsync',
-                              curl_executable='curl', scp_executable='scp', ssh_executable='ssh')
+                              ca_cert=metadata_ca_cert, ssh_options=metadata_ssh_options, config=self.config)
         assert isinstance(backend, StorageBackend)
         return backend
 
@@ -316,7 +315,7 @@ class GitRepository(CommonBackupPoint):
     """
 
     parameters = CommonBackupPoint.parameters + [
-        Parameter('git_executable', converter=check_executable, common=True,
+        Parameter('git_executable', converter=check_executable,
                   help_str='path of the git executable (default: "git")'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
@@ -480,7 +479,7 @@ class Synchronize(CommonBackupPoint):
         ca_cert = self.format_value(self.ca_cert, collect_point)
         ssh_options = self.format_value(self.ssh_options, collect_point)
         backend = get_backend(collect_point, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
-                              ssh_options=ssh_options)
+                              ssh_options=ssh_options, config=self.config)
         return backend
 
     def do_restore(self, collect_point, export_data_path):
@@ -504,9 +503,9 @@ class TarArchive(CommonBackupPoint):
         Parameter('ssh_options', help_str='SSH options associated to \'url\' [*]'),
         Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
-        Parameter('tar_executable', converter=check_executable, common=True,
+        Parameter('tar_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "tar")'),
-        Parameter('curl_executable', converter=check_executable, common=True,
+        Parameter('curl_executable', converter=check_executable,
                   help_str='path of the rsync executable (default: "curl")'),
     ]
 
@@ -528,7 +527,7 @@ class TarArchive(CommonBackupPoint):
         ca_cert = self.format_value(self.ca_cert, collect_point)
         ssh_options = self.format_value(self.ssh_options, collect_point)
         backend = get_backend(collect_point, remote_url, keytab=keytab, private_key=private_key, ca_cert=ca_cert,
-                              ssh_options=ssh_options)
+                              ssh_options=ssh_options, config=self.config)
         return backend
 
     def do_backup(self, collect_point, export_data_path, info):
