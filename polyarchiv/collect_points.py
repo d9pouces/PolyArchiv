@@ -303,40 +303,38 @@ class GitRepository(FileRepository):
     """Create a local git repository. Collect files from all sources and commit them locally.
     """
     parameters = FileRepository.parameters + [
-        Parameter('git_executable', converter=check_executable, help_str='path of the git executable (default: "git")'),
         Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net") '
                                            '[*]'),
         Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv") [*]'),
         Parameter('commit_message', help_str='commit message (default: "Backup {Y}/{m}/{d} {H}:{M}") [*]'),
     ]
 
-    def __init__(self, name, git_executable='git', commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
+    def __init__(self, name, commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
                  commit_message='Backup {Y}/{m}/{d} {H}:{M}', **kwargs):
         super(GitRepository, self).__init__(name=name, **kwargs)
         self.commit_name = commit_name
         self.commit_email = commit_email
         self.commit_message = commit_message
-        self.git_executable = git_executable
 
     def post_source_backup(self):
         super(GitRepository, self).post_source_backup()
         git_config_path = os.path.join(self.metadata_path, '.gitconfig')
         if not os.path.isfile(git_config_path):
-            self.execute_command([self.git_executable, 'config', '--global', 'user.email',
+            self.execute_command([self.config.git_executable, 'config', '--global', 'user.email',
                                   self.format_value(self.commit_email)], env={'HOME': self.metadata_path})
-            self.execute_command([self.git_executable, 'config', '--global', 'user.name',
+            self.execute_command([self.config.git_executable, 'config', '--global', 'user.name',
                                   self.format_value(self.commit_name)], env={'HOME': self.metadata_path})
         os.chdir(self.import_data_path)
-        self.execute_command([self.git_executable, 'init'], cwd=self.import_data_path)
-        self.execute_command([self.git_executable, 'add', '.'])
-        self.execute_command([self.git_executable, 'commit', '-am', self.format_value(self.commit_message)],
+        self.execute_command([self.config.git_executable, 'init'], cwd=self.import_data_path)
+        self.execute_command([self.config.git_executable, 'add', '.'])
+        self.execute_command([self.config.git_executable, 'commit', '-am', self.format_value(self.commit_message)],
                              ignore_errors=True, env={'HOME': self.metadata_path})
 
     def pre_source_restore(self):
         os.chdir(self.import_data_path)
-        self.execute_command([self.git_executable, 'reset', '--hard'], cwd=self.import_data_path,
+        self.execute_command([self.config.git_executable, 'reset', '--hard'], cwd=self.import_data_path,
                              env={'HOME': self.metadata_path})
-        self.execute_command([self.git_executable, 'clean', '-f'], cwd=self.import_data_path,
+        self.execute_command([self.config.git_executable, 'clean', '-f'], cwd=self.import_data_path,
                              env={'HOME': self.metadata_path})
 
 

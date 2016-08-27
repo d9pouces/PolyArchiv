@@ -29,17 +29,15 @@ class Config(object):
 
     def __init__(self, command_display=True, command_confirm=False, command_execute=True,
                  command_keep_output=False,
-                 rsync_executable='rsync',
-                 curl_executable='curl',
-                 scp_executable='scp',
-                 ssh_executable='ssh',
-                 tar_executable='tar'):
+                 rsync_executable='rsync', curl_executable='curl', git_executable='git', scp_executable='scp',
+                 ssh_executable='ssh', tar_executable='tar'):
         self.command_display = command_display  # display each command before running it
         self.command_confirm = command_confirm  # ask the user to confirm each command
         self.command_execute = command_execute  # actually run commands (if False: 'dry' mode)
         self.command_keep_output = command_keep_output  # display all command outputs on stderr/stdout
         self.rsync_executable = rsync_executable
         self.curl_executable = curl_executable
+        self.git_executable = git_executable
         self.scp_executable = scp_executable
         self.ssh_executable = ssh_executable
         self.tar_executable = tar_executable

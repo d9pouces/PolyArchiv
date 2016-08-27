@@ -92,7 +92,7 @@ class Parameter(object):
     """class that maps an option in a .ini file to a argument name."""
 
     def __init__(self, arg_name, option_name=None, converter=str, to_str=str_or_blank, help_str=None, required=False,
-                 default_str_value=None, check_fn=None):
+                 default_str_value=None, checks=None):
         """:param arg_name: the name of parameter passed to the engine
         :type arg_name: `str` or `unicode`
         :param option_name: option name in a .ini file
@@ -107,9 +107,9 @@ class Parameter(object):
         :type help_str: `str` or `unicode`
         :param required: this parameter is required
         :param default_str_value: default value (string value)
-        :param check_fn: if not None, must bien a check function(Runner, Point|Source|Filter|Config|…)
+        :param checks: if not None, must bien a list of callables(Runner, Point|Source|Filter|Config|…, Parameter)
         """
-        self.advised_variables = check_fn
+        self.advised_variables = checks
         self.arg_name = arg_name
         self.option_name = option_name or arg_name
         self.converter = converter
@@ -117,7 +117,7 @@ class Parameter(object):
         self.help_str = help_str
         self.required = required
         self.default_str_value = default_str_value
-        self.suggested_variables = check_fn
+        self.checks = checks
 
     def __str__(self):
         return self.option_name

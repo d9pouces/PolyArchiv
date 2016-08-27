@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 
-from polyarchiv.check import check_collect_point, check_backup_collect_points
+from polyarchiv.status_check import check_collect_point, check_backup_collect_points
 from polyarchiv.conf import Parameter
 from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN, GREY, RED
 
