@@ -15,6 +15,7 @@ import socket
 
 from polyarchiv.filters import FileFilter
 from polyarchiv.sources import Source
+from polyarchiv.visitors import Visitor
 
 try:
     from pkg_resources import iter_entry_points
@@ -306,6 +307,40 @@ class Runner(ParameterizedObject):
                 if fnmatch.fnmatch(backup_point_tag, collect_point_pattern):
                     return True
         return False
+
+    def visit(self, visitor=None, only_collect_points=None, only_backup_points=None):
+        """ Apply the given commands to the available collect/backup points.
+        :param visitor: visitor
+        :param only_collect_points: list of selected collect points (all if not specified)
+        :type only_collect_points: :class:`list`
+        :param only_backup_points: list of selected backup points (all if not specified)
+        :type only_backup_points: :class:`list`
+        :return:
+        :rtype:
+        """
+        assert isinstance(visitor, Visitor)
+        visitor.runner(self)
+        collect_points = [collect_point for collect_point_name, collect_point in self.collect_points.items()
+                          if not only_collect_points or collect_point_name in only_collect_points]
+        backup_points = [backup_point for backup_point_name, backup_point in self.backup_points.items()
+                         if not only_backup_points or backup_point_name in only_backup_points]
+        visitor.backup_points(self, backup_points)
+        for backup_point in backup_points:
+            assert isinstance(backup_point, BackupPoint)
+            visitor.backup_point(self, backup_point)
+            filtered_collect_points = [collect_point for collect_point in collect_points
+                                       if self.can_associate(collect_point, backup_point)]
+            visitor.backup_point_collect_points(self, backup_point, filtered_collect_points)
+        visitor.collect_points(self, collect_points)
+        for collect_point in collect_points:
+            assert isinstance(collect_point, CollectPoint)
+            visitor.collect_point(self, collect_point)
+            filtered_backup_points = [backup_point for backup_point in backup_points
+                                      if self.can_associate(collect_point, backup_point)]
+            visitor.backup_points_collect_point(self, filtered_backup_points,
+                                                collect_point)
+            for backup_point in filtered_backup_points:
+                visitor.backup_point_collect_point(self, backup_point, collect_point)
 
     def apply_commands(self, collect_point_command=None, backup_point_command=None,
                        collect_point_backup_point_command=None, only_collect_points=None, only_backup_points=None):

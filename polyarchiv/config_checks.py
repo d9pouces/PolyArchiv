@@ -4,29 +4,38 @@ from __future__ import unicode_literals, print_function, absolute_import
 __author__ = 'Matthieu Gallet'
 
 
-def check_uniquess(runner, backup_point, parameter):
-    pass
+class AttributeUniquess(object):
+    def __init__(self, attr_name):
+        self.attr_name = attr_name
+
+    def __call__(self, runner, point, collect_points):
+        pass
 
 
-def check_git_url_config(runner, backup_point, parameter):
-    pass
+class FileIsReadable(object):
+    def __init__(self, attr_name, required=False):
+        self.attr_name = attr_name
+        self.required = required
+
+    def __call__(self, runner, point, collect_points):
+        pass
 
 
-def check_metadata_is_required(runner, backup_point, parameter):
-    pass
+class CaCertificate(FileIsReadable):
+
+    def __call__(self, runner, point, collect_points):
+        pass
 
 
-def check_email(runner, backup_point, parameter):
-    pass
+class Email(object):
+    def __init__(self, attr_name):
+        self.attr_name = attr_name
+
+    def __call__(self, runner, point, collect_points):
+        pass
 
 
-def check_file_is_readable(runner, backup_point, parameter):
-    pass
+class GitUrl(AttributeUniquess):
 
-
-def check_ca_cert(runner, backup_point, parameter):
-    pass
-
-
-def check_gitlab_url(runner, backup_point, parameter):
-    pass
+    def __call__(self, runner, point, collect_points):
+        pass

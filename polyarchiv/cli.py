@@ -17,6 +17,7 @@ import sys
 from polyarchiv.status_check import check_collect_point, check_backup_collect_points
 from polyarchiv.conf import Parameter
 from polyarchiv.termcolor import cprint, YELLOW, CYAN, BOLD, GREEN, GREY, RED
+from polyarchiv.visitors import ConfigVisitor, CheckVisitor
 
 __author__ = 'Matthieu Gallet'
 
@@ -105,24 +106,16 @@ def main(engines_file=None):
         if runner.load():
             if not verbose:
                 cprint('you can display more info with --verbose', CYAN)
-            from polyarchiv.show import show_collect_point, show_backup_collect_point, show_backup_point
-            runner.apply_commands(collect_point_command=show_collect_point, backup_point_command=show_backup_point,
-                                  collect_point_backup_point_command=show_backup_collect_point,
-                                  only_collect_points=args.only_collect_points,
-                                  only_backup_points=args.only_backup_points)
+            visitor = ConfigVisitor(engines_file=engines_file)
+            runner.visit(visitor, only_collect_points=args.only_collect_points,
+                         only_backup_points=args.only_backup_points)
     elif command == 'check':
+        visitor = CheckVisitor()
         if runner.load():
-            from polyarchiv.show import show_collect_point, show_backup_collect_point, \
-                show_backup_point
-            values = {'return_text': [], 'return_code': 0}
-            collect_point_command = functools.partial(check_collect_point, values)
-            backup_point_command = functools.partial(check_backup_collect_points, values)
-            runner.apply_commands(collect_point_command=collect_point_command,
-                                  collect_point_backup_point_command=backup_point_command,
-                                  only_collect_points=args.only_collect_points,
-                                  only_backup_points=args.only_backup_points)
-            return_code = values['return_code']
-            msg = ', '.join(values['return_text'])
+            runner.visit(visitor, only_collect_points=args.only_collect_points,
+                         only_backup_points=args.only_backup_points)
+            return_code = visitor.return_code
+            msg = ', '.join(visitor.errors)
             if return_code == 0:
                 msg = 'everything is valid'
         else:
@@ -137,6 +130,8 @@ def main(engines_file=None):
                 msg = 'OK - %s' % msg
             else:
                 msg = 'UNKNOWN - %s' % msg
+        elif visitor.warnings:
+            msg += '\n' + '\n'.join(visitor.warnings)
         cprint(msg)
     elif command == 'plugins':
         width = 80

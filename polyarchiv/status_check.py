@@ -20,21 +20,21 @@ def check_collect_point(values, collect_point):
         info = collect_point.get_info()
     except ValueError as e:
         values['return_code'] = 2
-        values['return_text'] += ['unable to check status of %s: %s' % (name, e)]
+        values['errors'] += ['unable to check status of %s: %s' % (name, e)]
         return
     assert isinstance(info, PointInfo)
     if info.last_success is None:
         values['return_code'] = 2
-        values['return_text'] += ['no successful backup of %s' % name]
+        values['errors'] += ['no successful backup of %s' % name]
     else:
         now = datetime.datetime.now()
         out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
         if out_of_date:
             values['return_code'] = max(values['return_code'], 1)
-            values['return_text'] += ['the last backup of %s is out of date: %s' % (name, info.last_success)]
+            values['errors'] += ['the last backup of %s is out of date: %s' % (name, info.last_success)]
     if info.last_state_valid is False:
         values['return_code'] = 2
-        values['return_text'] += ['the last backup of %s has failed. %s' % (name, info.last_message)]
+        values['errors'] += ['the last backup of %s has failed. %s' % (name, info.last_message)]
 
 
 def check_backup_collect_points(values, collect_point, backup_point):
@@ -45,18 +45,18 @@ def check_backup_collect_points(values, collect_point, backup_point):
         info = backup_point.get_info(collect_point)
     except ValueError as e:
         values['return_code'] = 2
-        values['return_text'] += ['unable to check status of %s: %s' % (name, e)]
+        values['errors'] += ['unable to check status of %s: %s' % (name, e)]
         return
     assert isinstance(info, PointInfo)
     if info.last_success is None:
         values['return_code'] = 2
-        values['return_text'] += ['no successful backup of %s' % name]
+        values['errors'] += ['no successful backup of %s' % name]
     else:
         now = datetime.datetime.now()
         out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
         if out_of_date:
             values['return_code'] = max(values['return_code'], 1)
-            values['return_text'] += ['the last backup of %s is out of date: %s' % (name, info.last_success)]
+            values['errors'] += ['the last backup of %s is out of date: %s' % (name, info.last_success)]
     if info.last_state_valid is False:
         values['return_code'] = 2
-        values['return_text'] += ['the last backup of %s has failed. %s' % (name, info.last_message)]
+        values['errors'] += ['the last backup of %s has failed. %s' % (name, info.last_message)]

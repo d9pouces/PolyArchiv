@@ -6,13 +6,10 @@ import datetime
 import logging
 from collections import OrderedDict
 
-# noinspection PyProtectedMember
 from polyarchiv._vendor import requests
-# noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.backends import get_backend, StorageBackend
-from polyarchiv.config_checks import check_git_url_config, check_metadata_is_required, check_uniquess, check_email, \
-    check_file_is_readable, check_ca_cert
+from polyarchiv.config_checks import AttributeUniquess, FileIsReadable, CaCertificate, Email, GitUrl
 from polyarchiv.filters import FileFilter
 from polyarchiv.param_checks import check_git_url
 from polyarchiv.termcolor import RED
@@ -52,6 +49,7 @@ class BackupPoint(Point):
                            ' to this backup point. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_collect_point_tags and included_backup_point_tags.'),
     ]
+    checks = []
 
     def __init__(self, name, backup_point_tags=None, included_collect_point_tags=None, excluded_collect_point_tags=None,
                  **kwargs):
@@ -218,17 +216,17 @@ class CommonBackupPoint(BackupPoint):
     parameters = BackupPoint.parameters + [
         Parameter('metadata_url', required=False,
                   help_str='send metadata (about the successful last backup) to this URL.'
-                           'Should end by "/" or use the {name} variable [**]',
-                  checks=[check_metadata_is_required, ]),
-        Parameter('metadata_private_key', checks=[check_file_is_readable, ],
-                  help_str='private key associated to \'metadata_url\' [**]'),
-        Parameter('metadata_ca_cert', checks=[check_ca_cert, ],
+                           'Should end by "/" or use the {name} variable [**]'),
+        Parameter('metadata_private_key', help_str='private key associated to \'metadata_url\' [**]'),
+        Parameter('metadata_ca_cert',
                   help_str='private certificate associated to \'metadata_url\' [**]'),
-        Parameter('metadata_keytab', checks=[check_file_is_readable, ],
+        Parameter('metadata_keytab',
                   help_str='keytab (for Kerberos authentication) associated to \'metadata_url\' [**]'),
         Parameter('metadata_ssh_options',
                   help_str='SSH options associated to \'metadata_url\' [**]'),
     ]
+    checks = BackupPoint.checks + [AttributeUniquess('metadata_url'), FileIsReadable('metadata_private_key'),
+                                   FileIsReadable('metadata_keytab'), CaCertificate('metadata_ca_cert')]
 
     def __init__(self, name, metadata_url=None, metadata_private_key=None, metadata_ca_cert=None,
                  metadata_keytab=None, metadata_ssh_options=None, **kwargs):
@@ -319,12 +317,11 @@ class GitRepository(CommonBackupPoint):
     """
 
     parameters = CommonBackupPoint.parameters + [
-        Parameter('keytab', checks=[check_file_is_readable, ],
+        Parameter('keytab',
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
-        Parameter('private_key', checks=[check_file_is_readable, ],
+        Parameter('private_key',
                   help_str='absolute path of the private key file (for SSH key authentication) [*]'),
-        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")',
-                  checks=[check_email]),
+        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")'),
         Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
         Parameter('commit_message', help_str='commit message (default: "Backup {Y}/{m}/{d} {H}:{M}") [*]'),
         Parameter('remote_url', help_str='URL of the remote server, including username and password (e.g.: '
@@ -333,8 +330,10 @@ class GitRepository(CommonBackupPoint):
                                          'The password is not required for SSH connections (you should use SSH keys).'
                                          'The backup point must already exists. If you created it by hand, do not '
                                          'forget to set \'git config --bool core.bare true\'. [*]',
-                  required=True, converter=check_git_url, checks=[check_uniquess, check_git_url_config, ]),
+                  required=True, converter=check_git_url),
     ]
+    checks = CommonBackupPoint.checks + [AttributeUniquess('remote_url'), FileIsReadable('private_key'),
+                                         FileIsReadable('keytab'), Email('commit_email'), GitUrl('remote_url')]
 
     def __init__(self, name, remote_url='', remote_branch='master', private_key=None,
                  keytab=None, commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
@@ -410,13 +409,13 @@ class GitlabRepository(GitRepository):
     parameters = GitRepository.parameters[:-1] + [
         Parameter('gitlab_url', help_str='HTTP URL of the gitlab server (e.g.: \'https://mygitlab.example.org/\') [*]',
                   required=True),
-        Parameter('project_name', help_str='Name of the Gitlab project (e.g. \'myuser/myproject\')[*]', required=True,
-                  checks=[check_uniquess]),
+        Parameter('project_name', help_str='Name of the Gitlab project (e.g. \'myuser/myproject\')[*]', required=True),
         Parameter('username', help_str='Username to use for pushing data. If you use git+ssh, use the SSH username'
                                        ' (often \'git\'), otherwise use your real username. [*]'),
         Parameter('password', help_str='Password for HTTP auth (if private_key and keytab are not set) [*]'),
         Parameter('api_key', help_str='API key allowing for creating new repositories [*]', required=True),
     ]
+    checks = GitRepository.checks + [AttributeUniquess('project_name')]
 
     def __init__(self, name, gitlab_url='', api_key=None, project_name='', username='', password='', private_key=None,
                  **kwargs):
@@ -454,16 +453,16 @@ class GitlabRepository(GitRepository):
 
 class Synchronize(CommonBackupPoint):
     parameters = CommonBackupPoint.parameters + [
-        Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must ends by a folder name [*]',
-                  checks=[check_uniquess]),
-        Parameter('private_key', help_str='private key or certificate associated to \'remote_url\' [*]',
-                  checks=[check_file_is_readable]),
+        Parameter('remote_url', required=True, help_str='synchronize data to this URL. Must ends by a folder name [*]'),
+        Parameter('private_key', help_str='private key or certificate associated to \'remote_url\' [*]'),
         Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
-                                      'Set to "any" for not checking certificates [*]', checks=[check_ca_cert, ]),
+                                      'Set to "any" for not checking certificates [*]'),
         Parameter('ssh_options', help_str='SSH options associated to \'url\' [*]'),
-        Parameter('keytab', converter=check_file, checks=[check_file_is_readable, ],
+        Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
     ]
+    checks = CommonBackupPoint.checks + [AttributeUniquess('remote_url'), FileIsReadable('private_key'),
+                                         CaCertificate('ca_cert'), FileIsReadable('keytab')]
 
     def __init__(self, name, remote_url='', keytab=None, private_key=None, ca_cert=None, ssh_options=None, **kwargs):
         super(Synchronize, self).__init__(name, **kwargs)
@@ -499,18 +498,18 @@ class TarArchive(CommonBackupPoint):
 
     excluded_files = {'.git', '.gitignore'}
     parameters = CommonBackupPoint.parameters + [
-        Parameter('remote_url', required=True, checks=[check_uniquess, ],
+        Parameter('remote_url', required=True,
                   help_str='synchronize data to this URL, like \'ssh://user@hostname/folder/archive.tar.gz\'. '
                            'Must end by ".tar.gz", "tar.bz2", "tar.xz" [*]'),
-        Parameter('private_key', help_str='private key or certificate associated to \'remote_url\' [*]',
-                  checks=[check_file_is_readable, ]),
+        Parameter('private_key', help_str='private key or certificate associated to \'remote_url\' [*]'),
         Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
-                                      'Set to "any" for not checking certificates [*]',
-                  checks=[check_ca_cert, ]),
+                                      'Set to "any" for not checking certificates [*]'),
         Parameter('ssh_options', help_str='SSH options associated to \'url\' [*]'),
-        Parameter('keytab', converter=check_file, checks=[check_file_is_readable, ],
+        Parameter('keytab', converter=check_file,
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
     ]
+    checks = CommonBackupPoint.checks + [AttributeUniquess('remote_url'), FileIsReadable('private_key'),
+                                         CaCertificate('ca_cert'), FileIsReadable('keytab')]
 
     def __init__(self, name, remote_url='', keytab=None, private_key=None,
                  ca_cert=None, ssh_options=None, **kwargs):
