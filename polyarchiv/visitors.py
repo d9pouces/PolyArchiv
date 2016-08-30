@@ -13,28 +13,28 @@ __author__ = 'Matthieu Gallet'
 
 class Visitor(object):
 
-    def runner(self, runner):
+    def visit_runner(self, runner):
         pass
 
-    def backup_point(self, runner, backup_point):
+    def visit_backup_point(self, runner, backup_point):
         pass
 
-    def collect_point(self, runner, collect_point):
+    def visit_collect_point(self, runner, collect_point):
         pass
 
-    def backup_points(self, runner, backup_points):
+    def visit_backup_points(self, runner, backup_points):
         pass
 
-    def collect_points(self, runner, collect_points):
+    def visit_collect_points(self, runner, collect_points):
         pass
 
-    def backup_point_collect_point(self, runner, backup_point, collect_point):
+    def visit_backup_point_collect_point(self, runner, backup_point, collect_point):
         pass
 
-    def backup_points_collect_point(self, runner, backup_points, collect_point):
+    def visit_backup_points_collect_point(self, runner, backup_points, collect_point):
         pass
 
-    def backup_point_collect_points(self, runner, backup_point, collect_points):
+    def visit_backup_point_collect_points(self, runner, backup_point, collect_points):
         pass
 
 
@@ -42,14 +42,19 @@ class ConfigVisitor(Visitor):
     def __init__(self, engines_file=None):
         self.engines_file = engines_file
 
-    def collect_point(self, runner, collect_point):
+    def visit_collect_point(self, runner, collect_point):
         show_collect_point(collect_point, engines_file=self.engines_file)
 
-    def backup_point(self, runner, backup_point):
+    def visit_backup_point(self, runner, backup_point):
         show_backup_point(backup_point, engines_file=self.engines_file)
 
-    def backup_point_collect_point(self, runner, backup_point, collect_point):
+    def visit_backup_point_collect_point(self, runner, backup_point, collect_point):
         show_backup_collect_point(collect_point, backup_point)
+
+    def visit_backup_point_collect_points(self, runner, backup_point, collect_points):
+        assert isinstance(backup_point, BackupPoint)
+        for check in backup_point.checks:
+            check(runner, backup_point, collect_points)
 
 
 class CheckVisitor(Visitor):
@@ -59,7 +64,7 @@ class CheckVisitor(Visitor):
         self.warnings = []
         self.infos = []
 
-    def collect_point(self, runner, collect_point_):
+    def visit_collect_point(self, runner, collect_point_):
         assert isinstance(collect_point_, CollectPoint)
         name = collect_point_.name
         try:
@@ -82,12 +87,12 @@ class CheckVisitor(Visitor):
             self.return_code = 2
             self.errors += ['the last backup of %s has failed. %s' % (name, info.last_message)]
 
-    def backup_point_collect_point(self, runner, backup_point_, collect_point_):
-        assert isinstance(collect_point_, CollectPoint)
-        assert isinstance(backup_point_, BackupPoint)
-        name = '%s:%s' % (collect_point_.name, backup_point_.name)
+    def visit_backup_point_collect_point(self, runner, backup_point, collect_point):
+        assert isinstance(collect_point, CollectPoint)
+        assert isinstance(backup_point, BackupPoint)
+        name = '%s:%s' % (collect_point.name, backup_point.name)
         try:
-            info = backup_point_.get_info(collect_point_)
+            info = backup_point.get_info(collect_point)
         except ValueError as e:
             self.return_code = 2
             self.errors += ['unable to check status of %s: %s' % (name, e)]
@@ -98,7 +103,7 @@ class CheckVisitor(Visitor):
             self.errors += ['no successful backup of %s' % name]
         else:
             now = datetime.datetime.now()
-            out_of_date = collect_point_.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
+            out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
             if out_of_date:
                 self.return_code = max(self.return_code, 1)
                 self.errors += ['the last backup of %s is out of date: %s' % (name, info.last_success)]

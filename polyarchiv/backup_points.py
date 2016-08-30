@@ -6,12 +6,13 @@ import datetime
 import logging
 from collections import OrderedDict
 
+# noinspection PyProtectedMember
 from polyarchiv._vendor import requests
+# noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.backends import get_backend, StorageBackend
-from polyarchiv.config_checks import AttributeUniquess, FileIsReadable, CaCertificate, Email, GitUrl
+from polyarchiv.config_checks import AttributeUniquess, FileIsReadable, CaCertificate, Email, ValidGitUrl, GitlabProjectName
 from polyarchiv.filters import FileFilter
-from polyarchiv.param_checks import check_git_url
 from polyarchiv.termcolor import RED
 from polyarchiv.termcolor import cprint
 
@@ -25,7 +26,7 @@ except ImportError:
     from urllib import urlencode, quote_plus
 import os
 
-from polyarchiv.conf import Parameter, strip_split, check_file
+from polyarchiv.conf import Parameter, strip_split
 from polyarchiv.collect_points import CollectPoint
 from polyarchiv.points import Point, PointInfo
 from polyarchiv.utils import text_type
@@ -330,10 +331,10 @@ class GitRepository(CommonBackupPoint):
                                          'The password is not required for SSH connections (you should use SSH keys).'
                                          'The backup point must already exists. If you created it by hand, do not '
                                          'forget to set \'git config --bool core.bare true\'. [*]',
-                  required=True, converter=check_git_url),
+                  required=True),
     ]
     checks = CommonBackupPoint.checks + [AttributeUniquess('remote_url'), FileIsReadable('private_key'),
-                                         FileIsReadable('keytab'), Email('commit_email'), GitUrl('remote_url')]
+                                         FileIsReadable('keytab'), Email('commit_email'), ValidGitUrl('remote_url')]
 
     def __init__(self, name, remote_url='', remote_branch='master', private_key=None,
                  keytab=None, commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
@@ -415,7 +416,7 @@ class GitlabRepository(GitRepository):
         Parameter('password', help_str='Password for HTTP auth (if private_key and keytab are not set) [*]'),
         Parameter('api_key', help_str='API key allowing for creating new repositories [*]', required=True),
     ]
-    checks = GitRepository.checks + [AttributeUniquess('project_name')]
+    checks = GitRepository.checks + [AttributeUniquess('project_name'), GitlabProjectName('project_name')]
 
     def __init__(self, name, gitlab_url='', api_key=None, project_name='', username='', password='', private_key=None,
                  **kwargs):
@@ -458,8 +459,7 @@ class Synchronize(CommonBackupPoint):
         Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
                                       'Set to "any" for not checking certificates [*]'),
         Parameter('ssh_options', help_str='SSH options associated to \'url\' [*]'),
-        Parameter('keytab', converter=check_file,
-                  help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
+        Parameter('keytab', help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
     ]
     checks = CommonBackupPoint.checks + [AttributeUniquess('remote_url'), FileIsReadable('private_key'),
                                          CaCertificate('ca_cert'), FileIsReadable('keytab')]
@@ -505,8 +505,7 @@ class TarArchive(CommonBackupPoint):
         Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
                                       'Set to "any" for not checking certificates [*]'),
         Parameter('ssh_options', help_str='SSH options associated to \'url\' [*]'),
-        Parameter('keytab', converter=check_file,
-                  help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
+        Parameter('keytab', help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
     ]
     checks = CommonBackupPoint.checks + [AttributeUniquess('remote_url'), FileIsReadable('private_key'),
                                          CaCertificate('ca_cert'), FileIsReadable('keytab')]

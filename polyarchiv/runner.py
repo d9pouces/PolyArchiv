@@ -319,66 +319,28 @@ class Runner(ParameterizedObject):
         :rtype:
         """
         assert isinstance(visitor, Visitor)
-        visitor.runner(self)
+        visitor.visit_runner(self)
         collect_points = [collect_point for collect_point_name, collect_point in self.collect_points.items()
                           if not only_collect_points or collect_point_name in only_collect_points]
         backup_points = [backup_point for backup_point_name, backup_point in self.backup_points.items()
                          if not only_backup_points or backup_point_name in only_backup_points]
-        visitor.backup_points(self, backup_points)
+        visitor.visit_backup_points(self, backup_points)
         for backup_point in backup_points:
             assert isinstance(backup_point, BackupPoint)
-            visitor.backup_point(self, backup_point)
+            visitor.visit_backup_point(self, backup_point)
             filtered_collect_points = [collect_point for collect_point in collect_points
                                        if self.can_associate(collect_point, backup_point)]
-            visitor.backup_point_collect_points(self, backup_point, filtered_collect_points)
-        visitor.collect_points(self, collect_points)
+            visitor.visit_backup_point_collect_points(self, backup_point, filtered_collect_points)
+        visitor.visit_collect_points(self, collect_points)
         for collect_point in collect_points:
             assert isinstance(collect_point, CollectPoint)
-            visitor.collect_point(self, collect_point)
+            visitor.visit_collect_point(self, collect_point)
             filtered_backup_points = [backup_point for backup_point in backup_points
                                       if self.can_associate(collect_point, backup_point)]
-            visitor.backup_points_collect_point(self, filtered_backup_points,
-                                                collect_point)
+            visitor.visit_backup_points_collect_point(self, filtered_backup_points,
+                                                      collect_point)
             for backup_point in filtered_backup_points:
-                visitor.backup_point_collect_point(self, backup_point, collect_point)
-
-    def apply_commands(self, collect_point_command=None, backup_point_command=None,
-                       collect_point_backup_point_command=None, only_collect_points=None, only_backup_points=None):
-        """ Apply the given commands to the available collect/backup points.
-
-        :param collect_point_command: callable(collect_point) -> None
-        :type collect_point_command: `callable`
-        :param collect_point_backup_point_command: callable(collect_point, backup_point) -> None
-        :type collect_point_backup_point_command: `callable`
-        :param backup_point_command: callable(backup_point) -> None
-        :type backup_point_command: `callable`
-        :param only_collect_points: list of selected collect points (all if not specified)
-        :type only_collect_points: :class:`list`
-        :param only_backup_points: list of selected backup points (all if not specified)
-        :type only_backup_points: :class:`list`
-        :return:
-        :rtype:
-        """
-        if backup_point_command:
-            for backup_point_name, backup_point in self.backup_points.items():
-                if only_backup_points and backup_point_name not in only_backup_points:
-                    continue
-                assert isinstance(backup_point, BackupPoint)
-                backup_point_command(backup_point)
-        for collect_point_name, collect_point in self.collect_points.items():
-            if only_collect_points and collect_point_name not in only_collect_points:
-                continue
-            assert isinstance(collect_point, CollectPoint)
-            if collect_point_command is not None:
-                collect_point_command(collect_point)
-            if collect_point_backup_point_command is None:
-                continue
-            for backup_point_name, backup_point in self.backup_points.items():
-                if only_backup_points and backup_point_name not in only_backup_points:
-                    continue
-                assert isinstance(backup_point, BackupPoint)
-                if self.can_associate(collect_point, backup_point):
-                    collect_point_backup_point_command(collect_point, backup_point)
+                visitor.visit_backup_point_collect_point(self, backup_point, collect_point)
 
     def backup(self, force=False, only_collect_points=None, only_backup_points=None, skip_collect=False,
                skip_backup=False):
