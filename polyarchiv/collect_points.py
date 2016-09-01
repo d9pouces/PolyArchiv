@@ -12,9 +12,8 @@ import tarfile
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
-from polyarchiv.conf import Parameter, strip_split, check_directory, check_executable
+from polyarchiv.conf import Parameter, strip_split, check_directory
 from polyarchiv.filelocks import Lock
-from polyarchiv.param_checks import check_archive
 from polyarchiv.points import Point, PointInfo
 from polyarchiv.termcolor import RED
 from polyarchiv.termcolor import cprint
@@ -336,6 +335,12 @@ class GitRepository(FileRepository):
                              env={'HOME': self.metadata_path})
         self.execute_command([self.config.git_executable, 'clean', '-f'], cwd=self.import_data_path,
                              env={'HOME': self.metadata_path})
+
+
+def check_archive(value):
+    if value.endswith('.tar.gz') or value.endswith('.tar.bz2') or value.endswith('.tar.xz'):
+        return value
+    raise ValueError('Archive name must end by .tar.gz, .tar.bz2 or .tar.xz')
 
 
 class ArchiveRepository(FileRepository):
