@@ -16,30 +16,40 @@ logger = logging.getLogger('polyarchiv.visitors')
 __author__ = 'Matthieu Gallet'
 
 
+# noinspection PyMethodMayBeStatic
 class Visitor(object):
+    """All these methods are called in this order."""
 
     def visit_runner(self, runner):
-        pass
-
-    def visit_backup_point(self, runner, backup_point):
-        pass
-
-    def visit_collect_point(self, runner, collect_point):
+        """Called on the runner"""
         pass
 
     def visit_backup_points(self, runner, backup_points):
+        """Called with all selected backup points"""
         pass
 
-    def visit_collect_points(self, runner, collect_points):
-        pass
-
-    def visit_backup_point_collect_point(self, runner, backup_point, collect_point):
-        pass
-
-    def visit_backup_points_collect_point(self, runner, backup_points, collect_point):
+    def visit_backup_point(self, runner, backup_point):
+        """Called on each backup point"""
         pass
 
     def visit_backup_point_collect_points(self, runner, backup_point, collect_points):
+        """For each selected backup point, called all collect points associated to this backup point """
+        pass
+
+    def visit_collect_points(self, runner, collect_points):
+        """Called with all selected collect points"""
+        pass
+
+    def visit_collect_point(self, runner, collect_point):
+        """Called on each selected collect point"""
+        pass
+
+    def visit_backup_points_collect_point(self, runner, backup_points, collect_point):
+        """For each selected collect point, called all backup points associated to this collect point"""
+        pass
+
+    def visit_backup_point_collect_point(self, runner, backup_point, collect_point):
+        """Applied to all valid couples (backup point, collect point)"""
         pass
 
 

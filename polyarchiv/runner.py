@@ -15,7 +15,6 @@ import socket
 
 from polyarchiv.filters import FileFilter
 from polyarchiv.sources import Source
-from polyarchiv.visitors import Visitor
 
 try:
     from pkg_resources import iter_entry_points
@@ -318,7 +317,6 @@ class Runner(ParameterizedObject):
         :return:
         :rtype:
         """
-        assert isinstance(visitor, Visitor)
         visitor.visit_runner(self)
         collect_points = [collect_point for collect_point_name, collect_point in self.collect_points.items()
                           if not only_collect_points or collect_point_name in only_collect_points]
