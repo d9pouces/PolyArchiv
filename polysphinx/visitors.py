@@ -44,8 +44,9 @@ def render_engines_html(self, node, engines, options):
 
     for name in names:
         engine_cls = engines[name]
-        content += '<dt><h3>engine=%s</h3></dt>\n' % name
-        if engine_cls.__doc__:
+        if name:
+            content += '<dt><h3>engine=%s</h3></dt>\n' % name
+        if engine_cls.__doc__ and engine_cls.__doc__.strip():
             content += '<dd>%s' % engine_cls.__doc__.strip()
         if verbose:
             content += '<p><b>List of available parameters:</b><ul>'

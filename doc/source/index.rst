@@ -54,5 +54,6 @@ The complete backup operation is split into three steps for each collect point:
    sources
    filters
    variables
+   global
    debian
 

@@ -19,12 +19,16 @@ logger = logging.getLogger('polyarchiv')
 
 class Config(object):
     parameters = [
-        Parameter('rsync_executable'),
-        Parameter('curl_executable'),
-        Parameter('scp_executable'),
-        Parameter('ssh_executable'),
-        Parameter('tar_executable'),
-        Parameter('log_file')
+        Parameter('rsync_executable', converter=check_executable,
+                  help_str='full path of the "rsync" executable'),
+        Parameter('curl_executable', converter=check_executable,
+                  help_str='full path of the "curl" executable'),
+        Parameter('scp_executable', converter=check_executable,
+                  help_str='full path of the "scp" executable'),
+        Parameter('ssh_executable', converter=check_executable,
+                  help_str='full path of the "ssh" executable'),
+        Parameter('tar_executable', converter=check_executable,
+                  help_str='full path of the "tar" executable'),
     ]
 
     def __init__(self, command_display=True, command_confirm=False, command_execute=True,

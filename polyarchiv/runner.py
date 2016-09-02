@@ -42,6 +42,9 @@ logger = logging.getLogger('polyarchiv.runner')
 class Runner(ParameterizedObject):
     """Run backup and restore operations for all specified configurations
     """
+    global_pattern = '*.global'
+    collect_pattern = '*.collect'
+    backup_pattern = '*.backup'
     point_section = 'point'
     variables_section = 'variables'
     engine_option = 'engine'
@@ -204,7 +207,7 @@ class Runner(ParameterizedObject):
 
     def _load_global_config(self):
         global_result = {}
-        for config_file, parser in self._iter_config_parsers('*.global'):
+        for config_file, parser in self._iter_config_parsers(self.global_pattern):
             file_result = self._get_available_args_from_parser(config_file, parser, self.global_section,
                                                                Config.parameters)
             global_result.update(file_result)
@@ -221,7 +224,7 @@ class Runner(ParameterizedObject):
             fqdn = 'localhost'
         common_values.update({'fqdn': fqdn, 'hostname': fqdn.partition('.')[0]})
 
-        for config_file, parser in self._iter_config_parsers('*.collect'):
+        for config_file, parser in self._iter_config_parsers(self.collect_pattern):
             # noinspection PyTypeChecker
             collect_point_name = os.path.basename(config_file).rpartition('.')[0]
             collect_point = self._load_engine(config_file, parser, self.point_section, [collect_point_name],
@@ -256,7 +259,7 @@ class Runner(ParameterizedObject):
             self.collect_points[collect_point_name] = collect_point
 
     def _find_backup_points(self):
-        for config_file, parser in self._iter_config_parsers('*.backup'):
+        for config_file, parser in self._iter_config_parsers(self.backup_pattern):
             # noinspection PyTypeChecker
             backup_point_name = os.path.basename(config_file).rpartition('.')[0]
             backup_point = self._load_engine(config_file, parser, self.point_section, [backup_point_name],
