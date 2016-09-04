@@ -439,18 +439,16 @@ class SvnRepository(FileRepository):
             cmd += self.__svn_parameters()
             cmd += [self.remote_url, self.import_data_path]
             self.execute_command(cmd)
-        cmd = [self.config.svn_executable, 'up', '-r', 'HEAD', '--ignore-externals', '--force', '--accept',
-               'theirs-conflict', ]
-        cmd += self.__svn_parameters()
-        self.execute_command(cmd, cwd=self.import_data_path)
 
     def post_source_backup(self):
         cmd = [self.config.svn_executable, 'status']
         p = subprocess.Popen(cmd, cwd=self.import_data_path, stdout=subprocess.PIPE, stderr=self.stderr)
         stdout, stderr = p.communicate()
+        print(stdout, stderr, self.import_data_path)
         to_add = []
         to_remove = []
         for line in stdout.decode('utf-8').splitlines():
+            print(line)
             matcher = re.match(r'^([ ADMRCXI?!~])[ MC][ L][ +][ S][ KOTB][ C] (?P<name>.*)$', line)
             if not matcher:
                 continue
@@ -491,3 +489,7 @@ class SvnRepository(FileRepository):
 
     def pre_source_restore(self):
         self.pre_source_backup()
+        cmd = [self.config.svn_executable, 'up', '-r', 'HEAD', '--ignore-externals', '--force', '--accept',
+               'theirs-conflict', ]
+        cmd += self.__svn_parameters()
+        self.execute_command(cmd, cwd=self.import_data_path)
