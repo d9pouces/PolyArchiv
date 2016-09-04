@@ -23,9 +23,12 @@ class AttributeUniquess(object):
 
     def __call__(self, runner, point, collect_points):
         value = getattr(point, self.attr_name)
+        if value is None:
+            return
         values = {point.format_value(value, collect_point) for collect_point in collect_points}
         if len(values) == 1 and len(collect_points) > 1:
-            msg = '%s.%s = %s does not depend on the the collect point' % (point.name, self.attr_name, values.pop())
+            msg = '%s.%s = %s does not depend on the the collect point. You should append "{name}"' % \
+                  (point.name, self.attr_name, values.pop())
             cprint(msg, RED)
 
 
