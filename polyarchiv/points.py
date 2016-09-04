@@ -29,12 +29,15 @@ class Config(object):
                   help_str='full path of the "ssh" executable'),
         Parameter('tar_executable', converter=check_executable,
                   help_str='full path of the "tar" executable'),
+        Parameter('svn_executable', converter=check_executable,
+                  help_str='full path of the "svn" executable'),
     ]
 
     def __init__(self, command_display=True, command_confirm=False, command_execute=True,
                  command_keep_output=False,
                  rsync_executable='rsync', curl_executable='curl', git_executable='git', scp_executable='scp',
-                 ssh_executable='ssh', tar_executable='tar'):
+                 ssh_executable='ssh', tar_executable='tar',
+                 svn_executable='svn'):
         self.command_display = command_display  # display each command before running it
         self.command_confirm = command_confirm  # ask the user to confirm each command
         self.command_execute = command_execute  # actually run commands (if False: 'dry' mode)
@@ -45,6 +48,7 @@ class Config(object):
         self.scp_executable = scp_executable
         self.ssh_executable = ssh_executable
         self.tar_executable = tar_executable
+        self.svn_executable = svn_executable
 
 
 class ParameterizedObject(object):

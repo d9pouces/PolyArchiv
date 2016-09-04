@@ -6,12 +6,11 @@ import datetime
 import logging
 from collections import OrderedDict
 
-# noinspection PyProtectedMember
 from polyarchiv._vendor import requests
-# noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.backends import get_backend, StorageBackend
-from polyarchiv.config_checks import AttributeUniquess, FileIsReadable, CaCertificate, Email, ValidGitUrl, GitlabProjectName
+from polyarchiv.config_checks import AttributeUniquess, FileIsReadable, CaCertificate, Email, ValidGitUrl, \
+    GitlabProjectName
 from polyarchiv.filters import FileFilter
 from polyarchiv.termcolor import RED
 from polyarchiv.termcolor import cprint
@@ -51,6 +50,7 @@ class BackupPoint(Point):
                            'included_collect_point_tags and included_backup_point_tags.'),
     ]
     checks = []
+    # list of callable(runner, backup_point, collect_points)
 
     def __init__(self, name, backup_point_tags=None, included_collect_point_tags=None, excluded_collect_point_tags=None,
                  **kwargs):
@@ -326,7 +326,7 @@ class GitRepository(CommonBackupPoint):
         Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
         Parameter('commit_message', help_str='commit message (default: "Backup {Y}/{m}/{d} {H}:{M}") [*]'),
         Parameter('remote_url', help_str='URL of the remote server, including username and password (e.g.: '
-                                         'git@mygitlab.example.org/project.git, file:///foo/bar/project.git or '
+                                         'ssh://git@mygitlab.example.org/project.git, file:///foo/bar/project.git or '
                                          'https://username:password@mygitlab.example.org/username/project.git). '
                                          'The password is not required for SSH connections (you should use SSH keys).'
                                          'The backup point must already exists. If you created it by hand, do not '

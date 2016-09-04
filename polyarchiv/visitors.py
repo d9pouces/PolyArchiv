@@ -142,6 +142,13 @@ class ConfigVisitor(Visitor):
         for check in backup_point.checks:
             check(runner, backup_point, collect_points)
 
+    def visit_backup_points_collect_point(self, runner, backup_points, collect_point):
+        assert isinstance(collect_point, CollectPoint)
+        for check in collect_point.checks:
+            check(runner, collect_point, backup_points)
+
+
+
 
 class CheckVisitor(Visitor):
     def __init__(self):

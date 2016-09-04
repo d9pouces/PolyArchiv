@@ -10,6 +10,8 @@ import shutil
 import subprocess
 import tarfile
 
+from polyarchiv.config_checks import ValidSvnUrl
+
 # noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.conf import Parameter, strip_split, check_directory
@@ -17,7 +19,7 @@ from polyarchiv.filelocks import Lock
 from polyarchiv.points import Point, PointInfo
 from polyarchiv.termcolor import RED
 from polyarchiv.termcolor import cprint
-from polyarchiv.utils import text_type, cached_property
+from polyarchiv.utils import text_type, cached_property, url_auth_split
 
 __author__ = 'Matthieu Gallet'
 logger = logging.getLogger('polyarchiv')
@@ -38,6 +40,8 @@ class CollectPoint(Point):
                            ' to this local repo. You can use ? or * as jokers in these tags. Have precedence over '
                            'included_collect_point_tags and included_backup_point_tags.'),
     ]
+    checks = []
+    # list of callable(runner, collect_point, backup_points)
 
     def __init__(self, name, collect_point_tags=None, included_backup_point_tags=None, excluded_backup_point_tags=None,
                  **kwargs):
@@ -154,15 +158,19 @@ class CollectPoint(Point):
         raise NotImplementedError
 
     def pre_source_backup(self):
+        """called before the first source backup"""
         pass
 
     def post_source_backup(self):
+        """called after the last source backup"""
         pass
 
     def pre_source_restore(self):
+        """called before the first source restore"""
         pass
 
     def post_source_restore(self):
+        """called after the last source restore"""
         pass
 
     def get_repository_size(self):
@@ -197,6 +205,8 @@ class CollectPoint(Point):
         raise NotImplementedError
 
     def format_value(self, value):
+        if value is None:
+            return None
         try:
             formatted_value = value.format(**self.variables)
         except KeyError as e:
@@ -387,3 +397,97 @@ class ArchiveRepository(FileRepository):
             shutil.rmtree(path)
         self.ensure_dir(path)
         self.execute_command(['tar', '-C', path, '-xf', full_path])
+
+
+class SvnRepository(FileRepository):
+    """Collect files from all sources in the folder 'local_path'.
+    """
+
+    parameters = FileRepository.parameters + [
+        Parameter('remote_url', required=True,
+                  help_str='URL of the remote repository (must already exist). Should contain username and password [*]'),
+        Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
+                                      'Set to "any" for not checking certificates [*]'),
+        Parameter('client_cert', help_str='Client certificate associated to \'remote_url\' [*]'),
+        Parameter('client_cert_password', help_str='Password for encrypted client certificates [*]'),
+        Parameter('commit_message', help_str='commit message (default: "Backup {Y}/{m}/{d} {H}:{M}") [*]'),
+    ]
+    checks = FileRepository.checks + [ValidSvnUrl('remote_url')]
+
+    def __init__(self, name, remote_url=None, ca_cert=None, client_cert=None, client_cert_password=None,
+                 commit_message='Backup {Y}/{m}/{d} {H}:{M}', **kwargs):
+        super(SvnRepository, self).__init__(name=name, **kwargs)
+        remote_url, username, password = url_auth_split(self.format_value(remote_url))
+        self.username = username
+        self.password = password
+        self.ca_cert = ca_cert
+        self.remote_url = remote_url
+        self.client_cert = client_cert
+        self.commit_message = commit_message
+        self.client_cert_password = client_cert_password
+
+    @cached_property
+    def svn_folder(self):
+        return os.path.join(self.import_data_path, '.svn')
+
+    def release_lock(self, lock_):
+        lock_.release()
+
+    def pre_source_backup(self):
+        if not os.path.isdir(self.svn_folder):
+            cmd = [self.config.svn_executable, 'co', '--ignore-externals', '--force', ]
+            cmd += self.__svn_parameters()
+            cmd += [self.remote_url, self.import_data_path]
+            self.execute_command(cmd)
+        cmd = [self.config.svn_executable, 'up', '-r', 'HEAD', '--ignore-externals', '--force', '--accept',
+               'theirs-conflict', ]
+        cmd += self.__svn_parameters()
+        self.execute_command(cmd, cwd=self.import_data_path)
+
+    def post_source_backup(self):
+        cmd = [self.config.svn_executable, 'status']
+        p = subprocess.Popen(cmd, cwd=self.import_data_path, stdout=subprocess.PIPE, stderr=self.stderr)
+        stdout, stderr = p.communicate()
+        to_add = []
+        to_remove = []
+        for line in stdout.decode('utf-8').splitlines():
+            matcher = re.match(r'^([ ADMRCXI?!~])[ MC][ L][ +][ S][ KOTB][ C] (?P<name>.*)$', line)
+            if not matcher:
+                continue
+            status, name = matcher.groups()
+            if status == '?':
+                to_add.append(name)
+            elif status == '!':
+                to_remove.append(name)
+        if to_add:
+            self.execute_command([self.config.svn_executable, 'add'] + to_add, cwd=self.import_data_path)
+        if to_remove:
+            self.execute_command([self.config.svn_executable, 'rm', '--force'] + to_remove, cwd=self.import_data_path)
+        message = self.format_value(self.commit_message)
+        cmd = [self.config.svn_executable, 'ci', '-m', message]
+        cmd += self.__svn_parameters()
+        self.execute_command(cmd, cwd=self.import_data_path)
+
+    def __svn_parameters(self):
+        result = ['--non-interactive', '--no-auth-cache']
+        if self.username:
+            result += ['--username', self.username]
+        if self.password:
+            result += ['--password', self.password]
+        ca_cert = self.format_value(self.ca_cert)
+        if ca_cert == 'any':
+            result += ['--trust-server-cert']
+        elif ca_cert:
+            result += ['--config-option', 'servers:global:ssl-authority-files=%s' % ca_cert]
+        client_cert = self.format_value(self.client_cert)
+        if client_cert:
+            result += ['--config-option',
+                       'servers:global:ssl-client-cert-file=%s' % client_cert]
+        client_cert_password = self.format_value(self.client_cert_password)
+        if client_cert_password:
+            result += ['--config-option',
+                       'servers:global:ssl-client-cert-password=%s' % client_cert_password]
+        return result
+
+    def pre_source_restore(self):
+        self.pre_source_backup()

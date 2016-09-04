@@ -7,6 +7,15 @@ import re
 import shutil
 import sys
 
+try:
+    # noinspection PyCompatibility
+    from urllib.parse import urlparse, urlencode, quote_plus
+except ImportError:
+    # noinspection PyCompatibility,PyUnresolvedReferences
+    from urlparse import urlparse
+    # noinspection PyUnresolvedReferences
+    from urllib import urlencode, quote_plus
+
 __author__ = 'Matthieu Gallet'
 
 if sys.version_info[0] == 3:
@@ -251,3 +260,53 @@ def copytree(src, dst, symlinks=False):
             else:
                 os.link(src_path, dst_path)
                 shutil.copystat(src_path, dst_path)
+
+
+def normalize_ssh_url(url):
+    """Convert a SSH-like url to a RFC1738-compliant url
+
+    >>> normalize_ssh_url('user@host.xz:/path/to/repo.git/') == 'ssh://user@host.xz/path/to/repo.git/'
+    True
+    >>> normalize_ssh_url('user@host.xz:path/to/repo.git/') == 'ssh://user@host.xz/path/to/repo.git/'
+    True
+
+    :param url:
+    :return:
+    """
+    matcher = re.match(r'(?P<username>\w+@|)(?P<hostname>\w+\.[^:]+):(?P<path>.+)', url)
+    if matcher:
+        (username, hostname, path) = matcher.groups()
+        if not path.startswith('/'):
+            path = '/' + path
+        return 'ssh://%s%s%s' % (username, hostname, path)
+    return url
+
+
+def url_auth_split(url):
+    """extract authentication information from the given URL
+
+    >>> url_auth_split('/path/to.git') == ('file:///path/to.git', None, None)
+    True
+    >>> result = ('ssh://git.example.com:2222/path/to.git', None, None)
+    >>> url_auth_split('ssh://git.example.com:2222/path/to.git') == result
+    True
+    >>> result = ('ssh://git.example.com/path/to.git', 'git', 'password')
+    >>> url_auth_split('ssh://git:password@git.example.com/path/to.git') == result
+    True
+
+    :param url:
+    :return:
+    """
+    if url.startswith('/'):
+        url = 'file://' + url
+    parsed_url = urlparse(url)
+    scheme = parsed_url.scheme or ''
+    if scheme:
+        scheme += '://'
+    else:
+        scheme = ''
+    username = parsed_url.username or None
+    password = parsed_url.password or None
+    port = ':%s' % parsed_url.port if parsed_url.port else ''
+    new_url = '%s%s%s%s' % (scheme, parsed_url.hostname or '', port, parsed_url.path)
+    return new_url, username, password

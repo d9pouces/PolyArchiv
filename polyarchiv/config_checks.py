@@ -3,6 +3,9 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 import os
 import re
+
+from polyarchiv.utils import normalize_ssh_url
+
 try:
     # noinspection PyCompatibility
     from urllib.parse import urlparse, urlencode, quote_plus
@@ -17,9 +20,15 @@ from polyarchiv.termcolor import cprint, RED
 __author__ = 'Matthieu Gallet'
 
 
-class AttributeUniquess(object):
+class AttributeCheck(object):
     def __init__(self, attr_name):
         self.attr_name = attr_name
+
+    def __call__(self, runner, point, associated_points):
+        pass
+
+
+class AttributeUniquess(AttributeCheck):
 
     def __call__(self, runner, point, collect_points):
         value = getattr(point, self.attr_name)
@@ -68,10 +77,7 @@ class CaCertificate(FileIsReadable):
         super(CaCertificate, self).read_file(point, collect_point, formatted_value)
 
 
-class Email(object):
-    def __init__(self, attr_name):
-        self.attr_name = attr_name
-
+class Email(AttributeCheck):
     # noinspection PyUnusedLocal
     def __call__(self, runner, point, collect_points):
         value = getattr(point, self.attr_name)
@@ -82,20 +88,21 @@ class Email(object):
                        % (point.name, self.attr_name, collect_point.name, formatted_value))
 
 
-class ValidGitUrl(AttributeUniquess):
+class ValidGitUrl(AttributeCheck):
 
     def __call__(self, runner, point, collect_points):
         value = getattr(point, self.attr_name)
         for collect_point in collect_points:
             remote_url = point.format_value(value, collect_point)
+            remote_url = normalize_ssh_url(remote_url)
             parsed_url = urlparse(remote_url)
             scheme = parsed_url.scheme
-            if scheme and scheme not in ('ssh', 'git', 'http', 'https', 'ftp', 'ftps', 'rsync', 'file',):
+            if scheme and scheme not in ('ssh', 'git', 'http', 'https', 'ftp', 'ftps', 'rsync', 'file', ):
                 cprint('%s.%s does not define a valid git URL for the collect point %s (%s)'
                        % (point.name, self.attr_name, collect_point.name, remote_url))
 
 
-class GitlabProjectName(AttributeUniquess):
+class GitlabProjectName(AttributeCheck):
 
     def __call__(self, runner, point, collect_points):
         value = getattr(point, self.attr_name)
@@ -104,3 +111,12 @@ class GitlabProjectName(AttributeUniquess):
             if not re.match(r'[a-zA-Z_][a-zA-Z_\-\d]*/[a-zA-Z_][a-zA-Z_\-\d]*', project_name):
                 cprint('%s.%s does not define a valid Gitlab project name for the collect point %s (%s)'
                        % (point.name, self.attr_name, collect_point.name, project_name))
+
+
+class ValidSvnUrl(AttributeCheck):
+    def __call__(self, runner, point, backup_points):
+        remote_url = getattr(point, self.attr_name)
+        parsed_url = urlparse(remote_url)
+        scheme = parsed_url.scheme
+        if scheme and scheme not in ('svn', 'http', 'https', 'file', ):
+            cprint('%s.%s does not define a valid svn URL (%s)' % (point.name, self.attr_name, remote_url))
