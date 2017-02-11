@@ -323,3 +323,43 @@ def url_auth_split(url):
     port = ':%s' % parsed_url.port if parsed_url.port else ''
     new_url = '%s%s%s%s' % (scheme, parsed_url.hostname or '', port, parsed_url.path)
     return new_url, username, password
+
+
+class FileContentMonitor(object):
+    def __init__(self, fd):
+        self.fd = fd
+        self.start_index = None
+        self.end_index = None
+
+    def __enter__(self):
+        self.start_index = self.fd.tell()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end_index = self.fd.tell()
+
+    def get_content(self, close=True):
+        if self.fd is None:
+            return None
+        fd = os.fdopen(os.dup(self.fd))
+        fd.seek(self.start_index)
+        content = fd.read(self.end_index - self.start_index)
+        fd.close()
+        if close:
+            self.fd.close()
+        return content
+
+    def copy_content(self, dst_fd, close=True):
+        if self.fd is None:
+            return
+        if dst_fd:
+            fd = os.fdopen(os.dup(self.fd))
+            fd.seek(self.start_index)
+            index = self.start_index
+            while index < self.end_index:
+                data = fd.read(min(4096, self.end_index - index))
+                dst_fd.write(data)
+                index += 4096
+            fd.close()
+        if close:
+            self.fd.close()

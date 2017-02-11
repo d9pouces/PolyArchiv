@@ -26,7 +26,7 @@ from polyarchiv.conf import Parameter
 from polyarchiv.collect_points import CollectPoint
 from polyarchiv.backup_points import BackupPoint
 from polyarchiv.points import ParameterizedObject, PointInfo, Config
-from polyarchiv.utils import import_string, text_type
+from polyarchiv.utils import import_string, text_type, FileContentMonitor
 
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
@@ -64,6 +64,7 @@ class Runner(ParameterizedObject):
         self.collect_point_config_files = []
         self.backup_point_config_files = []
         self.hooks = []
+        self.output_temp_fd = open('/tmp/polyarchiv.log', 'wb')
 
     @staticmethod
     def find_available_engines(engines_file=None):
@@ -126,7 +127,7 @@ class Runner(ParameterizedObject):
         available_parameters = engine_cls.parameters
         result = self._get_available_args_from_parser(config_file, parser, section, available_parameters)
         result.update({'verbosity': self.verbosity, 'command_confirm': self.command_confirm,
-                       'command_execute': self.command_execute, 'output_temp_fd': self.output_temp_fd})
+                       'command_execute': self.command_execute})
         return result
 
     # noinspection PyMethodMayBeStatic
@@ -243,6 +244,8 @@ class Runner(ParameterizedObject):
             # noinspection PyTypeChecker
             collect_point.variables = {'name': collect_point_name}
             collect_point.variables.update(common_values)
+            if self.output_temp_fd:
+                collect_point.output_temp_fd = tempfile.TemporaryFile()
             # load variables applying to the whole collect point
             if parser.has_section(self.variables_section):
                 collect_point.variables.update({opt: parser.get(self.variables_section, opt)
@@ -259,7 +262,7 @@ class Runner(ParameterizedObject):
                     used = True
                 filter_name = self._decompose_section_name(config_file, section, self.filter_section)
                 if filter_name:  # section looks like [filter "sha1"]
-                    filter_ = self._load_engine(config_file, parser, section, [filter_name],
+                    filter_ = self._load_engine(config_file, parser, section, [filter_name, collect_point],
                                                 self.available_filter_engines, FileFilter)
                     collect_point.add_filter(filter_)
                     used = True
@@ -284,11 +287,12 @@ class Runner(ParameterizedObject):
             if parser.has_section(self.variables_section):
                 backup_point.variables.update({opt: parser.get(self.variables_section, opt)
                                                for opt in parser.options(self.variables_section)})
-
+            if self.output_temp_fd:
+                backup_point.output_temp_fd = tempfile.TemporaryFile()
             for section in parser.sections():
                 filter_name = self._decompose_section_name(config_file, section, self.filter_section)
                 if filter_name:  # section looks like [filter "sha1"]
-                    filter_ = self._load_engine(config_file, parser, section, [filter_name],
+                    filter_ = self._load_engine(config_file, parser, section, [filter_name, backup_point],
                                                 self.available_filter_engines, FileFilter)
                     backup_point.add_filter(filter_)
                 hook_name = self._decompose_section_name(config_file, section, self.hook_section)
@@ -393,21 +397,25 @@ class Runner(ParameterizedObject):
                 continue
             assert isinstance(collect_point, CollectPoint)
             if not skip_collect:
-                result = collect_point.backup(force=force)
-                if result:
-                    self.print_success('[OK] collect point %s' % collect_point.name)
-                    collect_point_results[collect_point.name] = True
-                else:
-                    self.print_error('[KO] collect point %s' % collect_point.name)
-                    collect_point_results[collect_point.name] = False
-                    continue
+                with FileContentMonitor(collect_point.output_temp_fd) as cm:
+                    result = collect_point.backup(force=force)
+                    if result:
+                        self.print_success('[OK] collect point %s' % collect_point.name)
+                        collect_point_results[collect_point.name] = True
+                    else:
+                        self.print_error('[KO] collect point %s' % collect_point.name)
+                        collect_point_results[collect_point.name] = False
+                        continue
+                cm.copy_content(self.output_temp_fd)
             for backup_point_name, backup_point in self.backup_points.items():
                 if only_backup_points and backup_point_name not in only_backup_points and not skip_backup:
                     continue
                 assert isinstance(backup_point, BackupPoint)
                 if not self.can_associate(collect_point, backup_point):
                     continue
-                result = backup_point.backup(collect_point, force=force)
+                with FileContentMonitor(backup_point.output_temp_fd) as cm:
+                    result = backup_point.backup(collect_point, force=force)
+                    cm.copy_content(self.output_temp_fd, close=False)
                 if result:
                     self.print_info('[OK] backup point %s on collect point %s' %
                                     (backup_point.name, collect_point.name))
@@ -449,5 +457,9 @@ class Runner(ParameterizedObject):
                         best_backup_point = backup_point
                         best_backup_point_date = backup_point_info.last_success
                 if best_backup_point is not None:
-                    best_backup_point.restore(collect_point)
-            collect_point.restore()
+                    with FileContentMonitor(best_backup_point.output_temp_fd) as cm:
+                        best_backup_point.restore(collect_point)
+                    cm.copy_content(self.output_temp_fd, close=False)
+            with FileContentMonitor(collect_point.output_temp_fd) as cm:
+                collect_point.restore()
+            cm.copy_content(self.output_temp_fd, close=True)

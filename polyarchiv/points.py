@@ -66,34 +66,34 @@ class ParameterizedObject(object):
             if display:
                 cprint(text, YELLOW)
             if self.output_temp_fd:
-                self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
+                print(text, file=self.output_temp_fd, end='\n')
 
     def print_error(self, text, display=True):
         if display:
             cprint(text, RED, BOLD)
         if self.output_temp_fd:
-            self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
+            print(text, file=self.output_temp_fd, end='\n')
 
     def print_success(self, text, display=True):
         if self.verbosity >= 1:
             if display:
                 cprint(text, GREEN)
             if self.output_temp_fd:
-                self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
+                print(text, file=self.output_temp_fd, end='\n')
 
     def print_info(self, text, display=True):
         if self.verbosity >= 2:
             if display:
                 cprint(text, CYAN)
             if self.output_temp_fd:
-                self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
+                print(text, file=self.output_temp_fd, end='\n')
 
     def print_command_output(self, text, display=True):
         if self.verbosity >= 3:
             if display:
                 cprint(text)
             if self.output_temp_fd:
-                self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
+                print(text, file=self.output_temp_fd, end='\n')
 
     def can_execute_command(self, text):
         """Return False if dry mode is activated or if the command is not validated by the user.
@@ -368,3 +368,21 @@ class Point(ParameterizedObject):
         self.hooks.append(hook)
         if hook.keep_output and not self.output_temp_fd:
             self.output_temp_fd = tempfile.TemporaryFile()
+
+    @property
+    def stderr(self):
+        if self.verbosity >= 3 and not self.output_temp_fd:
+            return None
+        elif self.output_temp_fd:
+            return self.output_temp_fd
+        self.output_temp_fd = open(os.devnull, 'wb')
+        return self.output_temp_fd
+
+    @property
+    def stdout(self):
+        if self.verbosity >= 3 and not self.output_temp_fd:
+            return None
+        elif self.output_temp_fd:
+            return self.output_temp_fd
+        self.output_temp_fd = open(os.devnull, 'wb')
+        return self.output_temp_fd

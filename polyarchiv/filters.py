@@ -7,8 +7,6 @@ import os
 import shlex
 import shutil
 
-import subprocess
-
 from polyarchiv.conf import Parameter, check_executable, CheckOption
 from polyarchiv.points import ParameterizedObject
 from polyarchiv.utils import copytree
@@ -16,6 +14,10 @@ from polyarchiv.utils import copytree
 
 class FileFilter(ParameterizedObject):
     work_in_place = True
+
+    def __init__(self, name, point, *args, **kwargs):
+        super(FileFilter, self).__init__(name, *args, **kwargs)
+        self.point = point  # either CollectPoint or BackupPoint
 
     def do_backup(self, previous_path, next_path, private_path, allow_in_place=True):
         raise NotImplementedError
@@ -43,6 +45,14 @@ class FileFilter(ParameterizedObject):
             copytree(next_path, previous_path)
         self.do_restore(previous_path, next_path, private_path, allow_in_place)
         return next_path
+
+    @property
+    def stderr(self):
+        return self.point.stderr
+
+    @property
+    def stdout(self):
+        return self.point.stdout
 
 
 class SymmetricCrypt(FileFilter):
@@ -85,8 +95,8 @@ class SymmetricCrypt(FileFilter):
                         os.symlink(linkto, crypted_path)
                 else:
                     cmd = ['gpg', '--passphrase', self.password, '-o', crypted_path, '-c', clear_path]
-                    if self.can_execute_command(cmd):
-                        subprocess.check_call(cmd, stderr=self.stderr, stdout=self.stdout)
+                    return_code, __, __ = self.execute_command(cmd, stderr=self.stderr, stdout=self.stdout)
+                    if return_code == 0 and os.path.isfile(crypted_path) and os.path.isfile(clear_path):
                         shutil.copystat(clear_path, crypted_path)
 
     def do_restore(self, previous_path, next_path, private_path, allow_in_place=True):

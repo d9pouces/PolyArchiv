@@ -43,6 +43,14 @@ class Source(ParameterizedObject):
         """Restore data from the collect point """
         raise NotImplementedError
 
+    @property
+    def stderr(self):
+        return self.collect_point.stderr
+
+    @property
+    def stdout(self):
+        return self.collect_point.stdout
+
 
 class LocalFiles(Source):
     """copy all files from the given source_path to the collect point using 'rsync'.

@@ -442,7 +442,7 @@ class SvnRepository(FileRepository):
 
     def post_source_backup(self):
         cmd = [self.config.svn_executable, 'status']
-        p = subprocess.Popen(cmd, cwd=self.import_data_path, stdout=subprocess.PIPE, stderr=self.stderr)
+        p = subprocess.Popen(cmd, cwd=self.import_data_path, stdout=subprocess.PIPE, stderr=open(os.devnull, 'wb'))
         stdout, stderr = p.communicate()
         print(stdout, stderr, self.import_data_path)
         to_add = []
