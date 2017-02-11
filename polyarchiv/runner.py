@@ -7,13 +7,14 @@ import datetime
 import errno
 import fnmatch
 import glob
-import logging
 import os
 import pwd
 import shlex
 import socket
+import tempfile
 
 from polyarchiv.filters import FileFilter
+from polyarchiv.hooks import Hook
 from polyarchiv.sources import Source
 
 try:
@@ -25,7 +26,6 @@ from polyarchiv.conf import Parameter
 from polyarchiv.collect_points import CollectPoint
 from polyarchiv.backup_points import BackupPoint
 from polyarchiv.points import ParameterizedObject, PointInfo, Config
-from polyarchiv.termcolor import cprint, RED, GREEN, YELLOW
 from polyarchiv.utils import import_string, text_type
 
 try:
@@ -36,7 +36,6 @@ except ImportError:
     from ConfigParser import RawConfigParser, Error as ConfigError
 
 __author__ = 'Matthieu Gallet'
-logger = logging.getLogger('polyarchiv.runner')
 
 
 class Runner(ParameterizedObject):
@@ -51,18 +50,20 @@ class Runner(ParameterizedObject):
     source_section = 'source '
     global_section = 'global'
     filter_section = 'filter '
+    hook_section = 'hook '
     collect_point_variables_section = 'variables '
 
     def __init__(self, config_directories, engines_file=None, **kwargs):
         super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
         self.available_collect_point_engines, self.available_source_engines, self.available_backup_point_engines, \
-            self.available_filter_engines = self.find_available_engines(engines_file)
+            self.available_filter_engines, self.available_hook_engines = self.find_available_engines(engines_file)
         self.collect_points = {}
         self.backup_points = {}
         self.global_config_parameters = {}
         self.collect_point_config_files = []
         self.backup_point_config_files = []
+        self.hooks = []
 
     @staticmethod
     def find_available_engines(engines_file=None):
@@ -70,6 +71,7 @@ class Runner(ParameterizedObject):
         available_backup_point_engines = {}
         available_source_engines = {}
         available_filter_engines = {}
+        available_hook_engines = {}
         if iter_entry_points:
             def import_points(name):
                 result = {}
@@ -85,6 +87,7 @@ class Runner(ParameterizedObject):
             available_backup_point_engines.update(import_points('polyarchiv.backup_points'))
             available_source_engines.update(import_points('polyarchiv.sources'))
             available_filter_engines.update(import_points('polyarchiv.filters'))
+            available_hook_engines.update(import_points('polyarchiv.hooks'))
         if engines_file is not None:
             parser = RawConfigParser()
             parser.read([engines_file])
@@ -97,8 +100,9 @@ class Runner(ParameterizedObject):
             available_backup_point_engines.update(import_items('backup_points'))
             available_collect_point_engines.update(import_items('collect_points'))
             available_filter_engines.update(import_items('filters'))
+            available_hook_engines.update(import_items('hooks'))
         return (available_collect_point_engines, available_source_engines, available_backup_point_engines,
-                available_filter_engines)
+                available_filter_engines, available_hook_engines)
 
     def load(self, show_errors=True):
         result = True
@@ -109,11 +113,11 @@ class Runner(ParameterizedObject):
         except ValueError as e:
             result = False
             if show_errors:
-                cprint(text_type(e), RED)
+                self.print_error(text_type(e))
         except ImportError as e:
             result = False
             if show_errors:
-                cprint(text_type(e), RED)
+                self.print_error(text_type(e))
         return result
 
     def _get_args_from_parser(self, config_file, parser, section, engine_cls):
@@ -121,8 +125,8 @@ class Runner(ParameterizedObject):
         assert issubclass(engine_cls, ParameterizedObject)
         available_parameters = engine_cls.parameters
         result = self._get_available_args_from_parser(config_file, parser, section, available_parameters)
-        result.update({'command_display': self.command_display, 'command_confirm': self.command_confirm,
-                       'command_execute': self.command_execute, 'command_keep_output': self.command_keep_output})
+        result.update({'verbosity': self.verbosity, 'command_confirm': self.command_confirm,
+                       'command_execute': self.command_execute, 'output_temp_fd': self.output_temp_fd})
         return result
 
     # noinspection PyMethodMayBeStatic
@@ -140,7 +144,7 @@ class Runner(ParameterizedObject):
             try:
                 result[parameter.arg_name] = parameter.converter(value)
             except ValueError as e:
-                cprint('In file \'%s\', section \'%s\', option \'%s\':' % (config_file, section, option), RED)
+                self.print_error('In file \'%s\', section \'%s\', option \'%s\':' % (config_file, section, option))
                 raise e
         if missing_parameters:
             text = 'In file \'%s\', section \'%s\', missing options \'%s\'' % (
@@ -161,7 +165,7 @@ class Runner(ParameterizedObject):
             try:
                 engine_cls = import_string(engine)
             except ImportError:
-                cprint('List of built-in engines: %s ' % ', '.join(available_engines), GREEN)
+                self.print_info('List of built-in engines: %s ' % ', '.join(available_engines))
                 raise ImportError('In file \'%s\', section \'%s\': invalid engine \'%s\'' %
                                   (config_file, section, engine))
         parameters = self._get_args_from_parser(config_file, parser, section, engine_cls)
@@ -186,15 +190,15 @@ class Runner(ParameterizedObject):
                 except IOError as e:
                     if e.errno == errno.EACCES:
                         username = pwd.getpwuid(os.getuid())[0]
-                        logger.info('%s is ignored because user %s cannot read it' % (config_file, username))
+                        self.print_info('%s is ignored because user %s cannot read it' % (config_file, username))
                         continue
                     raise
                 except ConfigError:
                     raise ValueError('File \'%s\' is not a valid \'.ini\' file' % config_file)
-                logger.info('File %s added to the configuration' % config_file)
+                self.print_info('File %s added to the configuration' % config_file)
                 yield config_file, parser
             if count == 0:
-                logger.info('No %s file found in %s' % (pattern, path))
+                self.print_info('No %s file found in %s' % (pattern, path))
 
     @staticmethod
     def _decompose_section_name(config_file, section_name, prefix):
@@ -211,6 +215,12 @@ class Runner(ParameterizedObject):
             file_result = self._get_available_args_from_parser(config_file, parser, self.global_section,
                                                                Config.parameters)
             global_result.update(file_result)
+            for section in parser.sections():
+                hook_name = self._decompose_section_name(config_file, section, self.hook_section)
+                if hook_name:  # section looks like [hook "sha1"]
+                    hook = self._load_engine(config_file, parser, section, [hook_name], self.available_hook_engines,
+                                             Hook)
+                    self._add_hook(hook)
         self.config = Config(**global_result)
 
     def _find_collect_points(self):
@@ -253,8 +263,13 @@ class Runner(ParameterizedObject):
                                                 self.available_filter_engines, FileFilter)
                     collect_point.add_filter(filter_)
                     used = True
+                hook_name = self._decompose_section_name(config_file, section, self.hook_section)
+                if hook_name:  # section looks like [hook "sha1"]
+                    hook = self._load_engine(config_file, parser, section, [hook_name], self.available_hook_engines,
+                                             Hook)
+                    collect_point.add_hook(hook)
                 if not used:
-                    cprint('Unknown section \'%s\' in file \'%s\'' % (section, config_file), YELLOW)
+                    self.print_error('Unknown section \'%s\' in file \'%s\'' % (section, config_file))
             self.collect_point_config_files.append(config_file)
             self.collect_points[collect_point_name] = collect_point
 
@@ -276,6 +291,12 @@ class Runner(ParameterizedObject):
                     filter_ = self._load_engine(config_file, parser, section, [filter_name],
                                                 self.available_filter_engines, FileFilter)
                     backup_point.add_filter(filter_)
+                hook_name = self._decompose_section_name(config_file, section, self.hook_section)
+                if hook_name:  # section looks like [hook "sha1"]
+                    hook = self._load_engine(config_file, parser, section, [hook_name], self.available_hook_engines,
+                                             Hook)
+                    backup_point.add_hook(hook)
+
                 collect_point_name = self._decompose_section_name(config_file, section,
                                                                   self.collect_point_variables_section)
                 if collect_point_name:  # section looks like [variables "collect point"]
@@ -283,6 +304,13 @@ class Runner(ParameterizedObject):
                                                                                 for opt in parser.options(section)}
             self.backup_point_config_files.append(config_file)
             self.backup_points[backup_point_name] = backup_point
+
+    def _add_hook(self, hook):
+        from polyarchiv.hooks import Hook
+        assert isinstance(hook, Hook)
+        self.hooks.append(hook)
+        if hook.keep_output and not self.output_temp_fd:
+            self.output_temp_fd = tempfile.TemporaryFile()
 
     @staticmethod
     def can_associate(collect_point, backup_point):
@@ -367,10 +395,10 @@ class Runner(ParameterizedObject):
             if not skip_collect:
                 result = collect_point.backup(force=force)
                 if result:
-                    logger.info('[OK] collect point %s' % collect_point.name)
+                    self.print_success('[OK] collect point %s' % collect_point.name)
                     collect_point_results[collect_point.name] = True
                 else:
-                    logger.error('[KO] collect point %s' % collect_point.name)
+                    self.print_error('[KO] collect point %s' % collect_point.name)
                     collect_point_results[collect_point.name] = False
                     continue
             for backup_point_name, backup_point in self.backup_points.items():
@@ -381,10 +409,12 @@ class Runner(ParameterizedObject):
                     continue
                 result = backup_point.backup(collect_point, force=force)
                 if result:
-                    logger.info('[OK] backup point %s on collect point %s' % (backup_point.name, collect_point.name))
+                    self.print_info('[OK] backup point %s on collect point %s' %
+                                    (backup_point.name, collect_point.name))
                     backup_point_results[(backup_point.name, collect_point.name)] = True
                 else:
-                    logger.error('[KO] backup point %s on collect point %s' % (backup_point.name, collect_point.name))
+                    self.print_error('[KO] backup point %s on collect point %s' %
+                                     (backup_point.name, collect_point.name))
                     backup_point_results[(backup_point.name, collect_point.name)] = False
         return collect_point_results, backup_point_results
 

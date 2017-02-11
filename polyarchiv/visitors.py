@@ -9,7 +9,6 @@ from polyarchiv.collect_points import CollectPoint
 from polyarchiv.points import PointInfo
 from polyarchiv.runner import Runner
 from polyarchiv.sources import Source
-from polyarchiv.termcolor import CYAN, cprint, RED, YELLOW, BOLD, GREEN
 
 logger = logging.getLogger('polyarchiv.visitors')
 
@@ -58,84 +57,84 @@ class ConfigVisitor(Visitor):
         self.engines_file = engines_file
 
     def visit_collect_point(self, runner, collect_point):
-        available_collect_point_engines, available_source_engines, __, __ = \
+        available_collect_point_engines, available_source_engines, __, __, __ = \
             Runner.find_available_engines(self.engines_file)
 
         # ##############################################################################################################
         assert isinstance(collect_point, CollectPoint)
-        cprint('collect point %s selected' % collect_point.name, CYAN)
+        runner.print_command('collect point %s selected' % collect_point.name)
         if collect_point.__class__ in available_collect_point_engines:
             engine = available_collect_point_engines[collect_point.__class__]
         else:
             engine = '%s.%s' % (collect_point.__class__.__module__, collect_point.__class__.__name__)
-        logger.debug('engine: %s' % engine)
+        runner.print_info('engine: %s' % engine)
         if collect_point.__doc__:
-            logger.debug(collect_point.__doc__)
+            runner.print_command_output(collect_point.__doc__)
         # ##############################################################################################################
         for source in collect_point.sources:
             assert isinstance(source, Source)
-            cprint('  * source %s added to %s' % (source.name, collect_point.name), CYAN)
+            runner.print_command('  * source %s added to %s' % (source.name, collect_point.name))
             if source.__class__ in available_source_engines:
                 engine = available_source_engines[source.__class__]
             else:
                 engine = '%s.%s' % (source.__class__.__module__, source.__class__.__name__)
-            logger.debug('engine: %s' % engine)
+            runner.print_info('engine: %s' % engine)
             if source.__doc__:
-                logger.debug(source.__doc__)
+                runner.print_command_output(source.__doc__)
         # ##############################################################################################################
         try:
             info = collect_point.get_info()
         except ValueError as e:
-            cprint('Unable to retrieve more information from the collect point: %s' % e, RED)
+            runner.print_error('Unable to retrieve more information from the collect point: %s' % e)
             return
         assert isinstance(info, PointInfo)
         if info.last_success is None:
-            cprint('No successful local collect', RED)
+            runner.print_error('No successful local collect')
         else:
             now = datetime.datetime.now()
             out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
             if out_of_date:
-                cprint('Last local collect is out of date: %s' % info.last_success, YELLOW, BOLD)
+                runner.print_command('Last local collect is out of date: %s' % info.last_success)
             else:
-                cprint('Last local collect is recent enough: %s' % info.last_success, GREEN)
+                runner.print_success('Last local collect is recent enough: %s' % info.last_success)
         if info.last_state_valid is False:
-            cprint('The last backup has failed. %s' % info.last_message, RED)
+            runner.print_error('The last backup has failed. %s' % info.last_message)
 
     def visit_backup_point(self, runner, backup_point):
-        __, __, available_backup_point_engines, __ = Runner.find_available_engines(self.engines_file)
+        __, __, available_backup_point_engines, __, __ = Runner.find_available_engines(self.engines_file)
         assert isinstance(backup_point, BackupPoint)
-        cprint('backup point %s selected' % backup_point.name, CYAN)
+        runner.print_info('backup point %s selected' % backup_point.name)
         if backup_point.__class__ in available_backup_point_engines:
             engine = available_backup_point_engines[backup_point.__class__]
         else:
             engine = '%s.%s' % (backup_point.__class__.__module__, backup_point.__class__.__name__)
-        logger.debug('engine: %s' % engine)
+        runner.print_command_output('engine: %s' % engine)
         if backup_point.__doc__:
-            logger.debug(backup_point.__doc__)
+            runner.print_command_output(backup_point.__doc__)
 
     def visit_backup_point_collect_point(self, runner, backup_point, collect_point):
         assert isinstance(collect_point, CollectPoint)
         assert isinstance(backup_point, BackupPoint)
-        cprint('  * backup point %s selected on collect point %s' % (backup_point.name, collect_point.name),
-               CYAN)
+        runner.print_info('  * backup point %s selected on collect point %s' % (backup_point.name, collect_point.name))
         try:
             info = backup_point.get_info(collect_point)
         except ValueError as e:
-            cprint('Unable to retrieve more information from the backup point: %s' % e, RED)
+            runner.print_error('Unable to retrieve more information from the backup point: %s' % e)
             return
         assert isinstance(info, PointInfo)
         if info.last_success is None:
-            cprint('No successful remote backup for %s' % backup_point.name, RED)
+            runner.print_error('No successful remote backup for %s' % backup_point.name)
         else:
             now = datetime.datetime.now()
             out_of_date = collect_point.check_out_of_date_backup(current_time=now, previous_time=info.last_success)
             if out_of_date:
-                cprint('Last local collect is out of date on %s: %s' % (backup_point.name, info.last_success), YELLOW,
-                       BOLD)
+                runner.print_command('Last local collect is out of date on %s: %s' %
+                                     (backup_point.name, info.last_success))
             else:
-                cprint('Last local collect is recent enough on %s: %s' % (backup_point.name, info.last_success), GREEN)
+                runner.print_success('Last local collect is recent enough on %s: %s' %
+                                     (backup_point.name, info.last_success))
         if info.last_state_valid is False:
-            cprint('The last collect has failed on %s. %s' % (backup_point.name, info.last_message), RED)
+            runner.print_error('The last collect has failed on %s. %s' % (backup_point.name, info.last_message))
 
     def visit_backup_point_collect_points(self, runner, backup_point, collect_points):
         assert isinstance(backup_point, BackupPoint)
@@ -146,8 +145,6 @@ class ConfigVisitor(Visitor):
         assert isinstance(collect_point, CollectPoint)
         for check in collect_point.checks:
             check(runner, collect_point, backup_points)
-
-
 
 
 class CheckVisitor(Visitor):

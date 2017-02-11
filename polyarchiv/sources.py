@@ -9,23 +9,19 @@
 """
 from __future__ import unicode_literals
 
+import grp
 import io
 import os
+import pwd
 import re
 import subprocess
-
-import pwd
-
-import grp
 
 # noinspection PyProtectedMember
 from polyarchiv._vendor.ldif3 import LDIFParser
 from polyarchiv.backends import get_backend
-from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable, check_username, check_file
 from polyarchiv.collect_points import CollectPoint
+from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable, check_username, check_file
 from polyarchiv.points import ParameterizedObject
-from polyarchiv.termcolor import YELLOW
-from polyarchiv.termcolor import cprint
 
 __author__ = 'Matthieu Gallet'
 
@@ -162,9 +158,8 @@ class MySQL(Source):
             cmd = ['sudo', '-u', self.sudo_user] + cmd
         env = os.environ.copy()
         env.update(self.get_env())
-        if self.command_display:
-            for k, v in self.get_env().items():
-                cprint('%s=%s' % (k, v), YELLOW)
+        for k, v in self.get_env().items():
+            self.print_command('%s=%s' % (k, v))
         if not self.can_execute_command(cmd + ['>', filename]):
             filename = os.devnull  # run the dump even in dry mode
         with open(filename, 'wb') as fd:
@@ -182,9 +177,8 @@ class MySQL(Source):
             cmd = ['sudo', '-u', self.sudo_user] + cmd
         env = os.environ.copy()
         env.update(self.get_env())
-        if self.command_display:
-            for k, v in self.get_env().items():
-                cprint('%s=%s' % (k, v), YELLOW)
+        for k, v in self.get_env().items():
+            self.print_command('%s=%s' % (k, v))
         # noinspection PyTypeChecker
         with open(filename, 'rb') as fd:
             self.execute_command(cmd, env=env, stdin=fd, stderr=self.stderr, stdout=self.stdout)

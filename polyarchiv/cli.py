@@ -5,9 +5,6 @@ Parse arguments and logger, use translated strings.
 from __future__ import unicode_literals
 
 import argparse
-import functools
-import logging
-import logging.config
 import math
 import os
 import re
@@ -37,18 +34,19 @@ def main(engines_file=None):
     else:
         path_components = ['config']
 
-    log = {'version': 1, 'disable_existing_loggers': True,
-           'formatters': {'color': {'()': 'logging.Formatter', 'format': "%(message)s"}},
-           'handlers': {'stream': {'level': 'DEBUG', 'class': 'logging.StreamHandler', 'formatter': 'color'}},
-           'loggers': {'polyarchiv': {'handlers': ['stream', ], 'level': 'ERROR', 'propagate': False}}}
-
     config_dir = os.path.sep.join(path_components)
     parser = argparse.ArgumentParser(description='backup data from multiple sources')
-    parser.add_argument('-v', '--verbose', action='store_true', help='print more messages', default=False)
+    parser.add_argument('-v', '--verbose', action='store_true', help='equivalent to --verbosity=3', default=False)
+    parser.add_argument('-q', '--quiet', action='store_true', help='equivalent to --verbosity=0', default=False)
+    parser.add_argument('--verbosity', type=int, help='Level of verbosity.\n'
+                                                      '0: as quiet as possible (only errors are displayed)\n'
+                                                      '1: executed commands are displayed\n'
+                                                      '2: result of commands are displayed\n'
+                                                      '3: full command output', default=None)
     parser.add_argument('-f', '--force', action='store_true', help='force backup if not out-of-date', default=False)
     parser.add_argument('-n', '--nrpe', action='store_true', help='Nagios-compatible output', default=False)
     parser.add_argument('-D', '--dry', action='store_true', help='dry mode: do not execute commands', default=False)
-    parser.add_argument('--show-commands', action='store_true', help='display all bash executed commands',
+    parser.add_argument('--show-commands', action='store_true', help='equivalent to --verbosity=1',
                         default=False)
     parser.add_argument('--confirm-commands', action='store_true', help='ask the user to confirm each command',
                         default=False)
@@ -59,23 +57,26 @@ def main(engines_file=None):
     parser.add_argument('--skip-backup', action='store_true', help='skip the backup step during a backup',
                         default=False)
     parser.add_argument('--config', '-C', default=config_dir, help='config dir')
-    parser.add_argument('command', help='backup|restore|config|plugins')
+    parser.add_argument('command', choices=('backup', 'restore', 'config', 'plugins', 'check'))
     args = parser.parse_args()
     command = args.command
-    verbose = args.verbose
-    if verbose:
-        log['loggers']['polyarchiv']['level'] = 'DEBUG'
-    elif args.nrpe:
-        log['loggers']['polyarchiv']['level'] = 'CRITICAL'
-    logging.config.dictConfig(log)
+    verbosity = 1
+    if args.verbosity is not None:
+        verbosity = args.verbosity
+    elif args.verbose:
+        verbosity = 3
+    elif args.show_commands:
+        verbosity = 1
+    elif args.quiet:
+        verbosity = 0
+
     return_code = 0
     if args.dry:
         cprint('dry mode is selected: no write operation will be performed', YELLOW)
 
     from polyarchiv.runner import Runner  # import it after the log configuration
-    runner = Runner([args.config], engines_file=engines_file, command_display=args.show_commands,
-                    command_confirm=args.confirm_commands, command_execute=not args.dry,
-                    command_keep_output=verbose)
+    runner = Runner([args.config], engines_file=engines_file, verbosity=verbosity,
+                    command_confirm=args.confirm_commands, command_execute=not args.dry)
     if command == 'backup':
         if runner.load():
             collect_point_results, backup_point_results = runner.backup(only_collect_points=args.only_collect_points,
@@ -103,7 +104,7 @@ def main(engines_file=None):
     elif command == 'config':
         cprint('configuration directory: %s (you can change it with -C /other/directory)' % args.config, YELLOW)
         if runner.load():
-            if not verbose:
+            if verbosity == 1:
                 cprint('you can display more info with --verbose', CYAN)
             visitor = ConfigVisitor(engines_file=engines_file)
             runner.visit(visitor, only_collect_points=args.only_collect_points,
@@ -138,39 +139,41 @@ def main(engines_file=None):
         if re.match('^\d+$', tput_cols):
             width = int(tput_cols)
         cprint('configuration directory: %s' % args.config, YELLOW)
-        if not verbose:
+        if verbosity == 1:
             cprint('display available options for each engine with --verbose', CYAN)
 
         available_collect_point_engines, available_source_engines, available_backup_point_engines, \
-            available_filter_engines = Runner.find_available_engines(engines_file)
+            available_filter_engines, available_hook_engines = Runner.find_available_engines(engines_file)
         cprint('available collect point engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
-        display_classes(available_collect_point_engines, verbose=verbose, width=width)
+        display_classes(available_collect_point_engines, verbosity=verbosity, width=width)
         cprint('available source engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
-        display_classes(available_source_engines, verbose=verbose, width=width)
+        display_classes(available_source_engines, verbosity=verbosity, width=width)
         cprint('available backup point engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
-        display_classes(available_backup_point_engines, verbose=verbose, width=width)
+        display_classes(available_backup_point_engines, verbosity=verbosity, width=width)
         cprint('available filter engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
-        display_classes(available_filter_engines, verbose=verbose, width=width)
+        display_classes(available_filter_engines, verbosity=verbosity, width=width)
         cprint('[*] this parameter can use variables. See the README (\'Replacement rules\' section)', RED)
         cprint('[**] this parameter can only use time/host-independent variables. See the README', RED)
+        display_classes(available_hook_engines, verbosity=verbosity, width=width)
+        cprint('[*] this parameter can use variables. See the README (\'Replacement rules\' section)', RED)
     else:
         cprint('unknown command \'%s\'' % command, RED)
         cprint('available commands: backup|restore|config|plugins', YELLOW)
     return return_code
 
 
-def display_classes(engines, verbose=False, width=80):
+def display_classes(engines, verbosity=1, width=80):
     """display plugins of a given category"""
     for name, engine_cls in engines.items():
         cprint('  * engine=%s' % name, BOLD, GREEN)
         if engine_cls.__doc__:
             cprint('    ' + engine_cls.__doc__.strip(), GREY, BOLD)
 
-        if verbose:
+        if verbosity >= 2:
             cprint('    options:', GREEN)
         # noinspection PyUnresolvedReferences
         for parameter in engine_cls.parameters:
@@ -181,10 +184,10 @@ def display_classes(engines, verbose=False, width=80):
                 w = width - 8
                 for line in txt.splitlines():
                     lines += [line[w * i:w * (i + 1)] for i in range(int(math.ceil(len(line) / float(w))))]
-                if verbose:
+                if verbosity >= 2:
                     cprint('      - ' + ('\n        '.join(lines)), GREEN)
             else:
-                if verbose:
+                if verbosity >= 2:
                     cprint('      - %s' % parameter.option_name, GREEN)
-        if verbose:
+        if verbosity >= 2:
             cprint('    ' + '-' * (width - 4), GREEN)

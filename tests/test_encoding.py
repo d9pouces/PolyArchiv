@@ -1,7 +1,9 @@
 # coding=utf-8
 from __future__ import unicode_literals, print_function
-import sys
+
 import os
+import sys
+
 sys.path += [os.path.dirname(os.path.dirname(__file__))]
 
 from polyarchiv.termcolor import cprint, RED

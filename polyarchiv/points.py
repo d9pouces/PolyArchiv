@@ -3,18 +3,16 @@ from __future__ import unicode_literals, print_function
 
 import datetime
 import json
-import logging
 import os
-import pipes
 import shutil
 import subprocess
+import tempfile
 
 from polyarchiv.conf import Parameter, check_executable
-from polyarchiv.termcolor import cprint, YELLOW
-from polyarchiv.utils import get_is_time_elapsed, text_type, get_input_text
+from polyarchiv.termcolor import cprint, YELLOW, CYAN, GREEN, RED, BOLD
+from polyarchiv.utils import get_is_time_elapsed, text_type, get_input_text, command_to_text
 
 __author__ = 'Matthieu Gallet'
-logger = logging.getLogger('polyarchiv')
 
 
 class Config(object):
@@ -54,33 +52,61 @@ class Config(object):
 class ParameterizedObject(object):
     parameters = []
 
-    def __init__(self, name, command_display=True, command_confirm=False, command_execute=True,
-                 command_keep_output=False, config=None):
+    def __init__(self, name, verbosity=1, command_confirm=False, command_execute=True, config=None):
         self.name = name
         self.config = config
-        self.command_display = command_display  # display each command before running it
+        self.verbosity = verbosity
         self.command_confirm = command_confirm  # ask the user to confirm each command
         self.command_execute = command_execute  # actually run commands (if False: 'dry' mode)
-        self.command_keep_output = command_keep_output  # display all command outputs on stderr/stdout
+        self.output_temp_fd = None  # file descriptor used if a hook retains the stdout or the stderr
+
+    def print_command(self, text, display=True):
+        if self.verbosity >= 1:
+            text = command_to_text(text)
+            if display:
+                cprint(text, YELLOW)
+            if self.output_temp_fd:
+                self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
+
+    def print_error(self, text, display=True):
+        if display:
+            cprint(text, RED, BOLD)
+        if self.output_temp_fd:
+            self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
+
+    def print_success(self, text, display=True):
+        if self.verbosity >= 1:
+            if display:
+                cprint(text, GREEN)
+            if self.output_temp_fd:
+                self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
+
+    def print_info(self, text, display=True):
+        if self.verbosity >= 2:
+            if display:
+                cprint(text, CYAN)
+            if self.output_temp_fd:
+                self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
+
+    def print_command_output(self, text, display=True):
+        if self.verbosity >= 3:
+            if display:
+                cprint(text)
+            if self.output_temp_fd:
+                self.output_temp_fd.write(('%s\n' % text).encode('utf-8'))
 
     def can_execute_command(self, text):
         """Return False if dry mode is activated or if the command is not validated by the user.
          Return True otherwise.
          Display the command if required.
         """
-        def smart_quote(y):
-            if y in ('>', '<', '2>'):
-                return y
-            return pipes.quote(y)
-        if isinstance(text, list):
-            text = ' '.join([smart_quote(x) for x in text])
+        text = command_to_text(text)
         result = '-'
         if text:
             if self.command_confirm:
                 while result not in ('', 'y', 'n'):
                     result = get_input_text('%s [Y]/n\n' % text).lower()
-            elif self.command_display:
-                cprint(text, YELLOW)
+            self.print_command(text, display=not self.command_confirm)
         return result != 'n' and self.command_execute
 
     def execute_command(self, cmd, ignore_errors=False, cwd=None, stderr=None, stdout=None, stdin=None, env=None,
@@ -100,34 +126,24 @@ class ParameterizedObject(object):
         # noinspection PyTypeChecker
         if hasattr(stderr, 'name') and stderr.name:
             cmd_text += ['2>',  stderr.name]
-        if env and self.command_display:
-            for k, v in env.items():
-                cprint('%s=%s' % (k, v), YELLOW)
+        if env:
+            for k in sorted(env):
+                self.print_command('%s=%s' % (k, env[k]))
         if cwd:
             self.ensure_dir(cwd, parent=False)
-            self.can_execute_command(['cd', cwd])
+            self.print_command(['cd', cwd])
         if self.can_execute_command(cmd_text):
             p = subprocess.Popen(cmd, stdin=stdin, stderr=stderr or self.stderr, stdout=stdout or self.stdout,
                                  cwd=cwd, env=env)
             stdout, stderr = p.communicate()
             return_code = p.returncode
             if return_code != 0 and error_str:
-                logger.error(error_str)
+                self.print_error(error_str)
             if return_code != 0 and not ignore_errors:
                 raise subprocess.CalledProcessError(return_code, cmd[0])
         else:
             stdout, stderr = None, None
         return return_code, stdout, stderr
-
-    @property
-    def stderr(self):
-        # noinspection PyTypeChecker
-        return open(os.devnull, 'wb') if not self.command_keep_output else None
-
-    @property
-    def stdout(self):
-        # noinspection PyTypeChecker
-        return open(os.devnull, 'wb') if not self.command_keep_output else None
 
     def ensure_dir(self, dirname, parent=False):
         """ensure that `dirname` exists and is a directory.
@@ -156,13 +172,35 @@ class ParameterizedObject(object):
 
     def ensure_absent(self, path):
         if not os.path.exists(path):
-            return
+            return True
         if not self.can_execute_command(['rm', '-rf', path]):
-            return
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-        else:
-            os.remove(path)
+            return False
+        try:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
+        except OSError:
+            raise ValueError('Unable to remove %s' % path)
+        return True
+
+    @property
+    def stderr(self):
+        if self.verbosity >= 3 and not self.output_temp_fd:
+            return None
+        elif self.output_temp_fd:
+            return self.output_temp_fd
+        self.output_temp_fd = open(os.devnull, 'wb')
+        return self.output_temp_fd
+
+    @property
+    def stdout(self):
+        if self.verbosity >= 3 and not self.output_temp_fd:
+            return None
+        elif self.output_temp_fd:
+            return self.output_temp_fd
+        self.output_temp_fd = open(os.devnull, 'wb')
+        return self.output_temp_fd
 
 
 class PointInfo(object):
@@ -314,8 +352,19 @@ class Point(ParameterizedObject):
         self.check_out_of_date_backup = check_out_of_date_backup or get_is_time_elapsed(None)
         self.filters = []
         # list of `polyarchiv.filters.FileFilter`
+        self.hooks = []
+        # list of `polyarchiv.hooks.Hook`
         self.variables = {}
         # self.variables["variable_name"] = "value"
 
     def add_filter(self, filter_):
+        from polyarchiv.filters import FileFilter
+        assert isinstance(filter_, FileFilter)
         self.filters.append(filter_)
+
+    def add_hook(self, hook):
+        from polyarchiv.hooks import Hook
+        assert isinstance(hook, Hook)
+        self.hooks.append(hook)
+        if hook.keep_output and not self.output_temp_fd:
+            self.output_temp_fd = tempfile.TemporaryFile()

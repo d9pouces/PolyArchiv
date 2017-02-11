@@ -1,7 +1,8 @@
 # coding=utf-8
 from __future__ import unicode_literals
 
-from polyarchiv._vendor.requests.packages.urllib3.packages.ordered_dict import OrderedDict
+from collections import OrderedDict
+
 from polyarchiv.conf import Parameter
 
 __author__ = 'Matthieu Gallet'

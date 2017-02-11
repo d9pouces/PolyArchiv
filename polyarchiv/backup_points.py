@@ -6,14 +6,14 @@ import datetime
 import logging
 from collections import OrderedDict
 
+# noinspection PyProtectedMember
 from polyarchiv._vendor import requests
+# noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.backends import get_backend, StorageBackend
 from polyarchiv.config_checks import AttributeUniquess, FileIsReadable, CaCertificate, Email, ValidGitUrl, \
     GitlabProjectName
 from polyarchiv.filters import FileFilter
-from polyarchiv.termcolor import RED
-from polyarchiv.termcolor import cprint
 
 try:
     # noinspection PyCompatibility
@@ -50,6 +50,7 @@ class BackupPoint(Point):
                            'included_collect_point_tags and included_backup_point_tags.'),
     ]
     checks = []
+
     # list of callable(runner, backup_point, collect_points)
 
     def __init__(self, name, backup_point_tags=None, included_collect_point_tags=None, excluded_collect_point_tags=None,
@@ -115,7 +116,7 @@ class BackupPoint(Point):
             info.last_success = datetime.datetime.now()
             info.last_message = 'ok'
         except Exception as e:
-            cprint('unable to perform backup: %s' % text_type(e), RED)
+            self.print_error('unable to perform backup: %s' % text_type(e))
             info.fail_count += 1
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
@@ -127,7 +128,7 @@ class BackupPoint(Point):
                 if self.can_execute_command('# release lock'):
                     collect_point.release_lock(lock_)
             except Exception as e:
-                cprint('unable to release lock. %s' % text_type(e), RED)
+                self.print_error('unable to release lock. %s' % text_type(e))
         if self.can_execute_command('# register this backup point state'):
             self.set_info(collect_point, info)
         return info.last_state_valid
@@ -263,9 +264,9 @@ class CommonBackupPoint(BackupPoint):
             p1 = 's' if len(self.metadata_url_requirements) > 1 else ''
             p2 = '' if len(self.metadata_url_requirements) > 1 else ''
             if self.metadata_url_requirements:
-                cprint('value%s "%s" use%s time/host-dependent variables. '
-                       'You should define the "metadata_url" parameter to ease restore operation' %
-                       (p1, ', '.join(self.metadata_url_requirements), p2), RED)
+                self.print_error('value%s "%s" use%s time/host-dependent variables. '
+                                 'You should define the "metadata_url" parameter to ease restore operation' %
+                                 (p1, ', '.join(self.metadata_url_requirements), p2))
             return None
         metadata_url = self.format_value(self.metadata_url, collect_point, use_constant_values=True)
         if metadata_url.endswith('/'):
@@ -629,8 +630,8 @@ class RollingTarArchive(TarArchive):
         # ok, there we have to check which old backup must be removed
         values = []
         time_to_values = {}
+        # noinspection PyTypeChecker
         for value_dict in info.data:
-            # noinspection PyTypeChecker
             d = datetime.datetime(year=int(value_dict['Y']), month=int(value_dict['m']), day=int(value_dict['d']),
                                   hour=int(value_dict['H']), minute=int(value_dict['M']), second=int(value_dict['S']))
             values.append(d)

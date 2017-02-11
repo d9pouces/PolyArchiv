@@ -16,7 +16,6 @@ import os
 
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(root_path)
-
 version = None
 for line in codecs.open(os.path.join(root_path, 'polyarchiv', '__init__.py'), 'r', encoding='utf-8'):
     matcher = re.match(r"""^__version__\s*=\s*['"](.*)['"]\s*$""", line)

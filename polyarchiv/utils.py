@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import datetime
 import os
+import pipes
 import re
 import shutil
 import sys
@@ -24,6 +25,18 @@ if sys.version_info[0] == 3:
 else:
     # noinspection PyUnresolvedReferences
     text_type = unicode
+
+
+def smart_quote(y):
+    if y in ('>', '<', '2>'):
+        return y
+    return pipes.quote(y)
+
+
+def command_to_text(text):
+    if isinstance(text, list):
+        text = ' '.join([smart_quote(x) for x in text])
+    return text
 
 
 def get_input_text(prompt):

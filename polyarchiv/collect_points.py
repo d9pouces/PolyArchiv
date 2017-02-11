@@ -91,7 +91,7 @@ class CollectPoint(Point):
             info.last_success = datetime.datetime.now()
             info.last_message = 'ok'
         except Exception as e:
-            cprint('unable to perform backup: %s' % text_type(e), RED)
+            self.print_error('unable to perform backup: %s' % text_type(e))
             info.fail_count += 1
             info.last_fail = datetime.datetime.now()
             info.last_state_valid = False
@@ -104,7 +104,7 @@ class CollectPoint(Point):
                 if self.can_execute_command(''):
                     self.release_lock(lock_)
             except Exception as e:
-                cprint('unable to release lock. %s' % text_type(e), RED)
+                self.print_error('unable to release lock. %s' % text_type(e))
         if self.can_execute_command('# register this backup state'):
             self.set_info(info)
         return info.last_state_valid
@@ -400,7 +400,7 @@ class ArchiveRepository(FileRepository):
 
 
 class SvnRepository(FileRepository):
-    """Collect files from all sources in the folder 'local_path'.
+    """Collect files from all sources in the folder 'local_path' and commit them to a remote SVN repository.
     """
 
     parameters = FileRepository.parameters + [
