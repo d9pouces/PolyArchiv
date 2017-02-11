@@ -8,6 +8,7 @@ Check `polyarchiv plugins -v` for a complete documentation of each customizable 
 By default, only the following variables are defined:
 
   * `name`: basename of the corresponding config collect point.
+  * `username`: the username running PolyArchiv,
   * `fqdn`: local hostname, with the domain name (e.g., `vm1.test.example.org`)
   * `hostname`: local hostname (e.g., `vm1`)
   * the time of backup is also available, with a separate variable for each component: `Y`, `d` `M`, …

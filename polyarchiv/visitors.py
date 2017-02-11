@@ -2,7 +2,6 @@
 from __future__ import unicode_literals, print_function, absolute_import
 
 import datetime
-import logging
 
 from polyarchiv.backup_points import BackupPoint
 from polyarchiv.collect_points import CollectPoint
@@ -10,7 +9,6 @@ from polyarchiv.points import PointInfo
 from polyarchiv.runner import Runner
 from polyarchiv.sources import Source
 
-logger = logging.getLogger('polyarchiv.visitors')
 
 __author__ = 'Matthieu Gallet'
 

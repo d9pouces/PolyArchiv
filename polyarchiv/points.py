@@ -66,34 +66,39 @@ class ParameterizedObject(object):
             if display:
                 cprint(text, YELLOW)
             if self.output_temp_fd:
-                print(text, file=self.output_temp_fd, end='\n')
+                self.output_temp_fd.write(text.encode('utf-8'))
+                self.output_temp_fd.write(b'\n')
 
     def print_error(self, text, display=True):
         if display:
             cprint(text, RED, BOLD)
         if self.output_temp_fd:
-            print(text, file=self.output_temp_fd, end='\n')
+            self.output_temp_fd.write(text.encode('utf-8'))
+            self.output_temp_fd.write(b'\n')
 
     def print_success(self, text, display=True):
         if self.verbosity >= 1:
             if display:
                 cprint(text, GREEN)
             if self.output_temp_fd:
-                print(text, file=self.output_temp_fd, end='\n')
+                self.output_temp_fd.write(text.encode('utf-8'))
+                self.output_temp_fd.write(b'\n')
 
     def print_info(self, text, display=True):
         if self.verbosity >= 2:
             if display:
                 cprint(text, CYAN)
             if self.output_temp_fd:
-                print(text, file=self.output_temp_fd, end='\n')
+                self.output_temp_fd.write(text.encode('utf-8'))
+                self.output_temp_fd.write(b'\n')
 
     def print_command_output(self, text, display=True):
         if self.verbosity >= 3:
             if display:
                 cprint(text)
             if self.output_temp_fd:
-                print(text, file=self.output_temp_fd, end='\n')
+                self.output_temp_fd.write(text.encode('utf-8'))
+                self.output_temp_fd.write(b'\n')
 
     def can_execute_command(self, text):
         """Return False if dry mode is activated or if the command is not validated by the user.

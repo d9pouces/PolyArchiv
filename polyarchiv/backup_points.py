@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 
 import codecs
 import datetime
-import logging
 from collections import OrderedDict
 
 # noinspection PyProtectedMember
@@ -28,10 +27,9 @@ import os
 from polyarchiv.conf import Parameter, strip_split
 from polyarchiv.collect_points import CollectPoint
 from polyarchiv.points import Point, PointInfo
-from polyarchiv.utils import text_type
+from polyarchiv.utils import text_type, DEFAULT_EMAIL, DEFAULT_USERNAME
 
 __author__ = 'Matthieu Gallet'
-logger = logging.getLogger('polyarchiv.backup_points')
 constant_time = datetime.datetime(2016, 1, 1, 0, 0, 0)
 
 
@@ -84,7 +82,7 @@ class BackupPoint(Point):
     def backup(self, collect_point, force=False):
         """ perform the backup and log all errors
         """
-        logger.info('backup point %s of collect point %s' % (self.name, collect_point.name))
+        self.print_info('backup point %s of collect point %s' % (self.name, collect_point.name))
         info = self.get_info(collect_point)
         assert isinstance(info, PointInfo)
         assert isinstance(collect_point, CollectPoint)
@@ -93,14 +91,14 @@ class BackupPoint(Point):
         if not (force or out_of_date):
             # the last previous backup is still valid
             # => nothing to do
-            logger.debug('last backup (%s) is still valid. No backup to do.' % info.last_success)
+            self.print_success('last backup (%s) is still valid. No backup to do.' % info.last_success)
             return True
         elif info.last_success is None:
-            logger.info('no previous backup: a new backup is required.')
+            self.print_info('no previous backup: a new backup is required.')
         elif out_of_date:
-            logger.info('last backup (%s) is out-of-date.' % str(info.last_success))
+            self.print_info('last backup (%s) is out-of-date.' % str(info.last_success))
         elif force:
-            logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
+            self.print_info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
         lock_ = None
         # collect only (but all) variables that are related to host and time
         info.variables = {k: v for (k, v) in collect_point.variables.items() if k in self.constant_format_values}
@@ -323,8 +321,8 @@ class GitRepository(CommonBackupPoint):
                   help_str='absolute path of the keytab file (for Kerberos authentication) [*]'),
         Parameter('private_key',
                   help_str='absolute path of the private key file (for SSH key authentication) [*]'),
-        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net")'),
-        Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv")'),
+        Parameter('commit_email', help_str='user email used for signing commits (default: "%s")' % DEFAULT_EMAIL),
+        Parameter('commit_name', help_str='user name used for signing commits (default: "%s")' % DEFAULT_USERNAME),
         Parameter('commit_message', help_str='commit message (default: "Backup {Y}/{m}/{d} {H}:{M}") [*]'),
         Parameter('remote_url', help_str='URL of the remote server, including username and password (e.g.: '
                                          'ssh://git@mygitlab.example.org/project.git, file:///foo/bar/project.git or '
@@ -338,7 +336,7 @@ class GitRepository(CommonBackupPoint):
                                          FileIsReadable('keytab'), Email('commit_email'), ValidGitUrl('remote_url')]
 
     def __init__(self, name, remote_url='', remote_branch='master', private_key=None,
-                 keytab=None, commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
+                 keytab=None, commit_name=DEFAULT_USERNAME, commit_email=DEFAULT_EMAIL,
                  commit_message='Backup {Y}/{m}/{d} {H}:{M}', **kwargs):
         super(GitRepository, self).__init__(name, **kwargs)
         self.keytab = keytab

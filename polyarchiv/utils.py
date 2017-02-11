@@ -2,10 +2,12 @@
 from __future__ import unicode_literals
 
 import datetime
+import getpass
 import os
 import pipes
 import re
 import shutil
+import socket
 import sys
 
 try:
@@ -25,6 +27,10 @@ if sys.version_info[0] == 3:
 else:
     # noinspection PyUnresolvedReferences
     text_type = unicode
+
+
+DEFAULT_EMAIL = '%s@%s' % (getpass.getuser(), socket.getfqdn())
+DEFAULT_USERNAME = getpass.getuser()
 
 
 def smart_quote(y):
@@ -341,7 +347,7 @@ class FileContentMonitor(object):
     def get_content(self, close=True):
         if self.fd is None:
             return None
-        fd = os.fdopen(os.dup(self.fd))
+        fd = os.fdopen(os.dup(self.fd.fileno()), mode='rb')
         fd.seek(self.start_index)
         content = fd.read(self.end_index - self.start_index)
         fd.close()
@@ -353,7 +359,7 @@ class FileContentMonitor(object):
         if self.fd is None:
             return
         if dst_fd:
-            fd = os.fdopen(os.dup(self.fd))
+            fd = os.fdopen(os.dup(self.fd.fileno()), mode='rb')
             fd.seek(self.start_index)
             index = self.start_index
             while index < self.end_index:

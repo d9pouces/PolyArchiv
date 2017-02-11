@@ -3,26 +3,21 @@ from __future__ import unicode_literals
 
 import codecs
 import datetime
-import logging
 import os
 import re
 import shutil
 import subprocess
 import tarfile
 
-from polyarchiv.config_checks import ValidSvnUrl
-
 # noinspection PyProtectedMember
 from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.conf import Parameter, strip_split, check_directory
+from polyarchiv.config_checks import ValidSvnUrl
 from polyarchiv.filelocks import Lock
 from polyarchiv.points import Point, PointInfo
-from polyarchiv.termcolor import RED
-from polyarchiv.termcolor import cprint
-from polyarchiv.utils import text_type, cached_property, url_auth_split
+from polyarchiv.utils import text_type, cached_property, url_auth_split, DEFAULT_EMAIL, DEFAULT_USERNAME
 
 __author__ = 'Matthieu Gallet'
-logger = logging.getLogger('polyarchiv')
 
 
 class CollectPoint(Point):
@@ -41,6 +36,7 @@ class CollectPoint(Point):
                            'included_collect_point_tags and included_backup_point_tags.'),
     ]
     checks = []
+
     # list of callable(runner, collect_point, backup_points)
 
     def __init__(self, name, collect_point_tags=None, included_backup_point_tags=None, excluded_backup_point_tags=None,
@@ -55,7 +51,7 @@ class CollectPoint(Point):
     def backup(self, force=False):
         """ perform the backup and log all errors
         """
-        logger.info('backup of collect point %s' % self.name)
+        self.print_info('backup of collect point %s' % self.name)
         info = self.get_info()
         assert isinstance(info, PointInfo)
         out_of_date = self.check_out_of_date_backup(current_time=datetime.datetime.now(),
@@ -63,14 +59,14 @@ class CollectPoint(Point):
         if not (force or out_of_date):
             # the last previous backup is still valid
             # => nothing to do
-            logger.info('last backup (%s) is still valid. No backup to do.' % info.last_success)
+            self.print_success('last backup (%s) is still valid. No backup to do.' % info.last_success)
             return True
         elif info.last_success is None:
-            logger.info('no previous backup: a new backup is required.')
+            self.print_info('no previous backup: a new backup is required.')
         elif out_of_date:
-            logger.info('last backup (%s) is out-of-date.' % str(info.last_success))
+            self.print_info('last backup (%s) is out-of-date.' % str(info.last_success))
         elif force:
-            logger.info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
+            self.print_info('last backup (%s) is still valid but a new backup is forced.' % str(info.last_success))
         lock_ = None
         cwd = os.getcwd()
         try:
@@ -287,8 +283,8 @@ class FileRepository(CollectPoint):
         if lock_.acquire(timeout=1):
             return lock_
         else:
-            logger.error('Unable to lock collect point. Check if no other backup is currently running or '
-                         'delete %s' % self.lock_filepath)
+            self.print_error('Unable to lock collect point. Check if no other backup is currently running or '
+                             'delete %s' % self.lock_filepath)
             raise ValueError
 
     def get_repository_size(self):
@@ -312,13 +308,12 @@ class GitRepository(FileRepository):
     """Create a local git repository. Collect files from all sources and commit them locally.
     """
     parameters = FileRepository.parameters + [
-        Parameter('commit_email', help_str='user email used for signing commits (default: "polyarchiv@19pouces.net") '
-                                           '[*]'),
-        Parameter('commit_name', help_str='user name used for signing commits (default: "polyarchiv") [*]'),
+        Parameter('commit_email', help_str='user email used for signing commits (default: "%s") [*]' % DEFAULT_EMAIL),
+        Parameter('commit_name', help_str='user name used for signing commits (default: "%s") [*]' % DEFAULT_USERNAME),
         Parameter('commit_message', help_str='commit message (default: "Backup {Y}/{m}/{d} {H}:{M}") [*]'),
     ]
 
-    def __init__(self, name, commit_name='polyarchiv', commit_email='polyarchiv@19pouces.net',
+    def __init__(self, name, commit_name=DEFAULT_USERNAME, commit_email=DEFAULT_EMAIL,
                  commit_message='Backup {Y}/{m}/{d} {H}:{M}', **kwargs):
         super(GitRepository, self).__init__(name=name, **kwargs)
         self.commit_name = commit_name
@@ -405,7 +400,7 @@ class SvnRepository(FileRepository):
 
     parameters = FileRepository.parameters + [
         Parameter('remote_url', required=True,
-                  help_str='URL of the remote repository (must already exist). Should contain username and password [*]'),
+                  help_str='URL of the remote repository (must exist). Should contain username and password [*]'),
         Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
                                       'Set to "any" for not checking certificates [*]'),
         Parameter('client_cert', help_str='Client certificate associated to \'remote_url\' [*]'),
@@ -444,11 +439,9 @@ class SvnRepository(FileRepository):
         cmd = [self.config.svn_executable, 'status']
         p = subprocess.Popen(cmd, cwd=self.import_data_path, stdout=subprocess.PIPE, stderr=open(os.devnull, 'wb'))
         stdout, stderr = p.communicate()
-        print(stdout, stderr, self.import_data_path)
         to_add = []
         to_remove = []
         for line in stdout.decode('utf-8').splitlines():
-            print(line)
             matcher = re.match(r'^([ ADMRCXI?!~])[ MC][ L][ +][ S][ KOTB][ C] (?P<name>.*)$', line)
             if not matcher:
                 continue

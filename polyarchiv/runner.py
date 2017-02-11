@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import datetime
 import errno
 import fnmatch
+import getpass
 import glob
 import os
 import pwd
@@ -230,10 +231,10 @@ class Runner(ParameterizedObject):
         # ^ all available values for datetime
         # noinspection PyBroadException
         try:
-            fqdn = socket.gethostname()
+            fqdn = socket.getfqdn()
         except Exception:
             fqdn = 'localhost'
-        common_values.update({'fqdn': fqdn, 'hostname': fqdn.partition('.')[0]})
+        common_values.update({'fqdn': fqdn, 'hostname': fqdn.partition('.')[0], 'username': getpass.getuser()})
 
         for config_file, parser in self._iter_config_parsers(self.collect_pattern):
             # noinspection PyTypeChecker
