@@ -54,7 +54,7 @@ class Runner(ParameterizedObject):
     hook_section = 'hook '
     collect_point_variables_section = 'variables '
 
-    def __init__(self, config_directories, engines_file=None, **kwargs):
+    def __init__(self, config_directories, engines_file=None, log_file=None, **kwargs):
         super(Runner, self).__init__('runner', **kwargs)
         self.config_directories = config_directories
         self.available_collect_point_engines, self.available_source_engines, self.available_backup_point_engines, \
@@ -65,7 +65,10 @@ class Runner(ParameterizedObject):
         self.collect_point_config_files = []
         self.backup_point_config_files = []
         self.hooks = []
-        self.output_temp_fd = open('/tmp/polyarchiv.log', 'wb')
+        self.log_file = log_file
+        self.output_temp_fd = None
+        if self.log_file:
+            self.output_temp_fd = open(self.log_file, 'wb')
 
     @staticmethod
     def find_available_engines(engines_file=None):
@@ -391,6 +394,7 @@ class Runner(ParameterizedObject):
         :param skip_backup: do not execute the backup point phase
         :return:
         """
+        # HOOK before_global_backup
         collect_point_results = {}
         backup_point_results = {}
         for collect_point_name, collect_point in self.collect_points.items():
@@ -399,15 +403,19 @@ class Runner(ParameterizedObject):
             assert isinstance(collect_point, CollectPoint)
             if not skip_collect:
                 with FileContentMonitor(collect_point.output_temp_fd) as cm:
+                    # HOOK before_backup
                     result = collect_point.backup(force=force)
-                    if result:
-                        self.print_success('[OK] collect point %s' % collect_point.name)
-                        collect_point_results[collect_point.name] = True
-                    else:
-                        self.print_error('[KO] collect point %s' % collect_point.name)
-                        collect_point_results[collect_point.name] = False
-                        continue
+                    # HOOK after_backup
                 cm.copy_content(self.output_temp_fd)
+                if result:
+                    collect_point.print_success('[OK] collect point %s' % collect_point.name)
+                    # HOOK on_backup_success
+                    collect_point_results[collect_point.name] = True
+                else:
+                    collect_point.print_error('[KO] collect point %s' % collect_point.name)
+                    collect_point_results[collect_point.name] = False
+                    # HOOK on_backup_error
+                    continue
             for backup_point_name, backup_point in self.backup_points.items():
                 if only_backup_points and backup_point_name not in only_backup_points and not skip_backup:
                     continue
@@ -415,16 +423,23 @@ class Runner(ParameterizedObject):
                 if not self.can_associate(collect_point, backup_point):
                     continue
                 with FileContentMonitor(backup_point.output_temp_fd) as cm:
+                    # HOOK before_backup
                     result = backup_point.backup(collect_point, force=force)
-                    cm.copy_content(self.output_temp_fd, close=False)
+                    # HOOK after_backup
+                cm.copy_content(self.output_temp_fd, close=False)
                 if result:
-                    self.print_info('[OK] backup point %s on collect point %s' %
+                    backup_point.print_info('[OK] backup point %s on collect point %s' %
                                     (backup_point.name, collect_point.name))
+                    # HOOK on_backup_success
                     backup_point_results[(backup_point.name, collect_point.name)] = True
                 else:
-                    self.print_error('[KO] backup point %s on collect point %s' %
+                    backup_point.print_error('[KO] backup point %s on collect point %s' %
                                      (backup_point.name, collect_point.name))
+                    # HOOK on_backup_error
                     backup_point_results[(backup_point.name, collect_point.name)] = False
+        # HOOK after_global_backup
+        # HOOK after_global_error
+        # HOOK after_global_success
         return collect_point_results, backup_point_results
 
     def restore(self, only_collect_points=None, only_backup_points=None, no_backup_point=False):

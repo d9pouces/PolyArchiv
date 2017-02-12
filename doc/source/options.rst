@@ -14,6 +14,7 @@ There are some optional arguments, mainly for backup operations:
 
   * `-C`: change the configuration directory,
   * `-v` or `--verbose`: display more information (useful for backups or the `plugins`),
+  * `--log-file`: write a log file with all commands and their results
   * `-f` or `--force` (only for backups): force the backup, even if the last backup is recent enough (see the `frequency` option),
   * `-n` or `--nrpe` (only for backups): display a Nagios-like output (and the appropriate exit code),
   * `-D` or `--dry` (backup or restore): do not perform any write operation (can lead to errors if a read action requires a previous write),

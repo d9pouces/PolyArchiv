@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 
 from polyarchiv.conf import Parameter, check_executable
-from polyarchiv.termcolor import cprint, YELLOW, CYAN, GREEN, RED, BOLD
+from polyarchiv.termcolor import cprint, YELLOW, CYAN, GREEN, RED, BOLD, WHITE
 from polyarchiv.utils import get_is_time_elapsed, text_type, get_input_text, command_to_text
 
 __author__ = 'Matthieu Gallet'
@@ -60,45 +60,34 @@ class ParameterizedObject(object):
         self.command_execute = command_execute  # actually run commands (if False: 'dry' mode)
         self.output_temp_fd = None  # file descriptor used if a hook retains the stdout or the stderr
 
-    def print_command(self, text, display=True):
-        if self.verbosity >= 1:
-            text = command_to_text(text)
-            if display:
-                cprint(text, YELLOW)
-            if self.output_temp_fd:
-                self.output_temp_fd.write(text.encode('utf-8'))
-                self.output_temp_fd.write(b'\n')
-
-    def print_error(self, text, display=True):
+    def print_message(self, text, display=True, color=None, bold=False, min_verbosity=1):
+        if self.verbosity < min_verbosity:
+            return
+        attrs = []
+        if color:
+            attrs = [color]
+        if bold:
+            attrs.append(BOLD)
         if display:
-            cprint(text, RED, BOLD)
+            cprint(text, *attrs)
         if self.output_temp_fd:
             self.output_temp_fd.write(text.encode('utf-8'))
             self.output_temp_fd.write(b'\n')
 
+    def print_command(self, text, display=True):
+        return self.print_message(command_to_text(text), color=YELLOW, display=display, min_verbosity=1)
+
+    def print_error(self, text, display=True):
+        return self.print_message(text, color=RED, display=display, min_verbosity=0, bold=True)
+
     def print_success(self, text, display=True):
-        if self.verbosity >= 1:
-            if display:
-                cprint(text, GREEN)
-            if self.output_temp_fd:
-                self.output_temp_fd.write(text.encode('utf-8'))
-                self.output_temp_fd.write(b'\n')
+        return self.print_message(text, color=GREEN, display=display, min_verbosity=1)
 
     def print_info(self, text, display=True):
-        if self.verbosity >= 2:
-            if display:
-                cprint(text, CYAN)
-            if self.output_temp_fd:
-                self.output_temp_fd.write(text.encode('utf-8'))
-                self.output_temp_fd.write(b'\n')
+        return self.print_message(text, color=CYAN, display=display, min_verbosity=2)
 
     def print_command_output(self, text, display=True):
-        if self.verbosity >= 3:
-            if display:
-                cprint(text)
-            if self.output_temp_fd:
-                self.output_temp_fd.write(text.encode('utf-8'))
-                self.output_temp_fd.write(b'\n')
+        return self.print_message(text, color=WHITE, display=display, min_verbosity=3)
 
     def can_execute_command(self, text):
         """Return False if dry mode is activated or if the command is not validated by the user.

@@ -10,9 +10,5 @@ class Hook(ParameterizedObject):
         self.keep_output = keep_output
         self.when = when
 
-    def do_backup(self, previous_path, next_path, private_path, allow_in_place=True):
-        raise NotImplementedError
-
-    def do_restore(self, previous_path, next_path, private_path, allow_in_place=True):
-        raise NotImplementedError
-
+    def call(self, when, parameterized_object, collect_point_results, backup_point_results):
+        pass

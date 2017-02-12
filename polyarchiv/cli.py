@@ -43,6 +43,7 @@ def main(engines_file=None):
                                                       '1: executed commands are displayed\n'
                                                       '2: result of commands are displayed\n'
                                                       '3: full command output', default=None)
+    parser.add_argument('--log-file', default=None, help='log file')
     parser.add_argument('-f', '--force', action='store_true', help='force backup if not out-of-date', default=False)
     parser.add_argument('-n', '--nrpe', action='store_true', help='Nagios-compatible output', default=False)
     parser.add_argument('-D', '--dry', action='store_true', help='dry mode: do not execute commands', default=False)
@@ -76,7 +77,7 @@ def main(engines_file=None):
 
     from polyarchiv.runner import Runner  # import it after the log configuration
     runner = Runner([args.config], engines_file=engines_file, verbosity=verbosity,
-                    command_confirm=args.confirm_commands, command_execute=not args.dry)
+                    command_confirm=args.confirm_commands, command_execute=not args.dry, log_file=args.log_file)
     if command == 'backup':
         if runner.load():
             collect_point_results, backup_point_results = runner.backup(only_collect_points=args.only_collect_points,

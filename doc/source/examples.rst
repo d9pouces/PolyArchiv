@@ -21,7 +21,6 @@ First, you need to define one or more local collect points.
     included_backup_point_tags=*
     local_path=/var/backups/local.git
 
-
 .. code-block:: ini
    :linenos:
    :name: svn-backup.collect

@@ -342,6 +342,7 @@ class FileContentMonitor(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.fd.flush()
         self.end_index = self.fd.tell()
 
     def get_content(self, close=True):
@@ -359,6 +360,7 @@ class FileContentMonitor(object):
         if self.fd is None:
             return
         if dst_fd:
+            dst_fd.flush()
             fd = os.fdopen(os.dup(self.fd.fileno()), mode='rb')
             fd.seek(self.start_index)
             index = self.start_index
