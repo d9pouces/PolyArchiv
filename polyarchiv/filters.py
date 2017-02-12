@@ -46,6 +46,9 @@ class FileFilter(ParameterizedObject):
         self.do_restore(previous_path, next_path, private_path, allow_in_place)
         return next_path
 
+    def print_message(self, *args, **kwargs):
+        return self.point.print_message(*args, **kwargs)
+
     @property
     def stderr(self):
         return self.point.stderr
