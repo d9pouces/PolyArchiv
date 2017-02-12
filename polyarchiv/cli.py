@@ -160,7 +160,6 @@ def main(engines_file=None):
         cprint('available hook engines:', YELLOW, BOLD)
         # noinspection PyTypeChecker
         display_classes(available_hook_engines, verbosity=verbosity, width=width)
-        display_classes(available_hook_engines, verbosity=verbosity, width=width)
         cprint('[*] this parameter can use variables. See the README (\'Replacement rules\' section)', RED)
         cprint('[**] this parameter can only use time/host-independent variables. See the README', RED)
     else:

@@ -14,6 +14,7 @@ from polyarchiv._vendor.lru_cache import lru_cache
 from polyarchiv.conf import Parameter, strip_split, check_directory
 from polyarchiv.config_checks import ValidSvnUrl
 from polyarchiv.filelocks import Lock
+from polyarchiv.hooks import Hook
 from polyarchiv.points import Point, PointInfo
 from polyarchiv.utils import text_type, cached_property, url_auth_split, DEFAULT_EMAIL, DEFAULT_USERNAME
 
@@ -209,6 +210,13 @@ class CollectPoint(Point):
             txt = text_type(e)[len('KeyError:'):]
             raise ValueError('Unable to format \'%s\': variable %s is missing' % (value, txt))
         return formatted_value
+
+    def execute_hook(self, when, cm, result=None):
+        result_ = {self.name: result}
+        for hook in self.hooks:
+            assert isinstance(hook, Hook)
+            if when in hook.hooked_events:
+                hook.call(self, when, cm, result_, {})
 
 
 class FileRepository(CollectPoint):

@@ -5,6 +5,8 @@ import datetime
 
 from polyarchiv.backup_points import BackupPoint
 from polyarchiv.collect_points import CollectPoint
+from polyarchiv.filters import FileFilter
+from polyarchiv.hooks import Hook
 from polyarchiv.points import PointInfo
 from polyarchiv.runner import Runner
 from polyarchiv.sources import Source
@@ -55,8 +57,8 @@ class ConfigVisitor(Visitor):
         self.engines_file = engines_file
 
     def visit_collect_point(self, runner, collect_point):
-        available_collect_point_engines, available_source_engines, __, __, __ = \
-            Runner.find_available_engines(self.engines_file)
+        available_collect_point_engines, available_source_engines, __, available_filter_engines, available_hook_engines\
+            = Runner.find_available_engines(self.engines_file)
 
         # ##############################################################################################################
         assert isinstance(collect_point, CollectPoint)
@@ -80,6 +82,28 @@ class ConfigVisitor(Visitor):
             if source.__doc__:
                 runner.print_command_output(source.__doc__)
         # ##############################################################################################################
+        for filter_ in collect_point.filters:
+            assert isinstance(filter_, FileFilter)
+            runner.print_command('  * filter %s added to %s' % (filter_.name, collect_point.name))
+            if filter_.__class__ in available_filter_engines:
+                engine = available_filter_engines[filter_.__class__]
+            else:
+                engine = '%s.%s' % (filter_.__class__.__module__, filter_.__class__.__name__)
+            runner.print_info('engine: %s' % engine)
+            if filter_.__doc__:
+                runner.print_command_output(filter_.__doc__)
+        # ##############################################################################################################
+        for hook in collect_point.hooks:
+            assert isinstance(hook, Hook)
+            runner.print_command('  * hook %s added to %s' % (hook.name, collect_point.name))
+            if hook.__class__ in available_hook_engines:
+                engine = available_hook_engines[hook.__class__]
+            else:
+                engine = '%s.%s' % (hook.__class__.__module__, hook.__class__.__name__)
+            runner.print_info('engine: %s' % engine)
+            if hook.__doc__:
+                runner.print_command_output(hook.__doc__)
+        # ##############################################################################################################
         try:
             info = collect_point.get_info()
         except ValueError as e:
@@ -99,7 +123,8 @@ class ConfigVisitor(Visitor):
             runner.print_error('The last backup has failed. %s' % info.last_message)
 
     def visit_backup_point(self, runner, backup_point):
-        __, __, available_backup_point_engines, __, __ = Runner.find_available_engines(self.engines_file)
+        __, __, available_backup_point_engines, available_filter_engines, available_hook_engines = \
+            Runner.find_available_engines(self.engines_file)
         assert isinstance(backup_point, BackupPoint)
         runner.print_info('backup point %s selected' % backup_point.name)
         if backup_point.__class__ in available_backup_point_engines:
@@ -109,6 +134,28 @@ class ConfigVisitor(Visitor):
         runner.print_command_output('engine: %s' % engine)
         if backup_point.__doc__:
             runner.print_command_output(backup_point.__doc__)
+        # ##############################################################################################################
+        for filter_ in backup_point.filters:
+            assert isinstance(filter_, FileFilter)
+            runner.print_command('  * filter %s added to %s' % (filter_.name, backup_point.name))
+            if filter_.__class__ in available_filter_engines:
+                engine = available_filter_engines[filter_.__class__]
+            else:
+                engine = '%s.%s' % (filter_.__class__.__module__, filter_.__class__.__name__)
+            runner.print_info('engine: %s' % engine)
+            if filter_.__doc__:
+                runner.print_command_output(filter_.__doc__)
+        # ##############################################################################################################
+        for hook in backup_point.hooks:
+            assert isinstance(hook, Hook)
+            runner.print_command('  * hook %s added to %s' % (hook.name, backup_point.name))
+            if hook.__class__ in available_hook_engines:
+                engine = available_hook_engines[hook.__class__]
+            else:
+                engine = '%s.%s' % (hook.__class__.__module__, hook.__class__.__name__)
+            runner.print_info('engine: %s' % engine)
+            if hook.__doc__:
+                runner.print_command_output(hook.__doc__)
 
     def visit_backup_point_collect_point(self, runner, backup_point, collect_point):
         assert isinstance(collect_point, CollectPoint)

@@ -51,6 +51,9 @@ class Source(ParameterizedObject):
     def stdout(self):
         return self.collect_point.stdout
 
+    def print_message(self, *args, **kwargs):
+        return self.collect_point.print_message(*args, **kwargs)
+
 
 class LocalFiles(Source):
     """copy all files from the given source_path to the collect point using 'rsync'.

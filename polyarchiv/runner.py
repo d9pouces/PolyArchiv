@@ -275,6 +275,7 @@ class Runner(ParameterizedObject):
                     hook = self._load_engine(config_file, parser, section, [hook_name], self.available_hook_engines,
                                              Hook)
                     collect_point.add_hook(hook)
+                    used = True
                 if not used:
                     self.print_error('Unknown section \'%s\' in file \'%s\'' % (section, config_file))
             self.collect_point_config_files.append(config_file)
@@ -294,22 +295,27 @@ class Runner(ParameterizedObject):
             if self.output_temp_fd:
                 backup_point.output_temp_fd = tempfile.TemporaryFile()
             for section in parser.sections():
+                used = False
                 filter_name = self._decompose_section_name(config_file, section, self.filter_section)
                 if filter_name:  # section looks like [filter "sha1"]
                     filter_ = self._load_engine(config_file, parser, section, [filter_name, backup_point],
                                                 self.available_filter_engines, FileFilter)
                     backup_point.add_filter(filter_)
+                    used = True
                 hook_name = self._decompose_section_name(config_file, section, self.hook_section)
                 if hook_name:  # section looks like [hook "sha1"]
                     hook = self._load_engine(config_file, parser, section, [hook_name], self.available_hook_engines,
                                              Hook)
                     backup_point.add_hook(hook)
+                    used = True
 
                 collect_point_name = self._decompose_section_name(config_file, section,
                                                                   self.collect_point_variables_section)
                 if collect_point_name:  # section looks like [variables "collect point"]
                     backup_point.collect_point_variables[collect_point_name] = {opt: parser.get(section, opt)
                                                                                 for opt in parser.options(section)}
+                if not used:
+                    self.print_error('Unknown section \'%s\' in file \'%s\'' % (section, config_file))
             self.backup_point_config_files.append(config_file)
             self.backup_points[backup_point_name] = backup_point
 
@@ -394,53 +400,65 @@ class Runner(ParameterizedObject):
         :param skip_backup: do not execute the backup point phase
         :return:
         """
-        # HOOK before_global_backup
-        collect_point_results = {}
-        backup_point_results = {}
-        for collect_point_name, collect_point in self.collect_points.items():
-            if only_collect_points and collect_point_name not in only_collect_points:
-                continue
-            assert isinstance(collect_point, CollectPoint)
-            if not skip_collect:
-                with FileContentMonitor(collect_point.output_temp_fd) as cm:
-                    # HOOK before_backup
-                    result = collect_point.backup(force=force)
-                    # HOOK after_backup
-                cm.copy_content(self.output_temp_fd)
-                if result:
-                    collect_point.print_success('[OK] collect point %s' % collect_point.name)
-                    # HOOK on_backup_success
-                    collect_point_results[collect_point.name] = True
-                else:
-                    collect_point.print_error('[KO] collect point %s' % collect_point.name)
-                    collect_point_results[collect_point.name] = False
-                    # HOOK on_backup_error
+        with FileContentMonitor(self.output_temp_fd) as global_cm:
+            self.execute_hook('before_backup', global_cm, {}, {})
+            collect_point_results = {}
+            backup_point_results = {}
+            for collect_point_name, collect_point in self.collect_points.items():
+                if only_collect_points and collect_point_name not in only_collect_points:
                     continue
-            for backup_point_name, backup_point in self.backup_points.items():
-                if only_backup_points and backup_point_name not in only_backup_points and not skip_backup:
-                    continue
-                assert isinstance(backup_point, BackupPoint)
-                if not self.can_associate(collect_point, backup_point):
-                    continue
-                with FileContentMonitor(backup_point.output_temp_fd) as cm:
-                    # HOOK before_backup
-                    result = backup_point.backup(collect_point, force=force)
-                    # HOOK after_backup
-                cm.copy_content(self.output_temp_fd, close=False)
-                if result:
-                    backup_point.print_info('[OK] backup point %s on collect point %s' %
-                                    (backup_point.name, collect_point.name))
-                    # HOOK on_backup_success
-                    backup_point_results[(backup_point.name, collect_point.name)] = True
-                else:
-                    backup_point.print_error('[KO] backup point %s on collect point %s' %
-                                     (backup_point.name, collect_point.name))
-                    # HOOK on_backup_error
-                    backup_point_results[(backup_point.name, collect_point.name)] = False
-        # HOOK after_global_backup
-        # HOOK after_global_error
-        # HOOK after_global_success
+                assert isinstance(collect_point, CollectPoint)
+                if not skip_collect:
+                    with FileContentMonitor(collect_point.output_temp_fd) as cm:
+                        collect_point.execute_hook('before_backup', cm)
+                        # HOOK before_backup(collect_point, when, cm, collect_point_results, backup_point_results)
+                        result = collect_point.backup(force=force)
+                        if result:
+                            collect_point.print_success('[OK] collect point %s' % collect_point.name)
+                        else:
+                            collect_point.print_error('[KO] collect point %s' % collect_point.name)
+                    collect_point_results[collect_point.name] = result
+                    if result:
+                        collect_point.execute_hook('backup_success', cm, result=result)
+                    else:
+                        collect_point.execute_hook('backup_error', cm, result=result)
+                        continue
+                    collect_point.execute_hook('after_backup', cm, result=result)
+                    cm.copy_content(self.output_temp_fd, close=True)
+                for backup_point_name, backup_point in self.backup_points.items():
+                    if only_backup_points and backup_point_name not in only_backup_points and not skip_backup:
+                        continue
+                    assert isinstance(backup_point, BackupPoint)
+                    if not self.can_associate(collect_point, backup_point):
+                        continue
+                    with FileContentMonitor(backup_point.output_temp_fd) as cm:
+                        backup_point.execute_hook('before_backup', cm, collect_point)
+                        result = backup_point.backup(collect_point, force=force)
+                        if result:
+                            backup_point.print_info('[OK] backup point %s on collect point %s' %
+                                                    (backup_point.name, collect_point.name))
+                        else:
+                            backup_point.print_error('[KO] backup point %s on collect point %s' %
+                                                     (backup_point.name, collect_point.name))
+                    backup_point_results[(backup_point.name, collect_point.name)] = result
+                    if result:
+                        backup_point.execute_hook('backup_success', cm, collect_point, result=result)
+                    else:
+                        backup_point.execute_hook('backup_error', cm, collect_point, result=result)
+                    backup_point.execute_hook('after_backup', cm, collect_point, result=result)
+                    cm.copy_content(self.output_temp_fd, close=False)
+        self.execute_hook('after_backup', global_cm, collect_point_results, backup_point_results)
+        if all(backup_point_results.values()) and all(collect_point_results.values()):
+            self.execute_hook('backup_success', global_cm, collect_point_results, backup_point_results)
+        else:
+            self.execute_hook('backup_error', global_cm, collect_point_results, backup_point_results)
         return collect_point_results, backup_point_results
+
+    def execute_hook(self, when, cm, collect_point_results, backup_point_results):
+        for hook in self.hooks:
+            assert isinstance(hook, Hook)
+            if when in hook.hooked_events:
+                hook.call(self, when, cm, collect_point_results, backup_point_results)
 
     def restore(self, only_collect_points=None, only_backup_points=None, no_backup_point=False):
         """Run a backup operation

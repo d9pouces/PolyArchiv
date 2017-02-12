@@ -338,16 +338,22 @@ class FileContentMonitor(object):
         self.end_index = None
 
     def __enter__(self):
-        self.start_index = self.fd.tell()
+        if self.fd:
+            self.fd.flush()
+            self.start_index = self.fd.tell()
+            self.end_index = self.start_index
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.fd.flush()
-        self.end_index = self.fd.tell()
+        if self.fd:
+            self.fd.flush()
+            self.end_index = self.fd.tell()
 
-    def get_content(self, close=True):
+    def get_content(self, close=False):
         if self.fd is None:
             return None
+        if self.end_index == self.start_index:
+            return b''
         fd = os.fdopen(os.dup(self.fd.fileno()), mode='rb')
         fd.seek(self.start_index)
         content = fd.read(self.end_index - self.start_index)
@@ -356,10 +362,16 @@ class FileContentMonitor(object):
             self.fd.close()
         return content
 
-    def copy_content(self, dst_fd, close=True):
+    def get_text_content(self, close=False, encoding='utf-8'):
+        content = self.get_content(close=close)
+        if content is None:
+            return content
+        return content.decode(encoding=encoding)
+
+    def copy_content(self, dst_fd, close=False):
         if self.fd is None:
             return
-        if dst_fd:
+        if dst_fd and self.end_index > self.start_index:
             dst_fd.flush()
             fd = os.fdopen(os.dup(self.fd.fileno()), mode='rb')
             fd.seek(self.start_index)

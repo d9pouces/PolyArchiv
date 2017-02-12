@@ -13,6 +13,7 @@ from polyarchiv.backends import get_backend, StorageBackend
 from polyarchiv.config_checks import AttributeUniquess, FileIsReadable, CaCertificate, Email, ValidGitUrl, \
     GitlabProjectName
 from polyarchiv.filters import FileFilter
+from polyarchiv.hooks import Hook
 
 try:
     # noinspection PyCompatibility
@@ -209,6 +210,14 @@ class BackupPoint(Point):
         assert isinstance(collect_point, CollectPoint)
         assert isinstance(filter_, FileFilter)
         return os.path.join(collect_point.backup_point_private_path(self), 'filter-%s' % filter_.name)
+
+    def execute_hook(self, when, cm, collect_point, result=None):
+        assert isinstance(collect_point, CollectPoint)
+        result_ = {(self.name, collect_point.name): result}
+        for hook in self.hooks:
+            assert isinstance(hook, Hook)
+            if when in hook.hooked_events:
+                hook.call(self, when, cm, {collect_point.name: True}, result_)
 
 
 class CommonBackupPoint(BackupPoint):
