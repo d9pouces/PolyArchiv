@@ -46,6 +46,7 @@ class EngineDirective(Directive):
             available_filter_engines, available_hook_engines = Runner.find_available_engines(engines_file)
         values = {'collect_points': available_collect_point_engines, 'backup_points': available_backup_point_engines,
                   'sources': available_source_engines, 'filters': available_filter_engines,
+                  'hooks': available_hook_engines,
                   'config': {'': Config}}
         engines = values[self.arguments[0]]
 

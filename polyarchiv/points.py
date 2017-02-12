@@ -59,6 +59,8 @@ class ParameterizedObject(object):
         self.command_confirm = command_confirm  # ask the user to confirm each command
         self.command_execute = command_execute  # actually run commands (if False: 'dry' mode)
         self.output_temp_fd = None  # file descriptor used if a hook retains the stdout or the stderr
+        self.variables = {'name': name}
+        # self.variables["variable_name"] = "value"
 
     def print_message(self, text, display=True, color=None, bold=False, min_verbosity=1):
         if self.verbosity < min_verbosity:
@@ -195,6 +197,16 @@ class ParameterizedObject(object):
             return self.output_temp_fd
         self.output_temp_fd = open(os.devnull, 'wb')
         return self.output_temp_fd
+
+    def format_value(self, value):
+        if value is None:
+            return None
+        try:
+            formatted_value = value.format(**self.variables)
+        except KeyError as e:
+            txt = text_type(e)[len('KeyError:'):]
+            raise ValueError('Unable to format \'%s\': variable %s is missing' % (value, txt))
+        return formatted_value
 
 
 class PointInfo(object):
@@ -348,8 +360,6 @@ class Point(ParameterizedObject):
         # list of `polyarchiv.filters.FileFilter`
         self.hooks = []
         # list of `polyarchiv.hooks.Hook`
-        self.variables = {}
-        # self.variables["variable_name"] = "value"
 
     def add_filter(self, filter_):
         from polyarchiv.filters import FileFilter

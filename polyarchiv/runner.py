@@ -3,31 +3,27 @@
 """
 from __future__ import unicode_literals
 
-import datetime
 import errno
 import fnmatch
-import getpass
 import glob
 import os
 import pwd
 import shlex
-import socket
 import tempfile
-
-from polyarchiv.filters import FileFilter
-from polyarchiv.hooks import Hook
-from polyarchiv.sources import Source
 
 try:
     from pkg_resources import iter_entry_points
 except ImportError:
     iter_entry_points = None
 
-from polyarchiv.conf import Parameter
-from polyarchiv.collect_points import CollectPoint
 from polyarchiv.backup_points import BackupPoint
+from polyarchiv.collect_points import CollectPoint
+from polyarchiv.conf import Parameter
+from polyarchiv.filters import FileFilter
+from polyarchiv.hooks import Hook
 from polyarchiv.points import ParameterizedObject, PointInfo, Config
-from polyarchiv.utils import import_string, text_type, FileContentMonitor
+from polyarchiv.sources import Source
+from polyarchiv.utils import import_string, text_type, FileContentMonitor, base_variables
 
 try:
     # noinspection PyUnresolvedReferences,PyCompatibility
@@ -216,6 +212,7 @@ class Runner(ParameterizedObject):
 
     def _load_global_config(self):
         global_result = {}
+        self.variables.update(base_variables())
         for config_file, parser in self._iter_config_parsers(self.global_pattern):
             file_result = self._get_available_args_from_parser(config_file, parser, self.global_section,
                                                                Config.parameters)
@@ -223,22 +220,16 @@ class Runner(ParameterizedObject):
             for section in parser.sections():
                 hook_name = self._decompose_section_name(config_file, section, self.hook_section)
                 if hook_name:  # section looks like [hook "sha1"]
-                    hook = self._load_engine(config_file, parser, section, [hook_name], self.available_hook_engines,
-                                             Hook)
+                    hook = self._load_engine(config_file, parser, section, [hook_name, self, self],
+                                             self.available_hook_engines, Hook)
                     self._add_hook(hook)
+            if parser.has_section(self.variables_section):
+                self.variables.update({opt: parser.get(self.variables_section, opt)
+                                       for opt in parser.options(self.variables_section)})
         self.config = Config(**global_result)
 
     def _find_collect_points(self):
-        now = datetime.datetime.now()
-        common_values = {x: now.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'}
-        # ^ all available values for datetime
-        # noinspection PyBroadException
-        try:
-            fqdn = socket.getfqdn()
-        except Exception:
-            fqdn = 'localhost'
-        common_values.update({'fqdn': fqdn, 'hostname': fqdn.partition('.')[0], 'username': getpass.getuser()})
-
+        common_values = base_variables(use_constants=False)
         for config_file, parser in self._iter_config_parsers(self.collect_pattern):
             # noinspection PyTypeChecker
             collect_point_name = os.path.basename(config_file).rpartition('.')[0]
@@ -272,8 +263,8 @@ class Runner(ParameterizedObject):
                     used = True
                 hook_name = self._decompose_section_name(config_file, section, self.hook_section)
                 if hook_name:  # section looks like [hook "sha1"]
-                    hook = self._load_engine(config_file, parser, section, [hook_name], self.available_hook_engines,
-                                             Hook)
+                    hook = self._load_engine(config_file, parser, section, [hook_name, self, collect_point],
+                                             self.available_hook_engines, Hook)
                     collect_point.add_hook(hook)
                     used = True
                 if not used:
@@ -304,8 +295,8 @@ class Runner(ParameterizedObject):
                     used = True
                 hook_name = self._decompose_section_name(config_file, section, self.hook_section)
                 if hook_name:  # section looks like [hook "sha1"]
-                    hook = self._load_engine(config_file, parser, section, [hook_name], self.available_hook_engines,
-                                             Hook)
+                    hook = self._load_engine(config_file, parser, section, [hook_name, self, backup_point],
+                                             self.available_hook_engines, Hook)
                     backup_point.add_hook(hook)
                     used = True
 
@@ -458,7 +449,7 @@ class Runner(ParameterizedObject):
         for hook in self.hooks:
             assert isinstance(hook, Hook)
             if when in hook.hooked_events:
-                hook.call(self, when, cm, collect_point_results, backup_point_results)
+                hook.call(when, cm, collect_point_results, backup_point_results)
 
     def restore(self, only_collect_points=None, only_backup_points=None, no_backup_point=False):
         """Run a backup operation

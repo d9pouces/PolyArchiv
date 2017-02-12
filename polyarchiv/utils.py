@@ -383,3 +383,23 @@ class FileContentMonitor(object):
             fd.close()
         if close:
             self.fd.close()
+
+
+def base_variables(use_constants=False):
+    common_values = {}
+    if use_constants:
+        now = datetime.datetime(2016, 1, 1, 0, 0, 0)
+        username = 'polyarchiv'
+        fqdn = 'localhost'
+    else:
+        now = datetime.datetime.now()
+        # noinspection PyBroadException
+        try:
+            fqdn = socket.getfqdn()
+        except Exception:
+            fqdn = 'localhost'
+        username = getpass.getuser()
+    common_values.update({'fqdn': fqdn, 'hostname': fqdn.partition('.')[0], 'username': username})
+    common_values.update({x: now.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'})
+    # ^ all available values for datetime
+    return common_values

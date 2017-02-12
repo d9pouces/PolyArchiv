@@ -201,22 +201,12 @@ class CollectPoint(Point):
         assert isinstance(filter_, FileFilter)
         raise NotImplementedError
 
-    def format_value(self, value):
-        if value is None:
-            return None
-        try:
-            formatted_value = value.format(**self.variables)
-        except KeyError as e:
-            txt = text_type(e)[len('KeyError:'):]
-            raise ValueError('Unable to format \'%s\': variable %s is missing' % (value, txt))
-        return formatted_value
-
     def execute_hook(self, when, cm, result=None):
         result_ = {self.name: result}
         for hook in self.hooks:
             assert isinstance(hook, Hook)
             if when in hook.hooked_events:
-                hook.call(self, when, cm, result_, {})
+                hook.call(when, cm, result_, {})
 
 
 class FileRepository(CollectPoint):

@@ -53,7 +53,9 @@ The complete backup operation is split into three steps for each collect point:
    backup_points
    sources
    filters
+   hooks
    variables
    global
+   examples/simple
    debian
 

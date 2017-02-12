@@ -15,6 +15,7 @@ from polyarchiv.config_checks import AttributeUniquess, FileIsReadable, CaCertif
 from polyarchiv.filters import FileFilter
 from polyarchiv.hooks import Hook
 
+
 try:
     # noinspection PyCompatibility
     from urllib.parse import urlparse, urlencode, quote_plus
@@ -28,15 +29,14 @@ import os
 from polyarchiv.conf import Parameter, strip_split
 from polyarchiv.collect_points import CollectPoint
 from polyarchiv.points import Point, PointInfo
-from polyarchiv.utils import text_type, DEFAULT_EMAIL, DEFAULT_USERNAME
+from polyarchiv.utils import text_type, DEFAULT_EMAIL, DEFAULT_USERNAME, base_variables
 
 __author__ = 'Matthieu Gallet'
 constant_time = datetime.datetime(2016, 1, 1, 0, 0, 0)
 
 
 class BackupPoint(Point):
-    constant_format_values = {x: constant_time.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'}
-    constant_format_values.update({'fqdn': 'localhost', 'hostname': 'localhost'})
+    constant_format_values = base_variables(use_constants=True)
     parameters = Point.parameters + [
         Parameter('backup_point_tags', converter=strip_split,
                   help_str='list of tags (comma-separated) associated to this backup point (default: "backup")'),
@@ -217,7 +217,7 @@ class BackupPoint(Point):
         for hook in self.hooks:
             assert isinstance(hook, Hook)
             if when in hook.hooked_events:
-                hook.call(self, when, cm, {collect_point.name: True}, result_)
+                hook.call(when, cm, {collect_point.name: True}, result_)
 
 
 class CommonBackupPoint(BackupPoint):
