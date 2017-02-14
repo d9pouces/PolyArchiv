@@ -6,7 +6,9 @@ import shlex
 import smtplib
 from email.mime.text import MIMEText
 
+# noinspection PyProtectedMember
 from polyarchiv._vendor import requests
+# noinspection PyProtectedMember
 from polyarchiv._vendor.requests.auth import HTTPBasicAuth
 from polyarchiv.conf import Parameter, strip_split, CheckOption
 from polyarchiv.points import ParameterizedObject

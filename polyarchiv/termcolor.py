@@ -105,6 +105,7 @@ def cprint(text, *args, **kwargs):
     It accepts keyword arguments of print function.
     """
     if sys.version_info[0] == 2 and isinstance(text, str):
+        # noinspection PyUnresolvedReferences
         text = text.decode('utf-8')
     attrs = [x for x in args if x in ATTRIBUTES]
     colors = [x for x in args if x in COLORS]
