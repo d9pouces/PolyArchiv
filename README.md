@@ -120,6 +120,7 @@ First fetch data from the most recent backup point to the collect point, then re
   * `-f`: force backup operation, even if the most recent backup is still valid
   * `-n`: display a NRPE-compatible output
   * `-D`: no write action is performed
+  * `--log-file`: log all output to this file
   * `--show-commands`: display all write actions as a bash operation
   * `--confirm-commands`: require a validation of each action
   * `--config`: specify another config dir

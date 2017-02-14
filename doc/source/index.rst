@@ -58,6 +58,4 @@ Extra actions (“hooks”) can be called before or after a backup, or in case o
    hooks
    variables
    global
-   examples/simple
-   debian
 
