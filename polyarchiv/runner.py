@@ -229,7 +229,7 @@ class Runner(ParameterizedObject):
         self.config = Config(**global_result)
 
     def _find_collect_points(self):
-        common_values = base_variables(use_constants=False)
+        base_variable = base_variables(use_constants=False)
         for config_file, parser in self._iter_config_parsers(self.collect_pattern):
             # noinspection PyTypeChecker
             collect_point_name = os.path.basename(config_file).rpartition('.')[0]
@@ -238,7 +238,7 @@ class Runner(ParameterizedObject):
             assert isinstance(collect_point, CollectPoint)
             # noinspection PyTypeChecker
             collect_point.variables = {'name': collect_point_name}
-            collect_point.variables.update(common_values)
+            collect_point.variables.update(base_variable)
             if self.output_temp_fd:
                 collect_point.output_temp_fd = tempfile.TemporaryFile()
             # load variables applying to the whole collect point

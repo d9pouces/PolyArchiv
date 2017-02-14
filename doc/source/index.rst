@@ -8,7 +8,7 @@ Backup data from multiple local "sources" (organized in "collect points") and se
 .. code-block:: bash
 
        collect point 1: /var/backups/local1             /---------------------------\
-       data of www.github.com               ________\__ |   backup point 1: git     |
+       data of dev.example.com              ________\__ |   backup point 1: git     |
     /------------------------\             /        /   |   data of collect point 1 |
     |     source 1: files    |---->-------/             \---------------------------/
     |     source 2: mysql    |                          * http://mygit/backups/local1.git
@@ -36,10 +36,12 @@ Think collect points as projects (a website) or services (Ldap, Kerberos, …), 
 
 The complete backup operation is split into three steps for each collect point:
 
-  1. collect all data from sources (databases, files, config files, …) to the collect points,
-  2. perform the local collect operation (maybe a local `git` archive, or just raw files),
-  3. send all these data to distant servers (you can of course skip this step).
+  1. collect all data from sources (like copying files or dumping databases) to the collect point,
+  2. perform the local collect operation (maybe a local `tar.gz` archive, or just keep collected files as-this),
+  3. optionally send all the collected data to one or more distant servers.
 
+Some filters can be used (currently encrypting files or computing their md5 hashes) between the local collect and the remote send.
+Extra actions (“hooks”) can be called before or after a backup, or in case of success/error.
 
 .. toctree::
    :maxdepth: 1
