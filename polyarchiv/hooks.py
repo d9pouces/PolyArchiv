@@ -91,7 +91,7 @@ class EmailHook(Hook):
     parameters = Hook.parameters + [
         Parameter('recipient', required=True, help_str='recipients, separated by commas [*]'),
         Parameter('subject', help_str='subject (default to "%s") [*]' % default_subject),
-        Parameter('content', help_str='mail content (default to "%s") [*]') % default_content,
+        Parameter('content', help_str='mail content (default to "%s") [*]' % default_content),
         Parameter('sender', help_str='from address (default to %s) [*]' % DEFAULT_EMAIL),
         Parameter('hostname', help_str='SMTP server name (default to "localhost")'),
         Parameter('port', help_str='SMTP server port', converter=int),
