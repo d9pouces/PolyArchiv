@@ -146,18 +146,33 @@ def main(engines_file=None):
         available_collect_point_engines, available_source_engines, available_backup_point_engines, \
             available_filter_engines, available_hook_engines = Runner.find_available_engines(engines_file)
         cprint('available collect point engines:', YELLOW, BOLD)
+        if verbosity >= 2:
+            cprint('    You should define a [point] section in each ".collect" file in the config directory.', GREEN)
+            cprint('    The only required option in this section is the "engine" option.')
         # noinspection PyTypeChecker
         display_classes(available_collect_point_engines, verbosity=verbosity, width=width)
         cprint('available source engines:', YELLOW, BOLD)
+        if verbosity >= 2:
+            cprint('    You can define [source "source name"] sections in any ".collect" file.', GREEN)
+            cprint('    The only required option in these sections is the "engine" option.')
         # noinspection PyTypeChecker
         display_classes(available_source_engines, verbosity=verbosity, width=width)
         cprint('available backup point engines:', YELLOW, BOLD)
+        if verbosity >= 2:
+            cprint('    You should define a [point] section in each ".backup" file in the config directory.', GREEN)
+            cprint('    The only required option in this section is the "engine" option.')
         # noinspection PyTypeChecker
         display_classes(available_backup_point_engines, verbosity=verbosity, width=width)
         cprint('available filter engines:', YELLOW, BOLD)
+        if verbosity >= 2:
+            cprint('    You can define [filter "filter name"] sections in any ".backup" or ".collect" file.', GREEN)
+            cprint('    The only required option in these sections is the "engine" option.')
         # noinspection PyTypeChecker
         display_classes(available_filter_engines, verbosity=verbosity, width=width)
         cprint('available hook engines:', YELLOW, BOLD)
+        if verbosity >= 2:
+            cprint('    You can define [hook "filter name"] sections in any ".backup" or ".collect" file.', GREEN)
+            cprint('    The only required option in these sections is the "engine" option.')
         # noinspection PyTypeChecker
         display_classes(available_hook_engines, verbosity=verbosity, width=width)
         cprint('[*] this parameter can use variables. See the README (\'Replacement rules\' section)', RED)

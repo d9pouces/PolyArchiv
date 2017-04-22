@@ -286,6 +286,8 @@ class Runner(ParameterizedObject):
             if self.output_temp_fd:
                 backup_point.output_temp_fd = tempfile.TemporaryFile()
             for section in parser.sections():
+                if section == self.point_section or section == self.variables_section:
+                    continue
                 used = False
                 filter_name = self._decompose_section_name(config_file, section, self.filter_section)
                 if filter_name:  # section looks like [filter "sha1"]
