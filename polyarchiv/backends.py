@@ -520,7 +520,7 @@ class SShStorageBackend(FileStorageBackend):
 
     def sync_file_to_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
-        self.ensure_distant_dir(dst_path, parent=bool(filename))
+        self.ensure_distant_dir(dst_path, parent=True)
         self.ensure_dir(local_filename, parent=True)
         cmd = self._get_scp_command(executable=self.scp_executable)
         cmd += ['-p', '%s:%s' % (self.hostname, self.dst_path), local_filename]
@@ -528,7 +528,9 @@ class SShStorageBackend(FileStorageBackend):
 
     def sync_file_from_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
-        self.ensure_distant_dir(dst_path, parent=bool(filename))
+        self.ensure_distant_dir(dst_path, parent=True)
+        self.delete_on_distant(path=filename)
+        self.ensure_dir(local_filename, parent=True)
         cmd = self._get_scp_command(executable=self.scp_executable)
         cmd += ['-p', local_filename, '%s:%s' % (self.hostname, self.dst_path)]
         self.execute_command(cmd)
