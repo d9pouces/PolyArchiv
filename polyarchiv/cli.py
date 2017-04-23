@@ -171,7 +171,7 @@ def main(engines_file=None):
         display_classes(available_filter_engines, verbosity=verbosity, width=width)
         cprint('available hook engines:', YELLOW, BOLD)
         if verbosity >= 2:
-            cprint('    You can define [hook "filter name"] sections in any ".backup" or ".collect" file.', GREEN)
+            cprint('    You can define [hook "hook name"] sections in any ".backup" or ".collect" file.', GREEN)
             cprint('    The only required option in these sections is the "engine" option.')
         # noinspection PyTypeChecker
         display_classes(available_hook_engines, verbosity=verbosity, width=width)
