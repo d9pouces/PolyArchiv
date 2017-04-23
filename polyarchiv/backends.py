@@ -517,9 +517,7 @@ class SShStorageBackend(FileStorageBackend):
         return cmd
 
     def sync_dir_from_local(self, local_dirname):
-        cmd = self._get_ssh_command()
-        cmd += [self.hostname, 'mkdir', '-p', self.dst_path]
-        self.execute_command(cmd)
+        self.ensure_distant_dir(self.dst_path, parent=False)
         self.ensure_dir(local_dirname, parent=False)
         cmd = self._get_rsync_command()
         cmd += ['-az', '--delete', '-S', force_dirname(local_dirname),
@@ -527,9 +525,7 @@ class SShStorageBackend(FileStorageBackend):
         self.execute_command(cmd)
 
     def sync_dir_to_local(self, local_dirname):
-        cmd = self._get_ssh_command()
-        cmd += [self.hostname, 'mkdir', '-p', self.dst_path]
-        self.execute_command(cmd)
+        self.ensure_distant_dir(self.dst_path, parent=False)
         self.ensure_dir(local_dirname, parent=False)
         cmd = self._get_rsync_command()
         cmd += ['-az', '--delete', '-S', '%s:%s' % (self.hostname, force_dirname(self.dst_path)),
@@ -538,11 +534,7 @@ class SShStorageBackend(FileStorageBackend):
 
     def sync_file_to_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
-        parent_path = os.path.dirname(dst_path)
-        cmd = self._get_ssh_command()
-        cmd += [self.hostname, 'mkdir', '-p', parent_path]
-        self.execute_command(cmd)
-
+        self.ensure_distant_dir(dst_path, parent=bool(filename))
         self.ensure_dir(local_filename, parent=True)
         cmd = self._get_scp_command(executable=self.scp_executable)
         cmd += ['-p', '%s:%s' % (self.hostname, self.dst_path), local_filename]
@@ -550,7 +542,7 @@ class SShStorageBackend(FileStorageBackend):
 
     def sync_file_from_local(self, local_filename, filename=''):
         dst_path = os.path.join(self.dst_path, filename) if filename else self.dst_path
-        self.ensure_dir(dst_path, parent=True)
+        self.ensure_distant_dir(dst_path, parent=bool(filename))
         cmd = self._get_scp_command(executable=self.scp_executable)
         cmd += ['-p', local_filename, '%s:%s' % (self.hostname, self.dst_path)]
         self.execute_command(cmd)
@@ -559,4 +551,11 @@ class SShStorageBackend(FileStorageBackend):
         dst_path = os.path.join(self.dst_path, path) if path else self.dst_path
         cmd = self._get_ssh_command()
         cmd += [self.hostname, 'rm', '-rf', dst_path]
+        self.execute_command(cmd)
+
+    def ensure_distant_dir(self, path, parent=False):
+        cmd = self._get_ssh_command()
+        if parent:
+            path = os.path.dirname(path)
+        cmd += [self.hostname, 'mkdir', '-p', path]
         self.execute_command(cmd)
