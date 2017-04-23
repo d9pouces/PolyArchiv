@@ -482,31 +482,17 @@ class SShStorageBackend(FileStorageBackend):
             executable = self.ssh_executable
         cmd += [executable]
         if self.private_key:
-            cmd += ['-i', self.private_key]
-        if self.username:
-            cmd += ['-l', self.username]
+            cmd += ['-o', 'identityfile=%s' % self.private_key]
         if self.port:
-            cmd += ['-p', str(self.port)]
+            cmd += ['-o', 'port=%s' % self.port]
+        if self.username:
+            cmd += ['-o', 'user=%s' % self.username]
         if self.ssh_options:
             cmd += list(shlex.split(self.ssh_options))
         return cmd
 
     def _get_scp_command(self, use_keytab=True, executable=None):
-        cmd = []
-        if use_keytab and self.keytab:
-            cmd += ['k5start', '-q', '-f', self.keytab, '-U', '--']
-        if executable is None:
-            executable = self.scp_executable
-        cmd += [executable]
-        if self.private_key:
-            cmd += ['-i', self.private_key]
-        if self.username:
-            cmd += ['-l', self.username]
-        if self.port:
-            cmd += ['-P', str(self.port)]
-        if self.ssh_options:
-            cmd += list(shlex.split(self.ssh_options))
-        return cmd
+        return self._get_ssh_command(use_keytab=use_keytab, executable=executable or self.scp_executable)
 
     def _get_rsync_command(self):
         cmd = []
