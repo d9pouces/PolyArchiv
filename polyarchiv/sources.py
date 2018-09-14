@@ -20,14 +20,22 @@ import subprocess
 from polyarchiv._vendor.ldif3 import LDIFParser
 from polyarchiv.backends import get_backend
 from polyarchiv.collect_points import CollectPoint
-from polyarchiv.conf import Parameter, bool_setting, check_directory, check_executable, check_username, check_file
+from polyarchiv.conf import (
+    Parameter,
+    bool_setting,
+    check_directory,
+    check_executable,
+    check_username,
+    check_file,
+)
 from polyarchiv.points import ParameterizedObject
 
-__author__ = 'Matthieu Gallet'
+__author__ = "Matthieu Gallet"
 
 
 class Source(ParameterizedObject):
     """base source class"""
+
     parameters = ParameterizedObject.parameters + []
 
     def __init__(self, name, collect_point, **kwargs):
@@ -59,20 +67,49 @@ class LocalFiles(Source):
     """copy all files from the given source_path to the collect point using 'rsync'.
     The destination is a folder inside the collect point.
     """
+
     parameters = Source.parameters + [
-        Parameter('source_path', converter=check_directory, help_str='original folder to backup', required=True),
-        Parameter('destination_path', help_str='destination folder (relative path, e.g. "./files")', required=True),
-        Parameter('exclude', help_str='exclude files matching PATTERN (see --exclude option from rsync). '
-                                      'If PATTERN startswith @, then it should be the absolute path of a file '
-                                      '(see --exclude-from option from rsync)'),
-        Parameter('include', help_str='only include files matching PATTERN (see --include option from rsync). '
-                                      'If PATTERN startswith @, then it should be the absolute path of a file '
-                                      '(see --include-from option from rsync)'),
-        Parameter('preserve_hard_links', converter=bool_setting, help_str='true|false: preserve hard links'),
+        Parameter(
+            "source_path",
+            converter=check_directory,
+            help_str="original folder to backup",
+            required=True,
+        ),
+        Parameter(
+            "destination_path",
+            help_str='destination folder (relative path, e.g. "./files")',
+            required=True,
+        ),
+        Parameter(
+            "exclude",
+            help_str="exclude files matching PATTERN (see --exclude option from rsync). "
+            "If PATTERN startswith @, then it should be the absolute path of a file "
+            "(see --exclude-from option from rsync)",
+        ),
+        Parameter(
+            "include",
+            help_str="only include files matching PATTERN (see --include option from rsync). "
+            "If PATTERN startswith @, then it should be the absolute path of a file "
+            "(see --include-from option from rsync)",
+        ),
+        Parameter(
+            "preserve_hard_links",
+            converter=bool_setting,
+            help_str="true|false: preserve hard links",
+        ),
     ]
 
-    def __init__(self, name, collect_point, source_path='', destination_path='',
-                 exclude='', include='', preserve_hard_links='', **kwargs):
+    def __init__(
+        self,
+        name,
+        collect_point,
+        source_path="",
+        destination_path="",
+        exclude="",
+        include="",
+        preserve_hard_links="",
+        **kwargs
+    ):
         """
         :param collect_point: collect point where files are stored
         :param source_path: absolute path of a directory to backup
@@ -88,23 +125,30 @@ class LocalFiles(Source):
         self.destination_path = destination_path
         self.exclude = exclude
         self.include = include
-        self.preserve_hard_links = preserve_hard_links.lower().strip() in ('yes', 'true', 'on', '1')
+        self.preserve_hard_links = preserve_hard_links.lower().strip() in (
+            "yes",
+            "true",
+            "on",
+            "1",
+        )
 
     def backup(self):
-        cmd = [self.config.rsync_executable, '-a', '--delete', '-S', ]
+        cmd = [self.config.rsync_executable, "-a", "--delete", "-S"]
         if self.preserve_hard_links:
-            cmd.append('-H')
+            cmd.append("-H")
         # noinspection PyTypeChecker
-        if self.exclude and self.exclude.startswith('@'):
-            cmd += ['--exclude-from', self.exclude[1:]]
+        if self.exclude and self.exclude.startswith("@"):
+            cmd += ["--exclude-from", self.exclude[1:]]
         elif self.exclude:
-            cmd += ['--exclude', self.exclude]
+            cmd += ["--exclude", self.exclude]
         # noinspection PyTypeChecker
-        if self.include and self.include.startswith('@'):
-            cmd += ['--include-from', self.include[1:]]
+        if self.include and self.include.startswith("@"):
+            cmd += ["--include-from", self.include[1:]]
         elif self.include:
-            cmd += ['--include', self.include]
-        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
+            cmd += ["--include", self.include]
+        dirname = os.path.join(
+            self.collect_point.import_data_path, self.destination_path
+        )
         self.ensure_dir(dirname)
         source = self.source_path
         if not source.endswith(os.path.sep):
@@ -115,10 +159,12 @@ class LocalFiles(Source):
         self.execute_command(cmd)
 
     def restore(self):
-        cmd = [self.config.rsync_executable, '-a', '--delete', '-S', ]
+        cmd = [self.config.rsync_executable, "-a", "--delete", "-S"]
         if self.preserve_hard_links:
-            cmd.append('-H')
-        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
+            cmd.append("-H")
+        dirname = os.path.join(
+            self.collect_point.import_data_path, self.destination_path
+        )
         source = self.source_path
         self.ensure_dir(dirname)
         self.ensure_dir(source)
@@ -133,23 +179,49 @@ class LocalFiles(Source):
 class MySQL(Source):
     """Dump the content of a MySQL database with the mysqldump utility to a filename in the collect point.
     Require the 'mysql' and 'mysqldump' utilities. """
+
     parameters = Source.parameters + [
-        Parameter('host', help_str='database host'),
-        Parameter('port', converter=int, help_str='database port'),
-        Parameter('sudo_user', help_str='sudo user, used for all SQL operations', converter=check_username),
-        Parameter('user', help_str='database user'),
-        Parameter('password', help_str='database password'),
-        Parameter('database', help_str='name of the backuped database', required=True),
-        Parameter('destination_path', help_str='relative path of the backup destination (e.g. "database.sql")'),
-        Parameter('dump_executable', converter=check_executable,
-                  help_str='path of the mysqldump executable (default: "mysqldump")'),
-        Parameter('restore_executable', converter=check_executable,
-                  help_str='path of the mysql executable (default: "mysql")'),
+        Parameter("host", help_str="database host"),
+        Parameter("port", converter=int, help_str="database port"),
+        Parameter(
+            "sudo_user",
+            help_str="sudo user, used for all SQL operations",
+            converter=check_username,
+        ),
+        Parameter("user", help_str="database user"),
+        Parameter("password", help_str="database password"),
+        Parameter("database", help_str="name of the backuped database", required=True),
+        Parameter(
+            "destination_path",
+            help_str='relative path of the backup destination (e.g. "database.sql")',
+        ),
+        Parameter(
+            "dump_executable",
+            converter=check_executable,
+            help_str='path of the mysqldump executable (default: "mysqldump")',
+        ),
+        Parameter(
+            "restore_executable",
+            converter=check_executable,
+            help_str='path of the mysql executable (default: "mysql")',
+        ),
     ]
 
-    def __init__(self, name, collect_point, host='localhost', port='3306', user='', password='', database='',
-                 destination_path='mysql_dump.sql', sudo_user=None, dump_executable='mysqldump',
-                 restore_executable='mysql', **kwargs):
+    def __init__(
+        self,
+        name,
+        collect_point,
+        host="localhost",
+        port="3306",
+        user="",
+        password="",
+        database="",
+        destination_path="mysql_dump.sql",
+        sudo_user=None,
+        dump_executable="mysqldump",
+        restore_executable="mysql",
+        **kwargs
+    ):
         super(MySQL, self).__init__(name, collect_point, **kwargs)
         self.sudo_user = sudo_user
         self.restore_executable = restore_executable
@@ -162,37 +234,43 @@ class MySQL(Source):
         self.destination_path = destination_path
 
     def backup(self):
-        filename = os.path.join(self.collect_point.import_data_path, self.destination_path)
+        filename = os.path.join(
+            self.collect_point.import_data_path, self.destination_path
+        )
         self.ensure_dir(filename, parent=True)
         cmd = self.get_dump_cmd_list()
         if self.sudo_user:
-            cmd = ['sudo', '-u', self.sudo_user] + cmd
+            cmd = ["sudo", "-u", self.sudo_user] + cmd
         env = os.environ.copy()
         env.update(self.get_env())
         for k, v in self.get_env().items():
-            self.print_command('%s=%s' % (k, v))
-        if not self.can_execute_command(cmd + ['>', filename]):
+            self.print_command("%s=%s" % (k, v))
+        if not self.can_execute_command(cmd + [">", filename]):
             filename = os.devnull  # run the dump even in dry mode
-        with open(filename, 'wb') as fd:
+        with open(filename, "wb") as fd:
             p = subprocess.Popen(cmd, env=env, stdout=fd, stderr=self.stderr)
             p.communicate()
         if p.returncode != 0:
             raise subprocess.CalledProcessError(p.returncode, cmd[0])
 
     def restore(self):
-        filename = os.path.join(self.collect_point.import_data_path, self.destination_path)
+        filename = os.path.join(
+            self.collect_point.import_data_path, self.destination_path
+        )
         if not os.path.isfile(filename):
             return
         cmd = self.get_restore_cmd_list()
         if self.sudo_user:
-            cmd = ['sudo', '-u', self.sudo_user] + cmd
+            cmd = ["sudo", "-u", self.sudo_user] + cmd
         env = os.environ.copy()
         env.update(self.get_env())
         for k, v in self.get_env().items():
-            self.print_command('%s=%s' % (k, v))
+            self.print_command("%s=%s" % (k, v))
         # noinspection PyTypeChecker
-        with open(filename, 'rb') as fd:
-            self.execute_command(cmd, env=env, stdin=fd, stderr=self.stderr, stdout=self.stdout)
+        with open(filename, "rb") as fd:
+            self.execute_command(
+                cmd, env=env, stdin=fd, stderr=self.stderr, stdout=self.stdout
+            )
 
     def get_dump_cmd_list(self):
         """ :return:
@@ -200,13 +278,13 @@ class MySQL(Source):
         """
         command = [self.dump_executable]
         if self.user:
-            command += ['--user=%s' % self.user]
+            command += ["--user=%s" % self.user]
         if self.password:
-            command += ['--password=%s' % self.password]
+            command += ["--password=%s" % self.password]
         if self.host:
-            command += ['--host=%s' % self.host]
+            command += ["--host=%s" % self.host]
         if self.port:
-            command += ['--port=%s' % self.port]
+            command += ["--port=%s" % self.port]
         command += [self.database]
         return command
 
@@ -226,53 +304,101 @@ class MySQL(Source):
 class PostgresSQL(MySQL):
     """Dump the content of a PostgresSQL database with the pg_dump utility to a filename in the collect point.
     Require the 'pg_dump' and 'psql' utilities."""
+
     parameters = MySQL.parameters[:-2] + [
-        Parameter('dump_executable', converter=check_executable,
-                  help_str='path of the pg_dump executable (default: "pg_dump")'),
-        Parameter('restore_executable', converter=check_executable,
-                  help_str='path of the psql executable (default: "psql")'),
+        Parameter(
+            "dump_executable",
+            converter=check_executable,
+            help_str='path of the pg_dump executable (default: "pg_dump")',
+        ),
+        Parameter(
+            "restore_executable",
+            converter=check_executable,
+            help_str='path of the psql executable (default: "psql")',
+        ),
     ]
 
-    def __init__(self, name, collect_point, port='5432', dump_executable='pg_dump', restore_executable='psql',
-                 **kwargs):
-        super(PostgresSQL, self).__init__(name, collect_point, port=port, dump_executable=dump_executable,
-                                          restore_executable=restore_executable, **kwargs)
+    def __init__(
+        self,
+        name,
+        collect_point,
+        port="5432",
+        dump_executable="pg_dump",
+        restore_executable="psql",
+        **kwargs
+    ):
+        super(PostgresSQL, self).__init__(
+            name,
+            collect_point,
+            port=port,
+            dump_executable=dump_executable,
+            restore_executable=restore_executable,
+            **kwargs
+        )
 
     def get_dump_cmd_list(self):
         command = [self.dump_executable]
         if self.user:
-            command += ['--username=%s' % self.user]
+            command += ["--username=%s" % self.user]
         if self.host:
-            command += ['--host=%s' % self.host]
+            command += ["--host=%s" % self.host]
         if self.port:
-            command += ['--port=%s' % self.port]
+            command += ["--port=%s" % self.port]
         command += [self.database]
         return command
 
     def get_env(self):
         """Extra environment variables to be passed to shell execution"""
         if self.password:
-            return {'PGPASSWORD': self.password}
+            return {"PGPASSWORD": self.password}
         return {}
 
 
 class Ldap(Source):
     """Dump a OpenLDAP database using slapcat to a filename in the collect point.
     Must be run on the LDAP server with a sudoer account (or 'root'). Require the 'slapcat' and 'slapadd' utilities. """
+
     parameters = Source.parameters + [
-        Parameter('destination_path', help_str='filename of the dump (not an absolute path)'),
-        Parameter('use_sudo', help_str='use sudo to perform the dump (yes/no)', converter=bool_setting),
-        Parameter('data_directory', help_str='your LDAP base (if you want to restrict the dump)'),
-        Parameter('ldap_base', help_str='your LDAP base dn (if you want to restrict the dump)'),
-        Parameter('database', help_str='database number (default: 1)', converter=int),
-        Parameter('dump_executable', converter=check_executable,
-                  help_str='path of the slapcat executable (default: "slapcat")'),
-        Parameter('restore_executable', converter=check_executable,
-                  help_str='path of the slapadd executable (default: "slapadd")'),
+        Parameter(
+            "destination_path", help_str="filename of the dump (not an absolute path)"
+        ),
+        Parameter(
+            "use_sudo",
+            help_str="use sudo to perform the dump (yes/no)",
+            converter=bool_setting,
+        ),
+        Parameter(
+            "data_directory",
+            help_str="your LDAP base (if you want to restrict the dump)",
+        ),
+        Parameter(
+            "ldap_base", help_str="your LDAP base dn (if you want to restrict the dump)"
+        ),
+        Parameter("database", help_str="database number (default: 1)", converter=int),
+        Parameter(
+            "dump_executable",
+            converter=check_executable,
+            help_str='path of the slapcat executable (default: "slapcat")',
+        ),
+        Parameter(
+            "restore_executable",
+            converter=check_executable,
+            help_str='path of the slapadd executable (default: "slapadd")',
+        ),
     ]
 
-    def __init__(self, name, collect_point, destination_path='ldap.ldif', dump_executable='slapcat',
-                 use_sudo=False, restore_executable='slapadd', database=1, ldap_base=None, **kwargs):
+    def __init__(
+        self,
+        name,
+        collect_point,
+        destination_path="ldap.ldif",
+        dump_executable="slapcat",
+        use_sudo=False,
+        restore_executable="slapadd",
+        database=1,
+        ldap_base=None,
+        **kwargs
+    ):
         super(Ldap, self).__init__(name, collect_point, **kwargs)
         self.destination_path = destination_path
         self.dump_executable = dump_executable
@@ -282,74 +408,109 @@ class Ldap(Source):
         self.database = database
 
     def backup(self):
-        filename = os.path.join(self.collect_point.import_data_path, self.destination_path)
+        filename = os.path.join(
+            self.collect_point.import_data_path, self.destination_path
+        )
         self.ensure_dir(filename, parent=True)
         cmd = []
         if self.use_sudo:
-            cmd += ['sudo']
+            cmd += ["sudo"]
         cmd += [self.dump_executable]
         if self.ldap_base:
-            cmd += ['-b', self.ldap_base]
-        cmd += ['-n', str(self.database)]
+            cmd += ["-b", self.ldap_base]
+        cmd += ["-n", str(self.database)]
         self.execute_command(cmd)
-        if not self.can_execute_command(cmd + ['>', filename]):
+        if not self.can_execute_command(cmd + [">", filename]):
             filename = os.devnull  # run the dump even in dry mode
-        with open(filename, 'wb') as fd:
+        with open(filename, "wb") as fd:
             p = subprocess.Popen(cmd, stdout=fd, stderr=self.stderr)
             p.communicate()
 
     def restore(self):
-        filename = os.path.join(self.collect_point.import_data_path, self.destination_path)
+        filename = os.path.join(
+            self.collect_point.import_data_path, self.destination_path
+        )
         if not os.path.isfile(filename):
             return
         prefix = []
         if self.use_sudo:
-            prefix += ['sudo']
+            prefix += ["sudo"]
         # identify the database folder
-        p = subprocess.Popen(prefix + [self.dump_executable, '-n', '0'], stdout=subprocess.PIPE, stderr=self.stderr)
+        p = subprocess.Popen(
+            prefix + [self.dump_executable, "-n", "0"],
+            stdout=subprocess.PIPE,
+            stderr=self.stderr,
+        )
         stdout, __ = p.communicate()
-        database_folder = self.get_database_folder(io.BytesIO(stdout), str(self.database))
+        database_folder = self.get_database_folder(
+            io.BytesIO(stdout), str(self.database)
+        )
         if database_folder is None:
-            raise IOError('Unable to find database folder for database %s' % self.database)
+            raise IOError(
+                "Unable to find database folder for database %s" % self.database
+            )
         stat_info = os.stat(database_folder)
         uid = stat_info.st_uid
         gid = stat_info.st_gid
         user = pwd.getpwuid(uid)[0]
         group = grp.getgrgid(gid)[0]
 
-        self.execute_command(prefix + ['service', 'slapd', 'stop'])
-        self.execute_command(prefix + ['rm', '-rf', database_folder])
-        self.execute_command(prefix + ['mkdir', '-p', database_folder])
-        self.execute_command(prefix + [self.restore_executable, '-l', filename, ])
-        self.execute_command(prefix + ['chown', '-R', '%s:%s' % (user, group), database_folder])
-        self.execute_command(prefix + ['service', 'slapd', 'start'])
+        self.execute_command(prefix + ["service", "slapd", "stop"])
+        self.execute_command(prefix + ["rm", "-rf", database_folder])
+        self.execute_command(prefix + ["mkdir", "-p", database_folder])
+        self.execute_command(prefix + [self.restore_executable, "-l", filename])
+        self.execute_command(
+            prefix + ["chown", "-R", "%s:%s" % (user, group), database_folder]
+        )
+        self.execute_command(prefix + ["service", "slapd", "start"])
 
     @staticmethod
     def get_database_folder(ldif_config, database_number):
         parser = LDIFParser(ldif_config)
-        regexp = re.compile('^olcDatabase=\{%s\}(.*),cn=config$' % database_number)
+        regexp = re.compile("^olcDatabase=\{%s\}(.*),cn=config$" % database_number)
         for dn, entry in parser.parse():
             if not regexp.match(dn):
                 continue
-            return entry.get('olcDbDirectory', [None])[0]
+            return entry.get("olcDbDirectory", [None])[0]
         return None
 
 
 class Dovecot(Source):
     """Dump a OpenLDAP database using slapcat to a filename in the collect point. Require the 'doveadm' utility."""
+
     parameters = Source.parameters + [
-        Parameter('destination_path', help_str='dirname of the dump (not an absolute path)'),
-        Parameter('mailbox', help_str='only sync this mailbox name'),
-        Parameter('socket', help_str='The option\'s argument is either an absolute path to a local UNIX domain socket,'
-                                     ' or a hostname and port (hostname:port), in order to connect a remote host via a'
-                                     ' TCP socket.'),
-        Parameter('user_mask', help_str='only sync this user ("*" and "?" wildcards can be used).'),
-        Parameter('dump_executable', converter=check_executable,
-                  help_str='path of the doveadm executable (default: "doveadm")'),
+        Parameter(
+            "destination_path", help_str="dirname of the dump (not an absolute path)"
+        ),
+        Parameter("mailbox", help_str="only sync this mailbox name"),
+        Parameter(
+            "socket",
+            help_str="The option's argument is either an absolute path to a local UNIX domain socket,"
+            " or a hostname and port (hostname:port), in order to connect a remote host via a"
+            " TCP socket.",
+        ),
+        Parameter(
+            "user_mask",
+            help_str='only sync this user ("*" and "?" wildcards can be used).',
+        ),
+        Parameter(
+            "dump_executable",
+            converter=check_executable,
+            help_str='path of the doveadm executable (default: "doveadm")',
+        ),
     ]
 
-    def __init__(self, name, collect_point, destination_path='dovecot', dump_executable='doveadm',
-                 mailbox=None, user_mask=None, socket=None, **kwargs):
+    def __init__(
+        self,
+        name,
+        collect_point,
+        destination_path="dovecot",
+        dump_executable="doveadm",
+        mailbox=None,
+        user_mask=None,
+        socket=None,
+        **kwargs
+    ):
         super(Dovecot, self).__init__(name, collect_point, **kwargs)
         self.socket = socket
         self.destination_path = destination_path
@@ -364,19 +525,21 @@ class Dovecot(Source):
         self.perform_action(restore=True)
 
     def perform_action(self, restore):
-        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
+        dirname = os.path.join(
+            self.collect_point.import_data_path, self.destination_path
+        )
         self.ensure_dir(dirname)
-        cmd = [self.dump_executable, 'backup', ]
+        cmd = [self.dump_executable, "backup"]
         if restore:
-            cmd += ['-R']
+            cmd += ["-R"]
         if self.mailbox:
-            cmd += ['-m', self.mailbox, ]
+            cmd += ["-m", self.mailbox]
         if self.socket:
-            cmd += ['-S', self.socket]
+            cmd += ["-S", self.socket]
         if self.user_mask is None:
-            cmd += ['-A']
+            cmd += ["-A"]
         else:
-            cmd += ['-u', self.user_mask]
+            cmd += ["-u", self.user_mask]
         cmd += [dirname]
         self.execute_command(cmd)
 
@@ -386,19 +549,47 @@ class RemoteFiles(Source):
     The destination is a folder inside the collect point.
     Require 'rsync'.
     """
+
     parameters = Source.parameters + [
-        Parameter('source_url', required=True, help_str='synchronize data from this URL. Must ends by a folder name'),
-        Parameter('destination_path', help_str='destination folder (like "./remote-files")', required=True),
-        Parameter('private_key', help_str='private key or certificate associated to \'remote_url\''),
-        Parameter('ca_cert', help_str='CA certificate associated to \'remote_url\'. '
-                                      'Set to "any" for not checking certificates'),
-        Parameter('ssh_options', help_str='SSH options associated to \'url\''),
-        Parameter('keytab', converter=check_file,
-                  help_str='absolute path of the keytab file (for Kerberos authentication)'),
+        Parameter(
+            "source_url",
+            required=True,
+            help_str="synchronize data from this URL. Must ends by a folder name",
+        ),
+        Parameter(
+            "destination_path",
+            help_str='destination folder (like "./remote-files")',
+            required=True,
+        ),
+        Parameter(
+            "private_key",
+            help_str="private key or certificate associated to 'remote_url'",
+        ),
+        Parameter(
+            "ca_cert",
+            help_str="CA certificate associated to 'remote_url'. "
+            'Set to "any" for not checking certificates',
+        ),
+        Parameter("ssh_options", help_str="SSH options associated to 'url'"),
+        Parameter(
+            "keytab",
+            converter=check_file,
+            help_str="absolute path of the keytab file (for Kerberos authentication)",
+        ),
     ]
 
-    def __init__(self, name, collect_point, source_url='', destination_path='', keytab=None, private_key=None,
-                 ca_cert=None, ssh_options=None, **kwargs):
+    def __init__(
+        self,
+        name,
+        collect_point,
+        source_url="",
+        destination_path="",
+        keytab=None,
+        private_key=None,
+        ca_cert=None,
+        ssh_options=None,
+        **kwargs
+    ):
         """
         :param collect_point: collect point where files are stored
         :param source_url: remote folders to add to the collect point
@@ -414,16 +605,26 @@ class RemoteFiles(Source):
 
     def backup(self):
         backend = self._get_backend()
-        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
+        dirname = os.path.join(
+            self.collect_point.import_data_path, self.destination_path
+        )
         backend.sync_dir_to_local(dirname)
 
     def _get_backend(self):
-        backend = get_backend(self.collect_point, self.source_url, keytab=self.keytab, private_key=self.private_key,
-                              ca_cert=self.ca_cert, ssh_options=self.ssh_options,
-                              config=self.config)
+        backend = get_backend(
+            self.collect_point,
+            self.source_url,
+            keytab=self.keytab,
+            private_key=self.private_key,
+            ca_cert=self.ca_cert,
+            ssh_options=self.ssh_options,
+            config=self.config,
+        )
         return backend
 
     def restore(self):
         backend = self._get_backend()
-        dirname = os.path.join(self.collect_point.import_data_path, self.destination_path)
+        dirname = os.path.join(
+            self.collect_point.import_data_path, self.destination_path
+        )
         backend.sync_dir_from_local(dirname)

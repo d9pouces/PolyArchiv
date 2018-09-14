@@ -92,7 +92,9 @@ PROPFIND_DATA = """<?xml version="1.0" encoding="utf-8" ?>
 
 class WebdavTest(TestCase):
     def test_read_propfind(self):
-        url = 'http://www.foo.bar/container/'
-        dirnames, filenames = HTTPRequestsStorageBackend.analyze_propfind(url, PROPFIND_DATA)
-        self.assertEqual(['collection'], dirnames)
-        self.assertEqual(['front.html'], filenames)
+        url = "http://www.foo.bar/container/"
+        dirnames, filenames = HTTPRequestsStorageBackend.analyze_propfind(
+            url, PROPFIND_DATA
+        )
+        self.assertEqual(["collection"], dirnames)
+        self.assertEqual(["front.html"], filenames)

@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 
 import unittest
 
-__author__ = 'Matthieu Gallet'
+__author__ = "Matthieu Gallet"
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -7,16 +7,16 @@ import pwd
 
 from polyarchiv.utils import text_type
 
-__author__ = 'Matthieu Gallet'
+__author__ = "Matthieu Gallet"
 
 
 def bool_setting(value):
-    return text_type(value).lower() in {'1', 'ok', 'yes', 'true', 'on'}
+    return text_type(value).lower() in {"1", "ok", "yes", "true", "on"}
 
 
 def check_username(value):
     if value not in {x[0] for x in pwd.getpwall()}:
-        raise ValueError('%s is not a valid user' % value)
+        raise ValueError("%s is not a valid user" % value)
     return value
 
 
@@ -25,7 +25,7 @@ def str_or_none(text):
 
 
 def str_or_blank(value):
-    return '' if value is None else text_type(value)
+    return "" if value is None else text_type(value)
 
 
 def strip_split(value):
@@ -46,7 +46,7 @@ def strip_split(value):
     :rtype:
     """
     if value:
-        return [x.strip() for x in value.split(',') if x.strip()]
+        return [x.strip() for x in value.split(",") if x.strip()]
     return []
 
 
@@ -55,7 +55,7 @@ def check_directory(value):
     """
     if os.path.isdir(value):
         return value
-    raise ValueError('%s is not a valid directory' % value)
+    raise ValueError("%s is not a valid directory" % value)
 
 
 def check_file(value):
@@ -63,18 +63,18 @@ def check_file(value):
     """
     if os.path.isfile(value):
         return value
-    raise ValueError('%s is not a valid file' % value)
+    raise ValueError("%s is not a valid file" % value)
 
 
 def check_executable(value):
     """TODO check if value is a valid executable"""
     if os.path.isfile(value):
         return True
-    path = os.environ.get('PATH', '')
-    for search_dir in path.split(':'):
+    path = os.environ.get("PATH", "")
+    for search_dir in path.split(":"):
         if os.path.isfile(os.path.join(search_dir, value)):
             return True
-    raise ValueError('Executable \'%s\' not found in $PATH=%s' % (value, path))
+    raise ValueError("Executable '%s' not found in $PATH=%s" % (value, path))
 
 
 class CheckOption(object):
@@ -85,14 +85,26 @@ class CheckOption(object):
     def __call__(self, value):
         if value in self.valid_options:
             return value
-        raise ValueError('%s is not valid. Please select one of %s' % (value, ', '.join(self.valid_options)))
+        raise ValueError(
+            "%s is not valid. Please select one of %s"
+            % (value, ", ".join(self.valid_options))
+        )
 
 
 class Parameter(object):
     """class that maps an option in a .ini file to a argument name."""
 
-    def __init__(self, arg_name, option_name=None, converter=str, to_str=str_or_blank, help_str=None, required=False,
-                 default_str_value=None, checks=None):
+    def __init__(
+        self,
+        arg_name,
+        option_name=None,
+        converter=str,
+        to_str=str_or_blank,
+        help_str=None,
+        required=False,
+        default_str_value=None,
+        checks=None,
+    ):
         """:param arg_name: the name of parameter passed to the engine
         :type arg_name: `str` or `unicode`
         :param option_name: option name in a .ini file

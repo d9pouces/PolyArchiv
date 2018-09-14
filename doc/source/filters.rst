@@ -36,8 +36,8 @@ Imagine you want to encrypt your backup files, and you have two backup points an
 First case
 ----------
 
-Example: you must apply the encryption filter to all collect points you wan to protect.
-Original (not crypted!) data are still available on the disk but not used by backup points.
+Example: you apply the encryption filter to all collect points you want to protect.
+Original (not encrypted!) data are still available on the disk but not present on backup points: only encrypted data are.
 
 Second case
 -----------
@@ -50,7 +50,7 @@ Applying filters
 ----------------
 
 You only have to add a `[filter "name_of_the_filter"]` section to your config file.
-Of course, you can use several filters, there are applied in the order of apparition in the config file.
+Of course, you can use several filters and there are processed in the apparition order in the config file.
 
 .. code-block:: ini
   :caption: /etc/polyarchiv/my-collect-point-1.collect

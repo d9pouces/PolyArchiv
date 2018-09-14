@@ -4,7 +4,7 @@ import os
 import time
 import errno
 
-__author__ = 'Matthieu Gallet'
+__author__ = "Matthieu Gallet"
 
 
 # noinspection PyPep8Naming

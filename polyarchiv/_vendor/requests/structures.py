@@ -7,16 +7,14 @@ requests.structures
 Data structures that power Requests.
 """
 
-import collections
-
-from .compat import OrderedDict
+from .compat import OrderedDict, Mapping, MutableMapping
 
 
-class CaseInsensitiveDict(collections.MutableMapping):
+class CaseInsensitiveDict(MutableMapping):
     """A case-insensitive ``dict``-like object.
 
     Implements all methods and operations of
-    ``collections.MutableMapping`` as well as dict's ``copy``. Also
+    ``MutableMapping`` as well as dict's ``copy``. Also
     provides ``lower_items``.
 
     All keys are expected to be strings. The structure remembers the
@@ -64,14 +62,10 @@ class CaseInsensitiveDict(collections.MutableMapping):
 
     def lower_items(self):
         """Like iteritems(), but with all lowercase keys."""
-        return (
-            (lowerkey, keyval[1])
-            for (lowerkey, keyval)
-            in self._store.items()
-        )
+        return ((lowerkey, keyval[1]) for (lowerkey, keyval) in self._store.items())
 
     def __eq__(self, other):
-        if isinstance(other, collections.Mapping):
+        if isinstance(other, Mapping):
             other = CaseInsensitiveDict(other)
         else:
             return NotImplemented
@@ -94,7 +88,7 @@ class LookupDict(dict):
         super(LookupDict, self).__init__()
 
     def __repr__(self):
-        return '<lookup \'%s\'>' % (self.name)
+        return "<lookup '%s'>" % (self.name)
 
     def __getitem__(self, key):
         # We allow fall-through here, so values default to None

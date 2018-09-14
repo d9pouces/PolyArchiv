@@ -16,10 +16,11 @@ try:
 except ImportError:
     # noinspection PyCompatibility,PyUnresolvedReferences
     from urlparse import urlparse
+
     # noinspection PyUnresolvedReferences
     from urllib import urlencode, quote_plus
 
-__author__ = 'Matthieu Gallet'
+__author__ = "Matthieu Gallet"
 
 if sys.version_info[0] == 3:
     text_type = str
@@ -29,26 +30,26 @@ else:
     text_type = unicode
 
 
-DEFAULT_EMAIL = '%s@%s' % (getpass.getuser(), socket.getfqdn())
+DEFAULT_EMAIL = "%s@%s" % (getpass.getuser(), socket.getfqdn())
 DEFAULT_USERNAME = getpass.getuser()
 
 
 def smart_quote(y):
-    if y in ('>', '<', '2>'):
+    if y in (">", "<", "2>"):
         return y
     return pipes.quote(y)
 
 
 def command_to_text(text):
     if isinstance(text, list):
-        text = ' '.join([smart_quote(x) for x in text])
+        text = " ".join([smart_quote(x) for x in text])
     return text
 
 
 def get_input_text(prompt):
-    encoding = 'utf-8'
+    encoding = "utf-8"
     # noinspection PyTypeChecker
-    if hasattr(sys.stdin, 'encoding') and sys.stdin.encoding:
+    if hasattr(sys.stdin, "encoding") and sys.stdin.encoding:
         encoding = sys.stdin.encoding
     if sys.version_info[0] == 2:
         # noinspection PyCompatibility,PyUnresolvedReferences
@@ -68,7 +69,7 @@ def ensure_dir(dirname, parent=False):
     if parent:
         dirname = os.path.dirname(dirname)
     if os.path.exists(dirname) and not os.path.isdir(dirname):
-        raise IOError('%s exists but is not a directory' % dirname)
+        raise IOError("%s exists but is not a directory" % dirname)
     elif os.path.isdir(dirname):
         return
     os.makedirs(dirname)
@@ -86,22 +87,31 @@ def import_string(import_name, silent=False):
     :return: imported object
     """
     try:
-        if ':' in import_name:
-            module, obj = import_name.split(':', 1)
-        elif '.' in import_name:
-            items = import_name.split('.')
-            module = '.'.join(items[:-1])
+        if ":" in import_name:
+            module, obj = import_name.split(":", 1)
+        elif "." in import_name:
+            items = import_name.split(".")
+            module = ".".join(items[:-1])
             obj = items[-1]
         else:
             return __import__(import_name)
         return getattr(__import__(module, None, None, [obj]), obj)
     except (ImportError, AttributeError):
         if not silent:
-            raise ImportError('Unable to import %s' % import_name)
+            raise ImportError("Unable to import %s" % import_name)
 
 
-def before_time_replace(dt, year=None, month=None, day=None, dow=None, hour=None, minute=None, second=None,
-                        microsecond=None):
+def before_time_replace(
+    dt,
+    year=None,
+    month=None,
+    day=None,
+    dow=None,
+    hour=None,
+    minute=None,
+    second=None,
+    microsecond=None,
+):
     """Return the given `datetime.datetime` object
 
     >>> dt = datetime.datetime(2016, 6, 15, 12, 30, 30, 500)
@@ -135,16 +145,30 @@ def before_time_replace(dt, year=None, month=None, day=None, dow=None, hour=None
     """
     assert isinstance(dt, datetime.datetime)
     if microsecond is not None:
-        offset = -datetime.timedelta(seconds=1) if dt.microsecond < microsecond else datetime.timedelta(0)
+        offset = (
+            -datetime.timedelta(seconds=1)
+            if dt.microsecond < microsecond
+            else datetime.timedelta(0)
+        )
         dt = dt.replace(microsecond=microsecond) + offset
     if second is not None:
-        offset = -datetime.timedelta(minutes=1) if dt.second < second else datetime.timedelta(0)
+        offset = (
+            -datetime.timedelta(minutes=1)
+            if dt.second < second
+            else datetime.timedelta(0)
+        )
         dt = dt.replace(second=second) + offset
     if minute is not None:
-        offset = -datetime.timedelta(hours=1) if dt.minute < minute else datetime.timedelta(0)
+        offset = (
+            -datetime.timedelta(hours=1)
+            if dt.minute < minute
+            else datetime.timedelta(0)
+        )
         dt = dt.replace(minute=minute) + offset
     if hour is not None:
-        offset = -datetime.timedelta(days=1) if dt.hour < hour else datetime.timedelta(0)
+        offset = (
+            -datetime.timedelta(days=1) if dt.hour < hour else datetime.timedelta(0)
+        )
         dt = dt.replace(hour=hour) + offset
     if day is not None:
         if dt.day > day:
@@ -197,32 +221,43 @@ def get_is_time_elapsed(fmt):
     :return:
     """
     if not fmt:
-        fmt = ''
-    if re.match('^\d+$', fmt):
+        fmt = ""
+    if re.match("^\d+$", fmt):
         # number => number of seconds
-        return lambda current_time, previous_time: previous_time is None or \
-                                                   (current_time - previous_time).total_seconds() > int(fmt)
-    matcher = re.match('^monthly:(\d+)$', fmt)
+        return lambda current_time, previous_time: previous_time is None or (
+            current_time - previous_time
+        ).total_seconds() > int(fmt)
+    matcher = re.match("^monthly:(\d+)$", fmt)
     if matcher:
         x = int(matcher.group(1))
-        return lambda current_time, previous_time: previous_time is None or \
-            previous_time < before_time_replace(current_time, day=x)
-    matcher = re.match('^weekly:(\d+)$', fmt)
+        return (
+            lambda current_time, previous_time: previous_time is None
+            or previous_time < before_time_replace(current_time, day=x)
+        )
+    matcher = re.match("^weekly:(\d+)$", fmt)
     if matcher:
         x = int(matcher.group(1))
-        return lambda current_time, previous_time: previous_time is None or \
-            previous_time < before_time_replace(current_time, dow=x)
-    elif fmt == 'weekly':
-        return lambda current_time, previous_time: previous_time is None or \
-                                                   (current_time - previous_time).total_seconds() > 7 * 86400
-    matcher = re.match('^daily:(\d+)$', fmt)
+        return (
+            lambda current_time, previous_time: previous_time is None
+            or previous_time < before_time_replace(current_time, dow=x)
+        )
+    elif fmt == "weekly":
+        return (
+            lambda current_time, previous_time: previous_time is None
+            or (current_time - previous_time).total_seconds() > 7 * 86400
+        )
+    matcher = re.match("^daily:(\d+)$", fmt)
     if matcher:
         x = int(matcher.group(1))
-        return lambda current_time, previous_time: previous_time is None or \
-            previous_time < before_time_replace(current_time, hour=x)
-    elif fmt == 'daily':
-        return lambda current_time, previous_time: previous_time is None or \
-                                                   (current_time - previous_time).total_seconds() > 86400
+        return (
+            lambda current_time, previous_time: previous_time is None
+            or previous_time < before_time_replace(current_time, hour=x)
+        )
+    elif fmt == "daily":
+        return (
+            lambda current_time, previous_time: previous_time is None
+            or (current_time - previous_time).total_seconds() > 86400
+        )
     return lambda current_time, previous_time: True
 
 
@@ -235,9 +270,10 @@ class cached_property(object):
     Optional ``name`` argument allows you to make cached properties of other
     methods. (e.g.  url = cached_property(get_absolute_url, name='url') )
     """
+
     def __init__(self, func, name=None):
         self.func = func
-        self.__doc__ = getattr(func, '__doc__')
+        self.__doc__ = getattr(func, "__doc__")
         self.name = name or func.__name__
 
     # noinspection PyUnusedLocal,PyShadowingBuiltins
@@ -292,12 +328,12 @@ def normalize_ssh_url(url):
     :param url:
     :return:
     """
-    matcher = re.match(r'(?P<username>\w+@|)(?P<hostname>\w+\.[^:]+):(?P<path>.+)', url)
+    matcher = re.match(r"(?P<username>\w+@|)(?P<hostname>\w+\.[^:]+):(?P<path>.+)", url)
     if matcher:
         (username, hostname, path) = matcher.groups()
-        if not path.startswith('/'):
-            path = '/' + path
-        return 'ssh://%s%s%s' % (username, hostname, path)
+        if not path.startswith("/"):
+            path = "/" + path
+        return "ssh://%s%s%s" % (username, hostname, path)
     return url
 
 
@@ -316,18 +352,18 @@ def url_auth_split(url):
     :param url:
     :return:
     """
-    if url.startswith('/'):
-        url = 'file://' + url
+    if url.startswith("/"):
+        url = "file://" + url
     parsed_url = urlparse(url)
-    scheme = parsed_url.scheme or ''
+    scheme = parsed_url.scheme or ""
     if scheme:
-        scheme += '://'
+        scheme += "://"
     else:
-        scheme = ''
+        scheme = ""
     username = parsed_url.username or None
     password = parsed_url.password or None
-    port = ':%s' % parsed_url.port if parsed_url.port else ''
-    new_url = '%s%s%s%s' % (scheme, parsed_url.hostname or '', port, parsed_url.path)
+    port = ":%s" % parsed_url.port if parsed_url.port else ""
+    new_url = "%s%s%s%s" % (scheme, parsed_url.hostname or "", port, parsed_url.path)
     return new_url, username, password
 
 
@@ -353,8 +389,8 @@ class FileContentMonitor(object):
         if self.fd is None:
             return None
         if self.end_index == self.start_index:
-            return b''
-        fd = os.fdopen(os.dup(self.fd.fileno()), mode='rb')
+            return b""
+        fd = os.fdopen(os.dup(self.fd.fileno()), mode="rb")
         fd.seek(self.start_index)
         content = fd.read(self.end_index - self.start_index)
         fd.close()
@@ -362,7 +398,7 @@ class FileContentMonitor(object):
             self.fd.close()
         return content
 
-    def get_text_content(self, close=False, encoding='utf-8'):
+    def get_text_content(self, close=False, encoding="utf-8"):
         content = self.get_content(close=close)
         if content is None:
             return content
@@ -373,7 +409,7 @@ class FileContentMonitor(object):
             return
         if dst_fd and self.end_index > self.start_index:
             dst_fd.flush()
-            fd = os.fdopen(os.dup(self.fd.fileno()), mode='rb')
+            fd = os.fdopen(os.dup(self.fd.fileno()), mode="rb")
             fd.seek(self.start_index)
             index = self.start_index
             while index < self.end_index:
@@ -389,17 +425,19 @@ def base_variables(use_constants=False):
     common_values = {}
     if use_constants:
         now = datetime.datetime(2016, 1, 1, 0, 0, 0)
-        username = 'polyarchiv'
-        fqdn = 'localhost'
+        username = "polyarchiv"
+        fqdn = "localhost"
     else:
         now = datetime.datetime.now()
         # noinspection PyBroadException
         try:
             fqdn = socket.getfqdn()
         except Exception:
-            fqdn = 'localhost'
+            fqdn = "localhost"
         username = getpass.getuser()
-    common_values.update({'fqdn': fqdn, 'hostname': fqdn.partition('.')[0], 'username': username})
-    common_values.update({x: now.strftime('%' + x) for x in 'aAwdbBmyYHIpMSfzZjUWcxX'})
+    common_values.update(
+        {"fqdn": fqdn, "hostname": fqdn.partition(".")[0], "username": username}
+    )
+    common_values.update({x: now.strftime("%" + x) for x in "aAwdbBmyYHIpMSfzZjUWcxX"})
     # ^ all available values for datetime
     return common_values

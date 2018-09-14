@@ -18,11 +18,11 @@ class TestCopyTree(TestCase):
             dst_dir = fd.name
         os.makedirs(src_dir)
         os.makedirs(dst_dir)
-        os.makedirs(os.path.join(src_dir, 'dir1'))
-        with codecs.open(os.path.join(src_dir, 'file1'), 'w', encoding='utf-8') as fd:
-            fd.write('file1')
-        path = os.path.join(dst_dir, 'file2')
-        open(path, 'w').close()
+        os.makedirs(os.path.join(src_dir, "dir1"))
+        with codecs.open(os.path.join(src_dir, "file1"), "w", encoding="utf-8") as fd:
+            fd.write("file1")
+        path = os.path.join(dst_dir, "file2")
+        open(path, "w").close()
         os.chmod(path, 0o400)
         copytree(src_dir, dst_dir)
         shutil.rmtree(src_dir)

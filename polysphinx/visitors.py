@@ -5,14 +5,14 @@ from collections import OrderedDict
 
 from polyarchiv.conf import Parameter
 
-__author__ = 'Matthieu Gallet'
+__author__ = "Matthieu Gallet"
 
 
 def render_engines_html(self, node, engines, options):
     verbose = True
-    cls = ''
-    if options.get('class'):
-        cls = ' class="%s"' % options['class']
+    cls = ""
+    if options.get("class"):
+        cls = ' class="%s"' % options["class"]
 
     content = "<dl %s>" % cls
     names = [x for x in sorted(engines.keys())]
@@ -25,32 +25,42 @@ def render_engines_html(self, node, engines, options):
         return footnotes_indices[x]
 
     def format_help(name_, text):
-        if '[*]' in text:
-            index_ = note_index('*')
-            text = text.replace('[*]', '<a href="#note-%s" title="this parameter can use variables"><sup>%s</sup></a>'
-                                % (index_, index_))
-        if '[**]' in text:
-            index_ = note_index('**')
-            text = text.replace('[**]', '<a href="#note-%s" title="this parameter can use time/host-independent '
-                                        'variables"><sup>%s</sup></a>' % (index_, index_))
-        if name_.startswith('metadata_'):
-            index_ = note_index('****')
-            text += '<a href="#note-%s" title="please check the documentation about metadata"><sup>%s</sup></a>' \
-                    % (index_, index_)
-        if name_.endswith('_url'):
-            index_ = note_index('***')
-            text += '<a href="#note-%s" title="please check the documentation about URLs"><sup>%s</sup></a>' \
-                    % (index_, index_)
+        if "[*]" in text:
+            index_ = note_index("*")
+            text = text.replace(
+                "[*]",
+                '<a href="#note-%s" title="this parameter can use variables"><sup>%s</sup></a>'
+                % (index_, index_),
+            )
+        if "[**]" in text:
+            index_ = note_index("**")
+            text = text.replace(
+                "[**]",
+                '<a href="#note-%s" title="this parameter can use time/host-independent '
+                'variables"><sup>%s</sup></a>' % (index_, index_),
+            )
+        if name_.startswith("metadata_"):
+            index_ = note_index("****")
+            text += (
+                '<a href="#note-%s" title="please check the documentation about metadata"><sup>%s</sup></a>'
+                % (index_, index_)
+            )
+        if name_.endswith("_url"):
+            index_ = note_index("***")
+            text += (
+                '<a href="#note-%s" title="please check the documentation about URLs"><sup>%s</sup></a>'
+                % (index_, index_)
+            )
         return text
 
     for name in names:
         engine_cls = engines[name]
         if name:
-            content += '<dt><h3>engine=%s</h3></dt>\n' % name
+            content += "<dt><h3>engine=%s</h3></dt>\n" % name
         if engine_cls.__doc__ and engine_cls.__doc__.strip():
-            content += '<dd>%s' % engine_cls.__doc__.strip()
+            content += "<dd>%s" % engine_cls.__doc__.strip()
         if verbose:
-            content += '<p><b>List of available parameters:</b><ul>'
+            content += "<p><b>List of available parameters:</b><ul>"
             # noinspection PyUnresolvedReferences
             for parameter in sorted(engine_cls.parameters, key=lambda x: x.option_name):
                 assert isinstance(parameter, Parameter)
@@ -60,32 +70,45 @@ def render_engines_html(self, node, engines, options):
                     style = 'style="color: #555;"'
                 if parameter.help_str:
                     help_str = format_help(parameter.option_name, parameter.help_str)
-                    content += '<li><b %s>%s</b>: %s</li>' % (style, parameter.option_name, help_str)
+                    content += "<li><b %s>%s</b>: %s</li>" % (
+                        style,
+                        parameter.option_name,
+                        help_str,
+                    )
                 else:
-                    content += '<li><b %s>%s</b></li>' % (style, parameter.option_name)
-            content += '</ul></p>'
+                    content += "<li><b %s>%s</b></li>" % (style, parameter.option_name)
+            content += "</ul></p>"
 
-        content += '</dd>'
+        content += "</dd>"
     content += "</dl>"
     if footnotes_indices:
-        content += '<ol>'
+        content += "<ol>"
         for footnote, index in footnotes_indices.items():
-            if footnote == '*':
-                content += '<li id="note-%s">this parameter can use variables</li>' % index
-            elif footnote == '**':
-                content += '<li id="note-%s">this parameter can use time/host-independent variables</li>' % index
-            elif footnote == '***':
-                content += '<li id="note-%s">please only use file/http/https/ssh URLs. If a username and a password ' \
-                           'are required, their must be provided in the URL.</li>' % index
-            elif footnote == '****':
-                content += '<li id="note-%s">Metadata should be used if some parameters use time- or host-dependent' \
-                           ' variables. This is required for restore operation.</li>' % index
-        content += '</ol>'
+            if footnote == "*":
+                content += (
+                    '<li id="note-%s">this parameter can use variables</li>' % index
+                )
+            elif footnote == "**":
+                content += (
+                    '<li id="note-%s">this parameter can use time/host-independent variables</li>'
+                    % index
+                )
+            elif footnote == "***":
+                content += (
+                    '<li id="note-%s">please only use file/http/https/ssh URLs. If a username and a password '
+                    "are required, their must be provided in the URL.</li>" % index
+                )
+            elif footnote == "****":
+                content += (
+                    '<li id="note-%s">Metadata should be used if some parameters use time- or host-dependent'
+                    " variables. This is required for restore operation.</li>" % index
+                )
+        content += "</ol>"
     self.body.append(content)
 
 
 def visit_folder_node(self, node):
-    render_engines_html(self, node, node['engines'], node['options'])
+    render_engines_html(self, node, node["engines"], node["options"])
 
 
 def depart_folder_node(self, node):

@@ -20,7 +20,7 @@ class TestBackend(FileTestCase):
 
     def setUp(self):
         super(TestBackend, self).setUp()
-        self.backup_point = CommonBackupPoint('remote', command_display=True)
+        self.backup_point = CommonBackupPoint("remote", command_display=True)
 
     def test_sync_file(self):
         if self.complete_file_url is None:
@@ -29,9 +29,9 @@ class TestBackend(FileTestCase):
         backend.sync_file_from_local(__file__)
         backend.sync_file_to_local(self.copy_file_pth)
         backend.delete_on_distant()
-        with open(__file__, 'rb') as fd:
+        with open(__file__, "rb") as fd:
             orig = fd.read()
-        with open(self.copy_file_pth, 'rb') as fd:
+        with open(self.copy_file_pth, "rb") as fd:
             copy = fd.read()
         self.assertEqual(orig, copy)
         if self.complete_file_path:
@@ -50,21 +50,21 @@ class TestBackend(FileTestCase):
 
 
 class TestFileBackend(TestBackend):
-    complete_file_url = 'file:///home/vagrant/backends/files/test.py'
-    complete_file_path = '/home/vagrant/backends/files/test.py'
-    complete_dir_url = 'file:///home/vagrant/backends/files'
-    complete_dir_path = '/home/vagrant/backends/files/'
+    complete_file_url = "file:///home/vagrant/backends/files/test.py"
+    complete_file_path = "/home/vagrant/backends/files/test.py"
+    complete_dir_url = "file:///home/vagrant/backends/files"
+    complete_dir_path = "/home/vagrant/backends/files/"
 
 
 class TestSSHBackend(TestBackend):
-    complete_file_url = 'ssh://localhost/home/vagrant/backends/ssh/test.py'
-    complete_file_path = '/home/vagrant/backends/ssh/test.py'
-    complete_dir_url = 'ssh://localhost/home/vagrant/backends/ssh'
-    complete_dir_path = '/home/vagrant/backends/ssh/'
+    complete_file_url = "ssh://localhost/home/vagrant/backends/ssh/test.py"
+    complete_file_path = "/home/vagrant/backends/ssh/test.py"
+    complete_dir_url = "ssh://localhost/home/vagrant/backends/ssh"
+    complete_dir_path = "/home/vagrant/backends/ssh/"
 
 
 class TestWebdavBackend(TestBackend):
-    complete_file_url = 'http://testuser:toto@localhost:9012/webdav/file/test.py'
-    complete_file_path = '/var/www/backup_points/webdav/file/test.py'
-    complete_dir_url = 'http://testuser:toto@localhost:9012/webdav/dir/'
-    complete_dir_path = '/var/www/backup_points/webdav/dir'
+    complete_file_url = "http://testuser:toto@localhost:9012/webdav/file/test.py"
+    complete_file_path = "/var/www/backup_points/webdav/file/test.py"
+    complete_dir_url = "http://testuser:toto@localhost:9012/webdav/dir/"
+    complete_dir_path = "/var/www/backup_points/webdav/dir"

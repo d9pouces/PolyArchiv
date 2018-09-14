@@ -15,38 +15,40 @@ try:  # pragma: nocover
 except ImportError:  # pragma: nocover
     # noinspection PyCompatibility,PyUnresolvedReferences
     from urllib.parse import urlparse
+
     # noinspection PyUnresolvedReferences,PyCompatibility
     from urllib.request import urlopen
 
-__version__ = '3.2.0'
+__version__ = "3.2.0"
 
 __all__ = [
     # constants
-    'LDIF_PATTERN',
+    "LDIF_PATTERN",
     # classes
-    'LDIFWriter',
-    'LDIFParser',
+    "LDIFWriter",
+    "LDIFParser",
 ]
 
-log = logging.getLogger('ldif3')
+log = logging.getLogger("ldif3")
 
-ATTRTYPE_PATTERN = r'[\w;.-]+(;[\w_-]+)*'
+ATTRTYPE_PATTERN = r"[\w;.-]+(;[\w_-]+)*"
 ATTRVALUE_PATTERN = r'(([^,]|\\,)+|".*?")'
-ATTR_PATTERN = ATTRTYPE_PATTERN + r'[ ]*=[ ]*' + ATTRVALUE_PATTERN
-RDN_PATTERN = ATTR_PATTERN + r'([ ]*\+[ ]*' + ATTR_PATTERN + r')*[ ]*'
-DN_PATTERN = RDN_PATTERN + r'([ ]*,[ ]*' + RDN_PATTERN + r')*[ ]*'
-DN_REGEX = re.compile('^%s$' % DN_PATTERN)
+ATTR_PATTERN = ATTRTYPE_PATTERN + r"[ ]*=[ ]*" + ATTRVALUE_PATTERN
+RDN_PATTERN = ATTR_PATTERN + r"([ ]*\+[ ]*" + ATTR_PATTERN + r")*[ ]*"
+DN_PATTERN = RDN_PATTERN + r"([ ]*,[ ]*" + RDN_PATTERN + r")*[ ]*"
+DN_REGEX = re.compile("^%s$" % DN_PATTERN)
 
-LDIF_PATTERN = ('^((dn(:|::) %(DN_PATTERN)s)|(%(ATTRTYPE_PATTERN)'
-                's(:|::) .*)$)+' % vars())
+LDIF_PATTERN = (
+    "^((dn(:|::) %(DN_PATTERN)s)|(%(ATTRTYPE_PATTERN)" "s(:|::) .*)$)+" % vars()
+)
 
-MOD_OPS = ['add', 'delete', 'replace']
-CHANGE_TYPES = ['add', 'delete', 'modify', 'modrdn']
+MOD_OPS = ["add", "delete", "replace"]
+CHANGE_TYPES = ["add", "delete", "modify", "modrdn"]
 
 
 def is_dn(s):
     """Return True if s is a LDAP DN."""
-    if s == '':
+    if s == "":
         return True
     rm = DN_REGEX.match(s)
     return rm is not None and rm.group(0) == s
@@ -89,22 +91,23 @@ class LDIFParser(object):
     # noinspection PyMethodMayBeStatic
     def _strip_line_sep(self, s):
         """Strip trailing line separators from s, but no other whitespaces."""
-        if s[-2:] == b'\r\n':
+        if s[-2:] == b"\r\n":
             return s[:-2]
-        elif s[-1:] == b'\n':
+        elif s[-1:] == b"\n":
             return s[:-1]
         else:
             return s
 
     # noinspection PyDefaultArgument
     def __init__(
-            self,
-            input_file,
-            ignored_attr_types=[],
-            process_url_schemes=[],
-            line_sep=b'\n',
-            encoding='utf8',
-            strict=True):
+        self,
+        input_file,
+        ignored_attr_types=[],
+        process_url_schemes=[],
+        line_sep=b"\n",
+        encoding="utf8",
+        strict=True,
+    ):
         self._input_file = input_file
         self._process_url_schemes = lower(process_url_schemes)
         self._ignored_attr_types = lower(ignored_attr_types)
@@ -126,11 +129,11 @@ class LDIFParser(object):
             line = self._strip_line_sep(line)
 
             nextline = self._input_file.readline()
-            while nextline and nextline[:1] == b' ':
+            while nextline and nextline[:1] == b" ":
                 line += self._strip_line_sep(nextline)[1:]
                 nextline = self._input_file.readline()
 
-            if not line.startswith(b'#'):
+            if not line.startswith(b"#"):
                 yield line
             line = nextline
 
@@ -150,23 +153,23 @@ class LDIFParser(object):
 
     def _parse_attr(self, line):
         """Parse a single attribute type/value pair."""
-        colon_pos = line.index(b':')
-        attr_type = line[0:colon_pos].decode('ascii')
+        colon_pos = line.index(b":")
+        attr_type = line[0:colon_pos].decode("ascii")
 
-        if line[colon_pos:].startswith(b'::'):
-            attr_value = base64.decodestring(line[colon_pos + 2:])
-        elif line[colon_pos:].startswith(b':<'):
-            url = line[colon_pos + 2:].strip()
-            attr_value = b''
+        if line[colon_pos:].startswith(b"::"):
+            attr_value = base64.decodestring(line[colon_pos + 2 :])
+        elif line[colon_pos:].startswith(b":<"):
+            url = line[colon_pos + 2 :].strip()
+            attr_value = b""
             if self._process_url_schemes:
                 u = urlparse(url)
                 if u[0] in self._process_url_schemes:
-                    attr_value = urlopen(url.decode('ascii')).read()
+                    attr_value = urlopen(url.decode("ascii")).read()
         else:
-            attr_value = line[colon_pos + 1:].strip()
+            attr_value = line[colon_pos + 1 :].strip()
 
-        if attr_type == u'dn':
-            return attr_type, attr_value.decode('utf8')
+        if attr_type == "dn":
+            return attr_type, attr_value.decode("utf8")
         elif self._encoding is not None:
             try:
                 return attr_type, attr_value.decode(self._encoding)
@@ -183,19 +186,21 @@ class LDIFParser(object):
     def _check_dn(self, dn, attr_value):
         """Check dn attribute for issues."""
         if dn is not None:
-            self._error('Two lines starting with dn: in one record.')
+            self._error("Two lines starting with dn: in one record.")
         if not is_dn(attr_value):
-            self._error('No valid string-representation of '
-                        'distinguished name %s.' % attr_value)
+            self._error(
+                "No valid string-representation of "
+                "distinguished name %s." % attr_value
+            )
 
     def _check_changetype(self, dn, changetype, attr_value):
         """Check changetype attribute for issues."""
         if dn is None:
-            self._error('Read changetype: before getting valid dn: line.')
+            self._error("Read changetype: before getting valid dn: line.")
         if changetype is not None:
-            self._error('Two lines starting with changetype: in one record.')
+            self._error("Two lines starting with changetype: in one record.")
         if attr_value not in CHANGE_TYPES:
-            self._error('changetype value %s is invalid.' % attr_value)
+            self._error("changetype value %s is invalid." % attr_value)
 
     def _parse_entry_record(self, lines):
         """Parse a single entry record from a list of lines."""
@@ -205,16 +210,21 @@ class LDIFParser(object):
         for line in lines:
             attr_type, attr_value = self._parse_attr(line)
 
-            if attr_type == 'dn':
+            if attr_type == "dn":
                 self._check_dn(dn, attr_value)
                 dn = attr_value
-            elif attr_type == 'version' and dn is None:
+            elif attr_type == "version" and dn is None:
                 pass  # version = 1
             else:
                 if dn is None:
-                    self._error('First line of record does not start '
-                                'with "dn:": %s' % attr_type)
-                if attr_value is not None and attr_type.lower() not in self._ignored_attr_types:
+                    self._error(
+                        "First line of record does not start "
+                        'with "dn:": %s' % attr_type
+                    )
+                if (
+                    attr_value is not None
+                    and attr_type.lower() not in self._ignored_attr_types
+                ):
                     if attr_type in entry:
                         entry[attr_type].append(attr_value)
                     else:

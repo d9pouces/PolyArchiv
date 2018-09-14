@@ -1,33 +1,43 @@
 PolyArchiv
 ==========
 
-Backup data from multiple 'sources' (organized in 'collect points') and copy them to one or more 'backup points'.
-The complete doc is available here: http://polyarchiv.readthedocs.io/en/latest/ 
+Locally gather data from multiple data sources (files or databases) and push them to remote servers using different protocols. 
+Data sources can be organized in 'collect points' and remote servers are 'backup points'.
 
-       collect point 1: /var/backups/local1             /----------------------\
-       data of www.github.com               ________\__ | backup point 1: git  |
-    /------------------------\             /        /   |   data of local 1    |
-    |     source 1: files    |---->-------/             \----------------------/
-    |     source 2: mysql    |                          * http://mygit/backups/local1.git
+The complete doc is available here: https://polyarchiv.readthedocs.io/en/latest/ .
+
+
+Assume that you have three websites hosted on the same server, say www.example.com, nothing.example.com and private.example.com.
+Each website has its dedicated 'collect point', and you want to backup their databases and files locally and to a another machine:
+
+
+       collect point 1: /var/backups/local1             /---------------------------------------------\
+       data from private.example.com        ________\__ | backup point 1: git                         |
+    /------------------------\             /        /   |   data of collect point private.example.com | 
+    |     source 1: files    |---->-------/             \---------------------------------------------/
+    |     source 2: mysql    |                          * http://mygit/backups/private.example.com.git
     |     source 3: mysql    |---->-------\
-    \------------------------/             \________\___ /--------------------------\
-                                                    /    | backup point 2: tar+curl |
-     collect point 2: : /var/backups/local2              |   data of local 1        | 
-     data of www.example.com                ________\___ |   data of local 2        |
-    /------------------------\             /        /    \--------------------------/
-    |     source 1: files    |---->-------/             * ftp://server/backups/local1/2016-01-01.tar.gz
-    |     source 2: mysql    |                          * ftp://server/backups/local2/2016-01-01.tar.gz
+    \------------------------/             \________\___ /---------------------------------------------\
+                                                    /    | backup point 2: tar+curl                    |
+     collect point 2: : /var/backups/www.example.com     |   data of collect point private.example.com | 
+     data from www.example.com              ________\___ |   data of collect point www.example.com     |
+    /------------------------\             /        /    \---------------------------------------------/
+    |     source 1: files    |---->-------/             * ftp://server/backups/private.example.com/2016-01-01.tar.gz
+    |     source 2: mysql    |                          * ftp://server/backups/www.example.com/2016-01-01.tar.gz
     \------------------------/          
                                         
-     collect point 3: : /var/backups/local3
-     data of nothing.example.com        
+     collect point 3: : /var/backups/nothing.example.com
+     data from nothing.example.com        
     /-----------------------------\     
     |     source 1: files         |     
     |     source 2: postgresql    |  (local backup only)
     |     source 3: mysql         |     
     \-----------------------------/     
-                                    
-Configuration is based on standard `.ini` files, each file corresponding to one collect or backup point: 
+
+ 
+
+
+Configuration is based on standard `ini` files, each file corresponding to one collect or backup point: 
     
   * `my-collect-point.collect` defines a collect point named `my-collect-point`,
   * `my-backup-point.backup` defines a backup point named `my-backup-point`.
@@ -54,10 +64,10 @@ There are also several kinds of backup points:
   * rolling_archive: creates an archive, pushes it to a remote location. Deletes some previous archives 
     (say, one per day during six days, then one per week during three weeks, then one per month during 12 months) 
 
-These backup points are optional and you can of course use only local collect points, for example when your collect point is stored on a NFS share. All parameters (especially the remote location) can depend on the date and time, and on the hostname.
+Backup points are optional and you can of course use only local collect points, for example when your collect point is stored on a NFS share. All parameters (especially the remote location) can depend on the date and time, and on the hostname.
 
-Each backup point (either collect ones or backup ones) is associated to a backup frequency. 
-If a given point has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be executed.
+Each point (either collect ones or backup ones) is associated to a backup frequency. 
+If a given point has a daily backup frequency but you execute Polyarchiv twice a day, only the first backup will be performed.
 
 Installation
 ------------
@@ -65,20 +75,20 @@ Installation
 PolyArchiv uses plain Python, with no extra dependency.
 The simplest way is to use `pip`, if it is installed on your system:
 
-    $ pip install polyarchiv
+    $ pip3 install polyarchiv
     
 You can also install it from the source:
 
     $ git clone https://github.com/d9pouces/PolyArchiv.git
     $ cd PolyArchiv
-    $ python setup.py install 
+    $ python3 setup.py install 
     
     
 Finally, you can use PolyArchiv without installation:
 
     $ git clone https://github.com/d9pouces/PolyArchiv.git
     $ cd PolyArchiv
-    $ python run.py 
+    $ python3 run.py 
 
 PolyArchiv is compatible with Python 2.7+ and Python 3.3+.
 
@@ -241,6 +251,19 @@ Extra backup options
   * `--skip-collect` (backup only): skip the collect step during a backup
   * `--skip-backup` (backup only): skip the backup step during a backup
 
+
+Filters
+-------
+
+You can apply transformation just before the local collect or before actually sending data to remote storages.
+Each transformation is called a 'filter'. Please check the doc for more info: https://polyarchiv.readthedocs.io/en/latest/filters.html .
+
+Hooks
+-----
+
+Finally, you can run extra actions before and after actions using the hook system (like sending an email when a backup fails). 
+Please check the doc for more info: https://polyarchiv.readthedocs.io/en/latest/filters.html .
+ 
 Adding your engines
 -------------------
 
@@ -248,8 +271,9 @@ PolyArchiv is designed to be extensible. You can add your own engines for all ki
 
   * backup points (must inherit from `polyarchiv.backup_points.BackupPoint`),
   * collect points (must inherit from `polyarchiv.collect_points.CollectPoint`),
-  * filters (must inherit from `polyarchiv.sources.Source`),
-  * sources (must inherit from `polyarchiv.filters.FileFilter`).
+  * sources (must inherit from `polyarchiv.sources.Source`),
+  * filters (must inherit from `polyarchiv.filters.FileFilter`).
+  * hooks (must inherit from `polyarchiv.hooks.Hook`).
   
 To use them, they must be installed in the current PYTHONPATH.
 You can either directly use the dotted path in the configuration files:

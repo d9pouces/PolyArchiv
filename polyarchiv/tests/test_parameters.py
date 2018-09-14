@@ -11,8 +11,9 @@ from polyarchiv.runner import Runner
 
 class TestEngineParameters(TestCase):
     def test_engine_parameters(self):
-        engines_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-                                    'engines.ini')
+        engines_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "engines.ini"
+        )
         all_engines = Runner.find_available_engines(engines_file)
         for engine_dict in all_engines:
             for name, engine_cls in engine_dict.items():
