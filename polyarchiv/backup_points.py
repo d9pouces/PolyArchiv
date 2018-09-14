@@ -1081,16 +1081,8 @@ class RollingTarArchive(TarArchive):
 
 
 class Restic(CommonBackupPoint):
-    """Use a remote git repository and push local modifications to it.
-    Can use https (with password or kerberos auth) or git+ssh remote URLs (with private key authentication).
-    local and remote branches are always named 'master'.
-
-
-# For authentication based on tokens
-$ export OS_STORAGE_URL=<MY_STORAGE_URL>
-$ export OS_AUTH_TOKEN=<MY_AUTH_TOKEN>
-
-$ export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gs-secret-restic-key.json
+    """Use a remote restic repository and push local modifications to it.
+    Check https://restic.readthedocs.io/en/stable/index.html for more info.
     """
 
     parameters = CommonBackupPoint.parameters + [
