@@ -5,13 +5,14 @@ import os
 import re
 
 # noinspection PyPackageRequirements
+from docutils.parsers.rst import Directive
 from docutils.parsers.rst.directives import unchanged_required
-# noinspection PyPackageRequirements
-from sphinx.util.docutils import SphinxDirective
 
 from polyarchiv.points import Config
 from polyarchiv.runner import Runner
 from polysphinx.nodes import EnginesHelpNode
+
+# noinspection PyPackageRequirements
 
 __author__ = "Matthieu Gallet"
 
@@ -29,9 +30,9 @@ def extension_check(argument):
     return argument
 
 
-class EngineDirective(SphinxDirective):
+class EngineDirective(Directive):
     """
-    Directive to insert arbitrary dot markup.
+    Directive to display all points/sources/filters/hooks.
     """
 
     has_content = True
