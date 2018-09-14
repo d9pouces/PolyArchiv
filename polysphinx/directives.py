@@ -1,17 +1,17 @@
 # coding=utf-8
 from __future__ import unicode_literals
-import re
+
 import os
+import re
+
+# noinspection PyPackageRequirements
+from docutils.parsers.rst.directives import unchanged_required
+# noinspection PyPackageRequirements
+from sphinx.util.docutils import SphinxDirective
 
 from polyarchiv.points import Config
 from polyarchiv.runner import Runner
 from polysphinx.nodes import EnginesHelpNode
-
-# noinspection PyPackageRequirements
-from docutils.parsers.rst.directives import unchanged_required
-
-# noinspection PyPackageRequirements
-from sphinx.util.compat import Directive
 
 __author__ = "Matthieu Gallet"
 
@@ -29,7 +29,7 @@ def extension_check(argument):
     return argument
 
 
-class EngineDirective(Directive):
+class EngineDirective(SphinxDirective):
     """
     Directive to insert arbitrary dot markup.
     """
