@@ -105,7 +105,7 @@ class ValidGitUrl(AttributeCheck):
             remote_url = normalize_ssh_url(remote_url)
             parsed_url = urlparse(remote_url)
             scheme = parsed_url.scheme
-            if scheme and scheme not in (
+            if scheme and scheme not in {
                 "ssh",
                 "git",
                 "http",
@@ -114,11 +114,41 @@ class ValidGitUrl(AttributeCheck):
                 "ftps",
                 "rsync",
                 "file",
-            ):
+            }:
                 runner.print_error(
                     "%s.%s does not define a valid git URL for the collect point %s (%s)"
                     % (point.name, self.attr_name, collect_point.name, remote_url)
                 )
+
+
+class ValidResticUrl(AttributeCheck):
+    def __call__(self, runner, point, collect_points):
+        value = getattr(point, self.attr_name)
+        for collect_point in collect_points:
+            remote_url = point.format_value(value, collect_point)
+            parsed_url = urlparse(remote_url)
+            scheme = parsed_url.scheme
+            if scheme and scheme not in (
+                "sftp",
+                "rest",
+                "s3",
+                "swift",
+                "b2",
+                "azure",
+                "gs",
+            ):
+                runner.print_error(
+                    "%s.%s does not define a valid restic URL for the collect point %s (%s)"
+                    % (point.name, self.attr_name, collect_point.name, remote_url)
+                )
+            else:
+                mapping = point.env_mapping.get(scheme, {})
+                for attr_name in mapping:
+                    if getattr(point, attr_name) is None:
+                        runner.print_error(
+                            "%s.%s is required with %s for the collect point %s"
+                            % (point.name, attr_name, remote_url, collect_point.name)
+                        )
 
 
 class GitlabProjectName(AttributeCheck):

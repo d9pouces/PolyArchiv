@@ -8,22 +8,23 @@ The complete doc is available here: https://polyarchiv.readthedocs.io/en/latest/
 
 
 Assume that you have three websites hosted on the same server, say www.example.com, nothing.example.com and private.example.com.
-Each website has its dedicated 'collect point', and you want to backup their databases and files locally and to a another machine:
+Each website has its dedicated 'collect point' to gather its data (files and database dumps), 
+and you want to backup their databases and files locally and to a another machine:
 
 
-       collect point 1: /var/backups/local1             /---------------------------------------------\
-       data from private.example.com        ________\__ | backup point 1: git                         |
-    /------------------------\             /        /   |   data of collect point private.example.com | 
-    |     source 1: files    |---->-------/             \---------------------------------------------/
-    |     source 2: mysql    |                          * http://mygit/backups/private.example.com.git
+       collect point 1: /var/backups/private.example.com     /---------------------------------------------\
+       data from private.example.com        ________\________| backup point 1: git                         |
+    /------------------------\             /        /        |   data of collect point private.example.com | 
+    |     source 1: files    |---->-------/                  \---------------------------------------------/
+    |     source 2: mysql    |                               * http://mygit/backups/private.example.com.git
     |     source 3: mysql    |---->-------\
     \------------------------/             \________\___ /---------------------------------------------\
                                                     /    | backup point 2: tar+curl                    |
      collect point 2: : /var/backups/www.example.com     |   data of collect point private.example.com | 
      data from www.example.com              ________\___ |   data of collect point www.example.com     |
     /------------------------\             /        /    \---------------------------------------------/
-    |     source 1: files    |---->-------/             * ftp://server/backups/private.example.com/2016-01-01.tar.gz
-    |     source 2: mysql    |                          * ftp://server/backups/www.example.com/2016-01-01.tar.gz
+    |     source 1: files    |---->-------/              * ftp://server/backups/private.example.com/2016-01-01.tar.gz
+    |     source 2: mysql    |                           * ftp://server/backups/www.example.com/2016-01-01.tar.gz
     \------------------------/          
                                         
      collect point 3: : /var/backups/nothing.example.com
@@ -291,6 +292,7 @@ You can also register them as new setuptools entry points:
   * `polyarchiv.sources`,
   * `polyarchiv.backup_points`,
   * `polyarchiv.collect_points`,
+  * `polyarchiv.hooks`,
   * `polyarchiv.filters`. 
 
 The key is the alias used in config files, the value is the dotted path.

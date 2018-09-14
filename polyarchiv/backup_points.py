@@ -18,6 +18,7 @@ from polyarchiv.config_checks import (
     Email,
     ValidGitUrl,
     GitlabProjectName,
+    ValidResticUrl,
 )
 from polyarchiv.filters import FileFilter
 from polyarchiv.hooks import Hook
@@ -90,6 +91,7 @@ class BackupPoint(Point):
         # values specific to a collect_point: self.collect_point_variables[collect_point.name][key] = value
         # used to override remote parameters
 
+    # noinspection PyMethodOverriding
     def format_value(self, value, collect_point, use_constant_values=False):
         if value is None:
             return None
@@ -1107,18 +1109,18 @@ $ export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gs-secret-restic-key.json
         Parameter(
             "remote_username",
             help_str="access key id for Amazon S3 and Minio Server, \n"
-                     "username for OpenStack Swift (keystone v1/v2/v3), \n"
-                     "account ID for Backblaze B2, \n"
-                     "account name for Microsoft Azure Blob Storage, \n"
-                     "google project ID for Google Cloud Storage",
+            "username for OpenStack Swift (keystone v1/v2/v3), \n"
+            "account ID for Backblaze B2, \n"
+            "account name for Microsoft Azure Blob Storage, \n"
+            "google project ID for Google Cloud Storage",
             required=True,
         ),
         Parameter(
             "remote_secret",
             help_str="secret access key for Amazon S3 and Minio Server, \n"
-                     "key/password for OpenStack Swift (keystone v1/v2/v3), \n"
-                     "account key for Blackblaze B2 and Microsoft Azure Blob Storage, \n"
-                     "path to the JSON key file for Google Cloud Storage",
+            "key/password for OpenStack Swift (keystone v1/v2/v3), \n"
+            "account key for Blackblaze B2 and Microsoft Azure Blob Storage, \n"
+            "path to the JSON key file for Google Cloud Storage",
             required=True,
         ),
         Parameter(
@@ -1139,26 +1141,32 @@ $ export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gs-secret-restic-key.json
         Parameter(
             "remote_project_name",
             help_str="tenant ID for OpenStack Swift (keystone v2), \n"
-                     "project name for OpenStack Swift (keystone v3)",
+            "project name for OpenStack Swift (keystone v3)",
             required=True,
         ),
         Parameter(
             "remote_project_domain_name",
             help_str="tenant name for OpenStack Swift (keystone v2), \n"
-                     "project domain name for OpenStack Swift (keystone v3)",
+            "project domain name for OpenStack Swift (keystone v3)",
             required=True,
         ),
     ]
-    checks = CommonBackupPoint.checks + [AttributeUniquess("remote_url")]
+    checks = CommonBackupPoint.checks + [
+        AttributeUniquess("remote_url"),
+        ValidResticUrl("remote_url"),
+    ]
     env_mapping = {
-        'sftp': {},
-        'rest': {},
-        's3': {
+        "": {"RESTIC_PASSWORD": "password"},
+        "sftp": {"RESTIC_PASSWORD": "password"},
+        "rest": {"RESTIC_PASSWORD": "password"},
+        "s3": {
+            "RESTIC_PASSWORD": "password",
             "AWS_ACCESS_KEY_ID": "remote_username",
             "AWS_SECRET_ACCESS_KEY": "remote_secret",
         },
-        'swift': {
-            'ST_AUTH': "remote_auth_url",
+        "swift": {
+            "RESTIC_PASSWORD": "password",
+            "ST_AUTH": "remote_auth_url",
             "OS_AUTH_URL": "remote_auth_url",
             "OS_USERNAME": "remote_username",
             "ST_USER": "remote_username",
@@ -1172,43 +1180,80 @@ $ export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gs-secret-restic-key.json
             "OS_PROJECT_DOMAIN_NAME": "remote_project_domain_name",
         },
         "b2": {
+            "RESTIC_PASSWORD": "password",
             "B2_ACCOUNT_ID": "remote_username",
             "B2_ACCOUNT_KEY": "remote_secret",
         },
         "azure": {
+            "RESTIC_PASSWORD": "password",
             "AZURE_ACCOUNT_NAME": "remote_username",
             "AZURE_ACCOUNT_KEY": "remote_secret",
         },
         "gs": {
+            "RESTIC_PASSWORD": "password",
             "GOOGLE_PROJECT_ID": "remote_username",
             "GOOGLE_APPLICATION_CREDENTIALS": "remote_secret",
         },
-
     }
 
-    def __init__(self, name, remote_url="", password=None, **kwargs):
+    def __init__(
+        self,
+        name,
+        remote_url="",
+        password=None,
+        remote_username=None,
+        remote_secret=None,
+        remote_auth_url=None,
+        remote_region_name=None,
+        remote_user_domain_name=None,
+        remote_project_name=None,
+        remote_project_domain_name=None,
+        **kwargs
+    ):
         super(Restic, self).__init__(name, **kwargs)
         self.password = password
         self.remote_url = remote_url
+        self.remote_auth_url = remote_auth_url
+        self.remote_region_name = remote_region_name
+        self.remote_user_domain_name = remote_user_domain_name
+        self.remote_project_name = remote_project_name
+        self.remote_project_domain_name = remote_project_domain_name
+        self.remote_username = remote_username
+        self.remote_secret = remote_secret
 
     def do_backup(self, collect_point, export_data_path, info):
         assert isinstance(collect_point, CollectPoint)  # just to help PyCharm
-        worktree = export_data_path
-        os.chdir(worktree)
+        os.chdir(export_data_path)
         remote_url = self.format_value(self.remote_url, collect_point)
         if not self.check_remote_url(collect_point):
             raise ValueError("Invalid backup point: %s" % remote_url)
-        cmd = [self.config.restic_executable, "-r", remote_url, "backup", worktree]
-        self.execute_command(cmd, cwd=worktree, env={"RESTIC_PASSWORD": self.password})
+        cmd = [
+            self.config.restic_executable,
+            "-r",
+            remote_url,
+            "backup",
+            export_data_path,
+        ]
+        env = self.get_env(remote_url, collect_point)
+        self.execute_command(cmd, cwd=export_data_path, env=env)
+
+    def get_env(self, remote_url, collect_point):
+        """return the environment values required for the given Restic backend"""
+        scheme = urlparse(remote_url).scheme
+        mapping = self.env_mapping.get(scheme, {})
+        env = {
+            key: self.format_value(getattr(self, attr_name), collect_point)
+            for (key, attr_name) in mapping.items()
+        }
+        return env
 
     def check_remote_url(self, collect_point):
         return True
 
     def do_restore(self, collect_point, export_data_path):
         assert isinstance(collect_point, CollectPoint)  # just to help PyCharm
-        worktree = export_data_path
-        self.ensure_dir(worktree, parent=True)
-        self.ensure_absent(worktree)
+        self.ensure_dir(export_data_path, parent=True)
+        self.ensure_absent(export_data_path)
         remote_url = self.format_value(self.remote_url, collect_point)
         cmd = [
             self.config.restic_executable,
@@ -1216,8 +1261,7 @@ $ export GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gs-secret-restic-key.json
             remote_url,
             "restore",
             "--target",
-            worktree,
+            export_data_path,
         ]
-        self.execute_command(
-            cmd, cwd=os.path.dirname(worktree), env={"RESTIC_PASSWORD": self.password}
-        )
+        env = self.get_env(remote_url, collect_point)
+        self.execute_command(cmd, cwd=os.path.dirname(export_data_path), env=env)
